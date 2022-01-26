@@ -1,0 +1,5 @@
+﻿{
+  "mtf_service_base_address": "https://api.raet.com/mft/v1.0/",
+  "chunk_max_bytes_size": "4194304",
+  "concurrent_connection_count": "6"
+}
