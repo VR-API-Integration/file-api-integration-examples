@@ -1,10 +1,10 @@
 # File API .Net Examples
 
-**AspNet** folder includes a collection of examples that show how to integrate the **File API SDKs** with **.Net Core**.
+**net-core-with-file-api-sdk** folder includes a collection of examples that show how to integrate the **File API SDKs** with **.Net Core**.
 
 ## Getting Started 
 
-Download **AspNet** folder.
+Download **net-core-with-file-api-sdk** folder.
 
 Inside the folder there is a solution called **FileAPI.MFT**. This solution contains two projects:
   - **FileAPI.MFT.FileSystem.NetCore22**. This project provides examples of how to integrate **FileSystem SDK** using **.Net Core 2.2**.
