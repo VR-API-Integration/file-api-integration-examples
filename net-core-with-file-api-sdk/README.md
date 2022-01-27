@@ -1,4 +1,4 @@
-# File API .Net Examples
+# File API .Net Core Examples
 
 **net-core-with-file-api-sdk** folder includes a collection of examples that show how to integrate the **File API SDKs** with **.Net Core**.
 

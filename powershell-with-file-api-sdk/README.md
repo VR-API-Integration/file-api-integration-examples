@@ -1,10 +1,10 @@
 # File API Powershell Examples
 
-PowerShell folder includes a collection of examples that show how to integrate the File API SDK with Powershell.
+**powershell-with-file-api-sdk** folder includes a collection of examples that show how to integrate the File API SDK with Powershell.
 
 ## Getting Started
 
-Download PowerShell folder. Required data is commented in the example powershell scripts. Fill required data and run the example scripts as described in Running Examples section.
+Download **powershell-with-file-api-sdk** folder. Required data is commented in the example Powershell scripts. Fill required data and run the example scripts as described in Running Examples section.
 
 ### Prerequisites
 
