@@ -1,8 +1,8 @@
-File API SDKs and Examples
+# File API SDKs and Examples
 
-The document is divided into two parts, the first part includes the documentation of File API SDKs(# File API SDKs) and the second part is the Examples of File API SDKs usage(# Examples of File API SDKs usage). 
+The document is divided into two parts, the first part includes the documentation of File API SDKs and the second part is the Examples of File API SDKs usage. 
 
-# File API SDKs
+## File API SDKs
 
 [![Build Status](https://dev.azure.com/raet/RaetOnline/_apis/build/status/Team%20Transporters/FTaaS/Ftaas.Sdk?branchName=master)](https://dev.azure.com/raet/RaetOnline/_build/latest?definitionId=4631&branchName=master)
 
@@ -10,11 +10,11 @@ Library that allows to send and receive files to File API.
 It comes in two different flavors: [Ftaas.Sdk.FileSystem](#ftaassdkfilesystem) and [Ftaas.Sdk.Streaming](#ftaassdkstreaming). The first one allows 
 to send and receive files directly on your file system, while the second is more configurable, as the source of files are streams.
 
-## FTaaS.Sdk.FileSystem
+### FTaaS.Sdk.FileSystem
 
 Integrate with File API with file system sources, sending and downloading files from and into directories.
 
-### Getting started
+#### Getting started
 
 1. Install the file system Nuget package into your ASP.NET Core application.
 
@@ -55,58 +55,58 @@ Integrate with File API with file system sources, sending and downloading files 
     `optionConfiguration`: MFT API base address, maximum chunk size (0 - 4194304 bytes) and number of concurrent connections (1 - 6).\
     `bearerTokenFactory`: Function that retrieves an authorization token.
 
-### Usage 
+#### Usage 
 
-#### Upload
+##### Upload
 
 `UploadFileAsync` uploads a file and returns the metadata of the file created on MFT: The Id can be used to download the file by the subscribers.
 
 _NOTE: If the file size is greater than the maximum chunk size configured, it will be uploaded by chunks._
 
-##### Task<FileUploadInfo> UploadFileAsync(FileUploadRequest request, string filePath, string tenantId, CancellationToken cancellationToken) 
+###### Task<FileUploadInfo> UploadFileAsync(FileUploadRequest request, string filePath, string tenantId, CancellationToken cancellationToken) 
 `request`: composed by fileName and bussinessTypeId.\
 `filePath`: absolute path of the file to upload.\
 `tenantId`: (optional) tenantId.\
 `cancellationToken`: (optional) the CancellationToken that the upload task will observe.
 
-#### Download
+##### Download
 
 `DownloadFileAsync` downloads the requested file on the specified path.
 
 _NOTE: If the file already exists, it will be replaced with the downloaded one._
 
-##### Task DownloadFileAsync(string fileId, string filePath, string tenantId, CancellationToken cancellationToken)
+###### Task DownloadFileAsync(string fileId, string filePath, string tenantId, CancellationToken cancellationToken)
 `fileId`: GUID of the file to download.\
 `filePath`: absolute path of the file to download.\
 `tenantId`: (optional) tenantId.\
 `cancellationToken`: (optional) the CancellationToken that the download task will observe.
 
-#### List
+##### List
 
 `GetAvailableFilesAsync` retrieves a list of metadatas of the available files.
 
 _NOTE: Files that have already been downloaded won't be listed._
 
-##### Task<PaginatedItems<FileInfo>> GetAvailableFilesAsync(long businessTypeId, Pagination pagination, string tenantId, CancellationToken cancellationToken)
+###### Task<PaginatedItems<FileInfo>> GetAvailableFilesAsync(long businessTypeId, Pagination pagination, string tenantId, CancellationToken cancellationToken)
 `businessTypeId`: (optional) if specified, only the files of this bussiness type will be listed.\
 `pagination`: (optional) if specified, the list will have the specified items size and will be the index page. If not, the first twenty files metadata will be retrieved.\
 `tenantId`: (optional) tenantId.\
 `cancellationToken`: (optional) the CancellationToken that the list task will observe.
 
-#### Has Subscription
+##### Has Subscription
 
 Returns true if a business type has subscribers for the specified authorized tenant and false otherwise.
 
-##### Task<bool> HasSubscriptionAsync(long businessTypeId, string tenantId, CancellationToken cancellationToken)
+###### Task<bool> HasSubscriptionAsync(long businessTypeId, string tenantId, CancellationToken cancellationToken)
 `businessTypeId`: business type.\
 `tenantId`: (optional) tenantId.\
 `cancellationToken`: (optional) the CancellationToken that the task will observe.
 
-## FTaaS.Sdk.Streaming
+### FTaaS.Sdk.Streaming
 
 Integrate with File API with stream sources.
 
-### Getting started
+#### Getting started
 
 1. Install the streams Nuget package into your ASP.NET Core application.
 
@@ -146,56 +146,56 @@ Integrate with File API with stream sources.
     `optionConfiguration`: MFT API base address, maximum chunk size (0 - 4194304 bytes) and number of concurrent connections (1 - 6).\
     `bearerTokenFactory`: Function that retrieves an authorization token.
 
-### Usage
+#### Usage
 
-#### Upload
+##### Upload
 
 `UploadFileAsync` uploads a file and returns the metadata of the file created on MFT: The Id can be used to download the file by the subscribers.
 
 _NOTE: If the file size is greater than the maximum chunk size configured, it will be uploaded by chunks._
 
-##### Task<FileUploadInfo> UploadFileAsync(FileUploadRequest request, Stream fileStream, string tenantId, CancellationToken cancellationToken)
+###### Task<FileUploadInfo> UploadFileAsync(FileUploadRequest request, Stream fileStream, string tenantId, CancellationToken cancellationToken)
 `request`: composed by fileName and bussinessTypeId.\
 `fileStream`: stream containing the bytes of the file.\
 `tenantId`: (optional) tenantId.\
 `cancellationToken`: (optional) the CancellationToken that the upload task will observe.
 
-#### Download
+##### Download
 
 `DownloadFileAsync` downloads the requested file on the specified path.
 
-##### Task DownloadFileAsync(string fileId, Stream fileStream, string tenantId, CancellationToken cancellationToken)
+###### Task DownloadFileAsync(string fileId, Stream fileStream, string tenantId, CancellationToken cancellationToken)
 `fileId`: GUID of the file to download.\
 `fileStream`: stream where the bytes of the file will be stored.\
 `tenantId`: (optional) tenantId.\
 `cancellationToken`: (optional) the CancellationToken that the download task will observe.
 
-#### List
+##### List
 
 `GetAvailableFilesAsync` retrieves a list of metadatas of the available files.
 
 _NOTE: Files that have already been downloaded won't be listed._
 
-##### Task<PaginatedItems<FileInfo>> GetAvailableFilesAsync( long businessTypeId, Pagination pagination, string tenantId, CancellationToken cancellationToken)
+###### Task<PaginatedItems<FileInfo>> GetAvailableFilesAsync( long businessTypeId, Pagination pagination, string tenantId, CancellationToken cancellationToken)
 `businessTypeId`: (optional) if specified, only the files of this bussiness type will be listed.\
 `pagination`: (optional) if specified, the list will have the specified items size and will be the index page. If not, the first twenty files metadata will be retrieved.\
 `tenantId`: (optional) tenantId.\
 `cancellationToken`: (optional) the CancellationToken that the list task will observe.
 
-#### Has Subscription
+##### Has Subscription
 
 Returns true if a business type has subscribers for the specified authorized tenant and false otherwise.
 
-##### Task<bool> HasSubscriptionAsync(long businessTypeId, string tenantId, CancellationToken cancellationToken)
+###### Task<bool> HasSubscriptionAsync(long businessTypeId, string tenantId, CancellationToken cancellationToken)
 `businessTypeId`: business type.\
 `tenantId`: (optional) tenantId.\
 `cancellationToken`: (optional) the CancellationToken that the task will observe.
 
-# Examples of File API SDKs usage
+## Examples of File API SDKs usage
 
 **net-core-with-file-api-sdk** folder includes a collection of examples that show how to integrate the **File API SDKs** with **.Net Core**.
 
-## Getting Started with Examples
+### Getting Started with Examples
 
 Download **net-core-with-file-api-sdk** folder.
 
@@ -216,7 +216,7 @@ Please, fill the required data before running the examples.
 
 **NOTE: If you are having errors when excuting the examples. Most likely will be caused because the custom parameters are not correctly provided.**
 
-## Projects structure of Examples
+### Projects structure of Examples
 
 Both example projects has the same structure:
   - **Example** folder contains all the examples as test methods.
@@ -224,7 +224,7 @@ Both example projects has the same structure:
   - **config.json** contains some parameters that the SDK needs.
   - **Startup.cs** initialize the examples and injects the SDK.
 
-## Running Examples
+### Running Examples
 
 Please, refer to [Microsoft documentation](https://docs.microsoft.com/en-us/visualstudio/test/run-unit-tests-with-test-explorer?view=vs-2019).
 
