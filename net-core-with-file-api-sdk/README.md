@@ -1,3 +1,7 @@
+File API SDKs and Examples
+
+The document is divided into two parts, the first part includes the documentation of File API SDKs(# File API SDKs) and the second part is the Examples of File API SDKs usage(# Examples of File API SDKs usage). 
+
 # File API SDKs
 
 [![Build Status](https://dev.azure.com/raet/RaetOnline/_apis/build/status/Team%20Transporters/FTaaS/Ftaas.Sdk?branchName=master)](https://dev.azure.com/raet/RaetOnline/_build/latest?definitionId=4631&branchName=master)
@@ -187,15 +191,11 @@ Returns true if a business type has subscribers for the specified authorized ten
 `tenantId`: (optional) tenantId.\
 `cancellationToken`: (optional) the CancellationToken that the task will observe.
 
-## Examples
+# Examples of File API SDKs usage
 
 **net-core-with-file-api-sdk** folder includes a collection of examples that show how to integrate the **File API SDKs** with **.Net Core**.
 
-### Running Examples
-
-Please, refer to [Microsoft documentation](https://docs.microsoft.com/en-us/visualstudio/test/run-unit-tests-with-test-explorer?view=vs-2019).
-
-### Getting Started with Examples
+## Getting Started with Examples
 
 Download **net-core-with-file-api-sdk** folder.
 
@@ -216,13 +216,17 @@ Please, fill the required data before running the examples.
 
 **NOTE: If you are having errors when excuting the examples. Most likely will be caused because the custom parameters are not correctly provided.**
 
-### Projects structure of Examples
+## Projects structure of Examples
 
 Both example projects has the same structure:
   - **Example** folder contains all the examples as test methods.
   - **Files** folder works as an internal file system. It also provides some sample files.
   - **config.json** contains some parameters that the SDK needs.
   - **Startup.cs** initialize the examples and injects the SDK.
+
+## Running Examples
+
+Please, refer to [Microsoft documentation](https://docs.microsoft.com/en-us/visualstudio/test/run-unit-tests-with-test-explorer?view=vs-2019).
 
 The examples are populated with some logs. They are stored internally and shown after an example is executed. To see these logs go the **Test Explorer**, choose the executed test and press **Open additional output for this result**. You can get more information [here](https://xunit.net/docs/capturing-output).
 
