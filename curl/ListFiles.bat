@@ -1,22 +1,21 @@
 @echo off & setlocal
 setlocal enableDelayedExpansion
 
-echo ===============================================
+echo ================================================
 echo File API example: Listing available files.
-echo ===============================================
+echo ================================================
 
 REM User configuration.
-
 echo Enter your credentials.
+
 set /p "_clientId=Cliend ID: "
 set /p "_clientSecret=Client secret: "
 set /p "_tenantId=Tenant ID: "
 
 REM Internal configuration.
+
 set "_authTokenApiBaseUrl=https://api.raet.com/authentication"
 set "_fileApiBaseUrl=https://api.raet.com/mft/v1.0"
-
-if not "%_basePath:~-1%" == "/" if not "%_basePath:~-1%" == "\" set _basePath=%_basePath%\
 
 REM Retrieve the authentication token.
 echo Retrieving the authentication token...
@@ -35,7 +34,7 @@ set "_token=%_afterTokenKey:"=" & set "_afterToken=%"
 echo Authentication token retrieved.
 
 REM Download the files.
-echo Calling 'list' endpoint...
+echo Calling the 'list' endpoint...
 
 for /f "delims=" %%i in (' ^
 curl GET "%_fileApiBaseUrl%/files?role=subscriber" ^
@@ -45,7 +44,7 @@ curl GET "%_fileApiBaseUrl%/files?role=subscriber" ^
 ') do set _listResponse=%%i
 
 echo List of available files:
-echo ------------------------
+echo ------------------------------------------------
 echo %_listResponse%
-echo ------------------------
+echo ------------------------------------------------
 echo Tip: In order to download a file, call the 'download' endpoint with the desired fileId shown in the list above.
