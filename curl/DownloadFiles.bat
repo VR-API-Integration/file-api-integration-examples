@@ -1,6 +1,10 @@
 @echo off & setlocal
 setlocal enableDelayedExpansion
 
+echo ================================================
+echo File API example: Download files.
+echo ================================================
+
 REM Configure the files that are going to be downloaded.
 
 REM The files are set with the next schema:
@@ -19,47 +23,59 @@ set files=#fileId#fileName
 REM Ask for the rest of configurations.
 
 echo Enter your credentials.
-set /p "clientId=Cliend ID: "
-set /p "clientSecret=Client secret: "
-set /p "tenantId=Tenant ID: "
+set /p "_clientId=Cliend ID: "
+set /p "_clientSecret=Client secret: "
+set /p "_tenantId=Tenant ID: "
 
 echo.
 echo Enter the path where you want to download the files:
-set /p "basePath="
+set /p "_basePath="
 
-if not "%basePath:~-1%" == "/" if not "%basePath:~-1%" == "\" set basePath=%basePath%\
+if not "%_basePath:~-1%" == "/" if not "%_basePath:~-1%" == "\" set _basePath=%_basePath%\
 
-REM Retrieve authentication token
+REM Internal configuration.
+set "_authTokenApiBaseUrl=https://api.raet.com/authentication"
+set "_fileApiBaseUrl=https://api.raet.com/mft/v1.0"
 
-for /f %%i in (' ^
-curl -s -X POST https://api.raet.com/authentication/token ^
--H "Content-Type: application/x-www-form-urlencoded" ^
--H "Cache-Control: no-cache" ^
--d "grant_type=client_credentials&client_id=%clientId%&client_secret=%clientSecret%" ^
-') do set response=%%i
+REM Retrieve the authentication token.
+echo Retrieving the authentication token...
 
-set "beforeTokenKey=%response:"access_token":"=" & set "afterTokenKey=%"
-set "token=%afterTokenKey:"=" & set "afterToken=%"
+for /f "delims=" %%i in (' ^
+curl POST "%_authTokenApiBaseUrl%/token" ^
+--header "Content-Type: application/x-www-form-urlencoded" ^
+--header "Cache-Control: no-cache" ^
+--data "grant_type=client_credentials&client_id=%_clientId%&client_secret=%_clientSecret%" ^
+--silent ^
+') do set _authTokenResponse=%%i
+
+set "_beforeTokenKey=%_authTokenResponse:"access_token":"=" & set "_afterTokenKey=%"
+set "_token=%_afterTokenKey:"=" & set "_afterToken=%"
+
+echo Authentication token retrieved.
 
 REM Download the files
+echo Calling the 'download' endpoint...
+:downloadFile
 
-:download_file
-
-for /F "tokens=1,2 delims=#" %%G in ("%files%") do (set "fileId=%%G" & set "fileName=%%H")
-set filePath=%basePath%%fileName%
+for /F "tokens=1,2 delims=#" %%G in ("%_files%") do (set "_fileId=%%G" & set "_fileName=%%H")
+set _filePath=%_basePath%%_fileName%
 
 echo.
-echo Downloading file ^<%fileId%^> to %filePath%
+echo Downloading file ^<%_fileId%^> to %_filePath%
 
-curl https://api.raet.com/mft/v1.0/files/%fileId%?role=subscriber ^
---header "x-raet-tenant-id: %tenantId%" ^
---header "Authorization: Bearer %token%" ^
--H "Accept: application/octet-stream" ^
---output "%filePath%"
+curl %_fileApiBaseUrl%/files/%_fileId%?role=subscriber ^
+--header "x-raet-tenant-id: %_tenantId%" ^
+--header "Authorization: Bearer %_token%" ^
+--header "Accept: application/octet-stream" ^
+--output "%_filePath%"
 
-echo File was downloaded.
+echo File ^<%_fileId%^> was downloaded.
 
 REM Remove the downloaded file from the list.
-set "files=!files:#%fileId%#%fileName%=!"
+set "_files=!_files:#%_fileId%#%_fileName%=!"
 
-if defined files goto :download_file
+if defined _files goto :downloadFile
+
+echo ------------------------------------------------
+echo You can find all downloaded files in %_basePath%
+echo ------------------------------------------------
