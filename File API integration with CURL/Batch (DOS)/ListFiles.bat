@@ -33,7 +33,7 @@ set "_token=%_afterTokenKey:"=" & set "_afterToken=%"
 
 echo Authentication token retrieved.
 
-REM Download the files.
+REM List the files.
 echo Calling the 'list' endpoint...
 
 for /f "delims=" %%i in (' ^
