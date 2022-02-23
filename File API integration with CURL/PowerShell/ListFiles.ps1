@@ -3,6 +3,7 @@ Write-Host File API example: Listing available files.
 Write-Host ================================================
 
 #region User_configuration
+
 Write-Host "Enter your application's client ID."
 Write-Host "(it can be retrieved from your application in the Developer Portal, under the name Consumer Key)"
 $clientId = Read-Host
@@ -14,14 +15,18 @@ $clientSecret = Read-Host
 Write-Host "Enter your application's tenant."
 Write-Host "(if your application is only allowed to one tenant (the most common scenario) you can leave this field empty by pressing Enter)"
 $tenantId = Read-Host
+
 #endregion
 
 #region Internal_configuration
+
 $authTokenApiBaseUrl = "https://api.raet.com/authentication"
 $fileApiBaseUrl = "https://api.raet.com/mft/v1.0"
+
 #endregion
 
 #region Retrieve_authentication_token
+
 Write-Host "Retrieving the authentication token..."
 
 $authHeaders = @{
@@ -38,9 +43,11 @@ $authTokenResponse = Invoke-RestMethod -Method "Post" -Uri "$($authTokenApiBaseU
 $token = $authTokenResponse.access_token
 
 Write-Host "Authentication token retrieved."
+
 #endregion
 
 #region List_files
+
 Write-Host "Calling the 'list' endpoint..."
 
 $listHeaders = @{
