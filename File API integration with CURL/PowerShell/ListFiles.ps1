@@ -1,6 +1,8 @@
-Write-Host ================================================
-Write-Host File API example: Listing available files.
-Write-Host ================================================
+# This example shows how to call the 'list' endpoint of the File API in order to retrieve all available files to be downloaded"
+
+Write-Host "================================================"
+Write-Host "File API example: Listing available files."
+Write-Host "================================================"
 
 #region User_configuration
 
