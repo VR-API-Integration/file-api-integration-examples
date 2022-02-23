@@ -1,7 +1,7 @@
 @echo off & setlocal
 setlocal enableDelayedExpansion
 
-REM This example shows how to call the 'list' endpoint of the File API in order to retrieve all available files to be downloaded"
+REM This example shows how to call the 'list' endpoint of the File API in order to retrieve the information of all the available files to be downloaded.
 
 echo ================================================
 echo File API example: Listing available files.
