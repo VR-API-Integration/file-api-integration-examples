@@ -1,23 +1,25 @@
-[CmdletBinding()]
-Param(
-    [Parameter(Mandatory = $true, HelpMessage = 'Client ID of your application. It can be retrieved from your application in the Developer Portal, under the name Consumer Key.')]
-    [string] $clientId,
-
-    [Parameter(Mandatory = $true, HelpMessage = 'Client secret of your application. It can be retrieved from your application in the Developer Portal, under the name Secret Key.')]
-    [string] $clientSecret,
-
-    [Parameter(Mandatory = $true, HelpMessage = 'Tenant ID of your application.')]
-    [AllowEmptyString()]
-    [string] $tenantId
-)
-
 Write-Host ================================================
 Write-Host File API example: Listing available files.
 Write-Host ================================================
 
-# Internal configuration
+#region User_configuration
+Write-Host "Enter your application's client ID."
+Write-Host "(it can be retrieved from your application in the Developer Portal, under the name Consumer Key)"
+$clientId = Read-Host
+
+Write-Host "Enter your application's client secret."
+Write-Host "(it can be retrieved from your application in the Developer Portal, under the name Secret Key)"
+$clientSecret = Read-Host
+
+Write-Host "Enter your application's tenant."
+Write-Host "(if your application is only allowed to one tenant (the most common scenario) you can leave this field empty by pressing Enter)"
+$tenantId = Read-Host
+#endregion
+
+#region Internal_configuration
 $authTokenApiBaseUrl = "https://api.raet.com/authentication"
 $fileApiBaseUrl = "https://api.raet.com/mft/v1.0"
+#endregion
 
 #region Retrieve_authentication_token
 Write-Host "Retrieving the authentication token..."
