@@ -1,8 +1,8 @@
 # This example shows how to call the 'list' endpoint of the File API with filters in order to retrieve the information of the specified files
 
-Write-Host ================================================
-Write-Host File API example: Listing filtered files.
-Write-Host ================================================
+Write-Host "================================================"
+Write-Host "File API example: Listing filtered files."
+Write-Host "================================================"
 
 #region User_configuration
 
