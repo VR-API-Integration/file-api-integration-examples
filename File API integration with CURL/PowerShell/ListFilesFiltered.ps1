@@ -18,6 +18,8 @@ Write-Host "Enter your application's tenant."
 Write-Host "(if your application is only allowed to one tenant (the most common scenario) you can leave this field empty by pressing Enter)"
 $tenantId = Read-Host
 
+#region List_filter
+
 # Here you can find a a lot of examples for filtering the files.
 # In order to use any of the filters, just uncomment (remove the hashtag #) of the desired filter and comment (add a hastag #) the rest.
 # You can also create your own filter. Check the File API documentation to see all the available filters.
@@ -56,7 +58,9 @@ $filter = "status eq 'downloaded'"
 #$filter = "endsWith(FileName, '.txt')"
 
 Write-Host "Using the filter <$($filter)>."
-Write-Host "If you want to change this filter, open the example in a text editor (like notepad) and follow the instructions in the 'User_configuration' region."
+Write-Host "If you want to change this filter, open the example in a text editor (like notepad) and follow the instructions under the 'List_filter' region."
+
+#endregion
 
 #endregion
 
