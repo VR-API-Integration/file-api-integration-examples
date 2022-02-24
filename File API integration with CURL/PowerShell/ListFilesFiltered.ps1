@@ -6,16 +6,15 @@ Write-Host "================================================"
 
 #region User_configuration
 
-Write-Host "Enter your application's client ID."
-Write-Host "(it can be retrieved from your application in the Developer Portal, under the name Consumer Key)"
+Write-Host "Enter your application's API Key."
+Write-Host "(it can be retrieved from your application in the Developer Portal, under the name API Key)"
 $clientId = Read-Host
 
-Write-Host "Enter your application's client secret."
+Write-Host "Enter your application's Secret Key."
 Write-Host "(it can be retrieved from your application in the Developer Portal, under the name Secret Key)"
 $clientSecret = Read-Host
 
-Write-Host "Enter your application's tenant."
-Write-Host "(if your application is only allowed to one tenant (the most common scenario) you can leave this field empty by pressing Enter)"
+Write-Host "Enter your application's tenant ID."
 $tenantId = Read-Host
 
 #region List_filter
