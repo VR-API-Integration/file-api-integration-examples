@@ -5,6 +5,8 @@
     <IsPackable>false</IsPackable>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <DisableImplicitNuGetFallbackFolder>true</DisableImplicitNuGetFallbackFolder>
+    <Company>Visma</Company>
+    <Copyright>Copyright (c) Visma</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
