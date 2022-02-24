@@ -22,13 +22,18 @@ set files=#fileId#fileName
 
 REM Ask for the rest of configurations.
 
-echo Enter your credentials.
-set /p "_clientId=Cliend ID: "
+echo Enter your application's API Key.
+echo (it can be retrieved from your application in the Developer Portal, under the name API Key)
+set /p "_clientId="
+
+echo Enter your application's Secret Key.
+echo (it can be retrieved from your application in the Developer Portal, under the name Secret Key)
 set /p "_clientSecret=Client secret: "
+
+echo Enter your application's tenant ID.
 set /p "_tenantId=Tenant ID: "
 
-echo.
-echo Enter the path where you want to download the files:
+echo Enter the folder path where you want to download the files (e.g. C:/Visma/File API/Download):
 set /p "_basePath="
 
 if not "%_basePath:~-1%" == "/" if not "%_basePath:~-1%" == "\" set _basePath=%_basePath%\
