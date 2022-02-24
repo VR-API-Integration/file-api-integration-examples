@@ -8,10 +8,16 @@ echo File API example: Listing available files.
 echo ================================================
 
 REM User configuration.
-echo Enter your credentials.
 
-set /p "_clientId=Cliend ID: "
+echo Enter your application's API Key.
+echo (it can be retrieved from your application in the Developer Portal, under the name API Key)
+set /p "_clientId="
+
+echo Enter your application's Secret Key.
+echo (it can be retrieved from your application in the Developer Portal, under the name Secret Key)
 set /p "_clientSecret=Client secret: "
+
+echo Enter your application's tenant ID.
 set /p "_tenantId=Tenant ID: "
 
 REM Internal configuration.
@@ -20,6 +26,7 @@ set "_authTokenApiBaseUrl=https://api.raet.com/authentication"
 set "_fileApiBaseUrl=https://api.raet.com/mft/v1.0"
 
 REM Retrieve the authentication token.
+
 echo Retrieving the authentication token...
 
 for /f "delims=" %%i in (' ^
@@ -36,6 +43,7 @@ set "_token=%_afterTokenKey:"=" & set "_afterToken=%"
 echo Authentication token retrieved.
 
 REM List the files.
+
 echo Calling the 'list' endpoint...
 
 for /f "delims=" %%i in (' ^
