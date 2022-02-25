@@ -1,12 +1,17 @@
 <Configuration>
     <Credentials>
-        <ApiKey>xZPYRNAxfu9KjRQ1J6u54soyqQICR2AU</ApiKey>
-        <SecretKey>mXKb16RfwLHAFKhw</SecretKey>
+        <ApiKey>EnterYourClientId</ApiKey>
+        <SecretKey>EnterYourClientSecret</SecretKey>
     </Credentials>
-    <TenantId>sandbox</TenantId>
+    <TenantId>EnterYourTenantId</TenantId>
+
+    <Download>
+        <Role>Subscriber</Role>
+        <Path>EnterTheFolderPathWhereYouWantToDownloadTheFiles (e.g. C:\Visma\File API\Download)</Path>
+    </Download>
 
     <List>
-        <!-- Here you can find a a lot of examples for filtering the files.
+        <!-- Here you can find several examples for filtering the files.
         In order to use any of the filters, just uncomment the desired <Filter> line and comment the rest.
         You can also create your own filter. Check the File API documentation to see all available filters. -->
 
