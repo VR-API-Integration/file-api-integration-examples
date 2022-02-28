@@ -1,10 +1,51 @@
-# This example shows how to call the 'list' endpoint of the File API with filters in order to retrieve the information of the specified files
+# This example shows how to download all the files specified in a filter
 
-Write-Host "================================================"
-Write-Host "File API example: Download available files."
-Write-Host "================================================"
+Write-Host "========================================================="
+Write-Host "File API example: Download files specified in a filter."
+Write-Host "========================================================="
 
 Write-Host "(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')"
+
+#region Helpers
+
+function Get-FileNameInfo_FileAPIHelper {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $fileName
+    )
+
+    $fileNameInfo = @{
+        Name      = $fileName
+        Extension = ""
+    }
+    
+    $splitFileName = $fileName -split "\."
+    if ($splitFileName.Length -gt 1) {
+        $fileNameInfo.Name = $splitFileName[0..($splitFileName.Length - 2)] -Join "."
+        $fileNameInfo.Extension = ".$($splitFileName[-1])"
+    }
+
+    return $fileNameInfo
+}
+
+function ConvertTo-UniqueName_FileAPIHelper {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $fileName
+    )
+
+    $fileNameInfo = Get-FileNameInfo_FileAPIHelper $fileName
+    $fileNameWithoutExtension = $fileNameInfo.Name
+    $fileExtension = $fileNameInfo.Extension
+    $timestamp = Get-Date -Format FileDateTimeUniversal
+
+    $uniqueFileName =  "$($fileNameWithoutExtension) - $($timestamp)$($fileExtension)"
+    return $uniqueFileName
+}
+
+#endregion
 
 #region Configuration
 
@@ -106,14 +147,11 @@ $downloadBody = @{
 
 foreach ($fileToDownload in $filesToDownload) {
     Write-Host "Downloading file <$($fileToDownload.Id)> with name <$($fileToDownload.Name)>."
+
     if (($ensureUniqueNames -eq $true) -and (Test-Path "$($downloadPath)\$($fileToDownload.Name)" -PathType Leaf)) {
-        Write-Host "There is already a file with the same name in the specified path."
-        Write-Host "Renaming the file to be downloaded."
-        $fileNameWithoutExtension = Split-Path $fileToDownload.Name -LeafBase # XXX This shit doesn't work, create your own method.
-        $fileExtension = Split-Path $fileToDownload.Name -Extension
-        $timestamp = Get-Date -Format FileDateTimeUniversal
-        $fileToDownload.Name = "$($fileNameWithoutExtension) - $($timestamp)$($fileExtension)"
-        Write-Host "File has been renamed to <$($fileToDownload.Name)>."
+        Write-Host "There is already a file with the same name in the download path. Renaming the file to be downloaded..."
+        $fileToDownload.Name = ConvertTo-UniqueName_FileAPIHelper $fileToDownload.Name
+        Write-Host "File will be downloaded with name <$($fileToDownload.Name)>."
     }
 
     Invoke-RestMethod `
