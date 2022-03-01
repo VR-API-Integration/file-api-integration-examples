@@ -41,18 +41,103 @@ function ConvertTo-UniqueName_FileAPIHelper {
     $fileExtension = $fileNameInfo.Extension
     $timestamp = Get-Date -Format FileDateTimeUniversal
 
-    $uniqueFileName =  "$($fileNameWithoutExtension) - $($timestamp)$($fileExtension)"
+    $uniqueFileName = "$($fileNameWithoutExtension) - $($timestamp)$($fileExtension)"
     return $uniqueFileName
 }
 
+class DownloadChunkManager {
+    [long]$ChunkStart
+    [long]$ChunkEnd
+
+    hidden [string] $_fileApiBaseUrl
+    hidden [string] $_fileId
+    hidden [long] $_fileSize
+    hidden [long] $_chunkSize
+    hidden [string] $_fullDownloadPath
+    hidden [string] $_role
+    hidden [string] $_tenantId
+    hidden [string] $_token
+
+    hidden [long] $_byteReadCount
+    hidden [PSCustomObject] $_downloadHeaders
+    hidden [PSCustomObject] $_downloadBody
+
+    DownloadChunkManager(
+        [string] $fileApiBaseUrl,
+        [string] $fileId,
+        [long] $fileSize,
+        [long] $chunkSize,
+        [string] $fullDownloadPath,
+        [string] $role,
+        [string] $tenantId,
+        [string] $token
+    ) {
+        $this._fileApiBaseUrl = $fileApiBaseUrl
+        $this._fileId = $fileId
+        $this._fileSize = $fileSize
+        $this._chunkSize = $chunksize
+        $this._fullDownloadPath = $fullDownloadPath
+        $this._role = $role
+        $this._tenantId = $tenantId
+        $this._token = $token
+
+        $this.RestartValues()
+    }
+
+    [void] NextChunk() {
+        $this._downloadHeaders.Range = "bytes=$($this.ChunkStart)-$($this.ChunkEnd)"
+
+        Invoke-RestMethod `
+            -Method "Get" `
+            -Uri "$($this._fileApiBaseUrl)/files/$($this._fileId)" `
+            -Headers $this._downloadHeaders `
+            -Body $this._downloadBody `
+            -OutFile $this._fullDownloadPath
+
+        $this.UpdateValues()
+    }
+
+    [bool] HasFinished() {
+        return $this._byteReadCount -ge ($this._fileSize - 1)
+    }
+
+    [void] RestartValues() {
+        $this.ChunkStart = 0
+        $this.ChunkEnd = $this.ChunkStart + $this._chunkSize - 1
+
+        $this._byteReadCount = 0
+        $this._downloadHeaders = @{
+            "x-raet-tenant-id" = $this._tenantId;
+            "Authorization"    = "Bearer $($this._token)";
+            "Accept"           = "application/octet-stream";
+        }
+        $this._downloadBody = @{
+            "role" = $this._role;
+        }
+    }
+
+    hidden [void] UpdateValues() {
+        $this._byteReadCount += $this.ChunkEnd - $this.ChunkStart + 1
+        $this.ChunkStart = $this.ChunkEnd + 1
+
+        if (($this.ChunkEnd + $this._chunkSize) -ge $this._fileSize) {
+            $this.ChunkEnd = $this._fileSize - 1
+        }
+        else {
+            $this.ChunkEnd = $this.ChunkEnd + $this._chunkSize
+        }
+    }
+}
+
 #endregion
+
+#region Program
 
 #region Configuration
 
 # XXX
 # $configPath = "$($PSScriptRoot)\config.xml"
 $configPath = "C:\Users\AlbertoInf\Inbox\PBI FTaaS Improve curl examples\config.xml"
-# XXX Ensure you can actually use the [xml] thing.
 [xml]$configDocument = Get-Content $configPath
 $config = $configDocument.Configuration
 
@@ -64,6 +149,8 @@ $listFilter = $config.List.Filter
 $role = $Config.Download.Role
 $downloadPath = $config.Download.Path
 $ensureUniqueNames = $config.Download.EnsureUniqueNames
+# $maxChunkSize = ([long]$config.Download.MaxChunkSizeMB) * 1024 * 1024
+$maxChunkSize = 30 # XXX
 
 $authTokenApiBaseUrl = "https://api.raet.com/authentication"
 $fileApiBaseUrl = "https://api.raet.com/mft/v1.0"
@@ -114,6 +201,7 @@ Write-Host "Calling the 'list' endpoint..."
 #     $filesToDownload += @{
 #         Id   = $fileData.fileId
 #         Name = $fileData.fileName
+#         Size = $fileData.fileSize
 #     }
 # }
 
@@ -121,11 +209,13 @@ $filesToDownload = @(
     @{
         Id   = "c5d7438e-5c29-47e7-b518-01e5a39d6711"
         Name = "sandbox_test_file.txt"
-    },
-    @{
-        Id   = "d92ffb21-7938-488b-a405-bcbc9e0a9696"
-        Name = "sandbox_test_file.xml"
+        Size = 33
     }
+    # @{
+    #     Id   = "d92ffb21-7938-488b-a405-bcbc9e0a9696"
+    #     Name = "sandbox_test_file.xml"
+    #     Size = 107
+    # }
 )
 
 Write-Host "List of files retrieved."
@@ -136,14 +226,14 @@ Write-Host "List of files retrieved."
 
 Write-Host "Calling the 'download' endpoint..."
 
-$downloadHeaders = @{
-    "x-raet-tenant-id" = $tenantId;
-    "Authorization"    = "Bearer $($token)";
-    "Accept"           = "application/octet-stream";
-}
-$downloadBody = @{
-    "role" = $role;
-}
+# $downloadHeaders = @{
+#     "x-raet-tenant-id" = $tenantId;
+#     "Authorization"    = "Bearer $($token)";
+#     "Accept"           = "application/octet-stream";
+# }
+# $downloadBody = @{
+#     "role" = $role;
+# }
 
 foreach ($fileToDownload in $filesToDownload) {
     Write-Host "Downloading file <$($fileToDownload.Id)> with name <$($fileToDownload.Name)>."
@@ -154,15 +244,33 @@ foreach ($fileToDownload in $filesToDownload) {
         Write-Host "File will be downloaded with name <$($fileToDownload.Name)>."
     }
 
-    Invoke-RestMethod `
-        -Method "Get" `
-        -Uri "$($fileApiBaseUrl)/files/$($fileToDownload.Id)" `
-        -Headers $downloadHeaders  `
-        -Body $downloadBody -OutFile "$($downloadPath)\$($fileToDownload.Name)"
+    [DownloadChunkManager] $downloadChunkManager = [DownloadChunkManager]::new(
+        $fileApiBaseUrl,
+        $fileToDownload.Id,
+        $fileToDownload.Size,
+        $maxChunkSize,
+        "$($downloadPath)\$($fileToDownload.Name)",
+        $role,
+        $tenantId,
+        $token
+    )
+
+    while (!$downloadChunkManager.HasFinished()) {
+        $downloadChunkManager.NextChunk()
+    }
+
+    # Invoke-RestMethod `
+    #     -Method "Get" `
+    #     -Uri "$($fileApiBaseUrl)/files/$($fileToDownload.Id)" `
+    #     -Headers $downloadHeaders `
+    #     -Body $downloadBody `
+    #     -OutFile "$($downloadPath)\$($fileToDownload.Name)"
         
     Write-Host "File <$($fileToDownload.Id)> with name <$($fileToDownload.Name)> was downloaded."
 }
 
 Write-Host "All files were downloaded. You can find them in $($downloadPath)"
+
+#endregion
 
 #endregion

@@ -8,6 +8,8 @@
     <Download>
         <Role>Subscriber</Role>
         <Path>EnterTheFolderPathWhereYouWantToDownloadTheFiles (e.g. C:\Visma\File API\Download)</Path>
+        <EnsureUniqueNames>true</EnsureUniqueNames>
+        <MaxChunkSizeMB>4</MaxChunkSizeMB>
     </Download>
 
     <List>
