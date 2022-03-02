@@ -50,6 +50,7 @@ class DownloadChunkManager {
     [long]$ChunkEnd
 
     hidden [string] $_fileApiBaseUrl
+    hidden [string] $_fileApiDownloadUrl
     hidden [string] $_fileId
     hidden [long] $_fileSize
     hidden [long] $_chunkSize
@@ -59,8 +60,14 @@ class DownloadChunkManager {
     hidden [string] $_token
 
     hidden [long] $_byteReadCount
+    hidden [long] $_bufferSize
+    # hidden [string[]] $_downloadHeaders
     hidden [PSCustomObject] $_downloadHeaders
     hidden [PSCustomObject] $_downloadBody
+
+    hidden [bool] $_isFirstRequest
+    hidden [string] $_chunksUniqueIdentifier
+    hidden [int] $_chunkCount
 
     DownloadChunkManager(
         [string] $fileApiBaseUrl,
@@ -81,42 +88,67 @@ class DownloadChunkManager {
         $this._tenantId = $tenantId
         $this._token = $token
 
-        $this.RestartValues()
+        $this.StartValues()
     }
 
-    [void] NextChunk() {
-        $this._downloadHeaders.Range = "bytes=$($this.ChunkStart)-$($this.ChunkEnd)"
+    [void] Download() {
+        # XXX Check what happens if the path doesn't exist.
+        # XXX I think it would be better to name the files .tmp and change the extension after the file is downloaded.
+        $streamWriter = [System.IO.StreamWriter]::new($this._fullDownloadPath)
 
-        Invoke-RestMethod `
-            -Method "Get" `
-            -Uri "$($this._fileApiBaseUrl)/files/$($this._fileId)" `
-            -Headers $this._downloadHeaders `
-            -Body $this._downloadBody `
-            -OutFile $this._fullDownloadPath
+        while (-not $this.HasFinished()) {
+            $response = $this.NextChunk()
+
+            $streamReader = [System.IO.StreamReader]::new($response.GetResponseStream())
+            # $streamReader = [System.IO.StreamReader]::new($response.GetResponseStream(), [System.Text.Encoding]::Default, $true)
+            $buffer = [char[]]::new($this._bufferSize)
+    
+            while ($bytesRead = $streamReader.Read($buffer, 0, $buffer.Length)) {
+                $streamWriter.Write($buffer, 0, $bytesRead) # XXX Check what happens if the path doesn't exist.
+                $streamWriter.Flush()
+            }
+    
+            $streamReader.Dispose()
+        }
+
+        $streamWriter.Dispose()
+    }
+
+    [System.Net.WebResponse] NextChunk() {
+        $request = [System.Net.WebRequest]::Create($this._fileApiDownloadUrl)
+        $request.Method = "GET"
+        $request.Headers.Add("x-raet-tenant-id", $this._tenantId)
+        $request.Headers.Add("Authorization", "Bearer $($this._token)")
+
+        $request.Accept = "application/octet-stream"
+        $request.AddRange("bytes", $this.ChunkStart, $this.ChunkEnd)
+
+        $response = $request.GetResponse()
 
         $this.UpdateValues()
+        return $response
     }
 
     [bool] HasFinished() {
         return $this._byteReadCount -ge ($this._fileSize - 1)
     }
 
-    [void] RestartValues() {
+    [void] StartValues() {
+        $this._fileApiDownloadUrl = "$($this._fileApiBaseUrl)/files/$($this._fileId)?role=$($this._role)"
+
+        $this._chunkCount = 0
         $this.ChunkStart = 0
         $this.ChunkEnd = $this.ChunkStart + $this._chunkSize - 1
 
+        $this._bufferSize = 1024 # Put this in the config.xml. This is the memory that the script will use, so it affects the users.
+        
+        $this._isFirstRequest = $true
+        $this._chunksUniqueIdentifier = ".$(New-Guid).tmp"
         $this._byteReadCount = 0
-        $this._downloadHeaders = @{
-            "x-raet-tenant-id" = $this._tenantId;
-            "Authorization"    = "Bearer $($this._token)";
-            "Accept"           = "application/octet-stream";
-        }
-        $this._downloadBody = @{
-            "role" = $this._role;
-        }
     }
 
     hidden [void] UpdateValues() {
+        $this._chunkCount++
         $this._byteReadCount += $this.ChunkEnd - $this.ChunkStart + 1
         $this.ChunkStart = $this.ChunkEnd + 1
 
@@ -149,11 +181,13 @@ $listFilter = $config.List.Filter
 $role = $Config.Download.Role
 $downloadPath = $config.Download.Path
 $ensureUniqueNames = $config.Download.EnsureUniqueNames
-# $maxChunkSize = ([long]$config.Download.MaxChunkSizeMB) * 1024 * 1024
-$maxChunkSize = 30 # XXX
+$maxChunkSize = ([long]$config.Download.MaxChunkSizeMB) * 1024 * 1024
+# $maxChunkSize = 30 # XXX
 
-$authTokenApiBaseUrl = "https://api.raet.com/authentication"
-$fileApiBaseUrl = "https://api.raet.com/mft/v1.0"
+# $authTokenApiBaseUrl = "https://api.raet.com/authentication"
+# $fileApiBaseUrl = "https://api.raet.com/mft/v1.0"
+# $authTokenApiBaseUrl = "https://api-test.raet.com/authentication"
+$fileApiBaseUrl = "https://api-test.raet.com/mft/v1.0"
 
 #endregion
 
@@ -205,17 +239,59 @@ Write-Host "Calling the 'list' endpoint..."
 #     }
 # }
 
+# $filesToDownload = @(
+#     @{
+#         Id   = "c5d7438e-5c29-47e7-b518-01e5a39d6711"
+#         Name = "sandbox_test_file.txt"
+#         Size = 33
+#     }
+#     # @{
+#     #     Id   = "d92ffb21-7938-488b-a405-bcbc9e0a9696"
+#     #     Name = "sandbox_test_file.xml"
+#     #     Size = 107
+#     # }
+# )
+
+# $filesToDownload = @(
+#     # @{
+#     #     Id   = "177bfedb-1cf9-4d51-9450-0663e190c906"
+#     #     Name = "testFile.txt"
+#     #     Size = 8388608
+#     # },
+#     @{
+#         Id   = "ee42afe3-e95f-4e66-ab70-505d2926fdc5"
+#         Name = "testFile-small.txt"
+#         Size = 38
+#     }
+# )
+
 $filesToDownload = @(
-    @{
-        Id   = "c5d7438e-5c29-47e7-b518-01e5a39d6711"
-        Name = "sandbox_test_file.txt"
-        Size = 33
-    }
-    # @{
-    #     Id   = "d92ffb21-7938-488b-a405-bcbc9e0a9696"
-    #     Name = "sandbox_test_file.xml"
-    #     Size = 107
+    # ,@{
+    #     Id   = "10527477-3400-4d91-9db9-556225ad885c"
+    #     Name = "File_8M.txt"
+    #     Size = 8388733
     # }
+    # ,@{
+    #     Id   = "84f3b847-a62c-4ea8-8945-cbc7d1556bc9"
+    #     Name = "File_110M.txt"
+    #     Size = 112639601
+    # }
+    # ,@{
+    #     Id   = "e2ff4e01-8996-4458-a427-c952f94c95b9"
+    #     Name = "small file.txt"
+    #     Size = 3
+    # }
+    # This one doesn't work.
+    # ,@{
+    #     Id   = "638bba65-1bb8-4860-b666-397136eb5e58"
+    #     Name = "File_zipped.zip"
+    #     Size = 121505
+    # }
+    ,@{
+        Id   = "4621ad38-5b04-45ab-99fd-28661543d935"
+        Name = "small file.zip"
+        Size = 167
+    }
 )
 
 Write-Host "List of files retrieved."
@@ -255,9 +331,7 @@ foreach ($fileToDownload in $filesToDownload) {
         $token
     )
 
-    while (!$downloadChunkManager.HasFinished()) {
-        $downloadChunkManager.NextChunk()
-    }
+    $downloadChunkManager.Download()
 
     # Invoke-RestMethod `
     #     -Method "Get" `
