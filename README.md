@@ -1,9 +1,7 @@
 # FileAPI Integration Examples
 
 Collection of examples that show how to integrate the File API using different technologies like:
-
 - .NET Core
-- Powershell
 - Curl scripts
 
 ## Acknowledgements
@@ -15,4 +13,3 @@ Collection of examples that show how to integrate the File API using different t
 - [Coverlet](https://github.com/coverlet-coverage/coverlet). [License](https://github.com/coverlet-coverage/coverlet/blob/master/LICENSE).
 - [NetEscapades.Configuration](https://github.com/andrewlock/NetEscapades.Configuration). [License](https://github.com/andrewlock/NetEscapades.Configuration/blob/master/LICENSE).
 - [StreamCompare](https://github.com/neosmart/StreamCompare). [License](https://github.com/neosmart/StreamCompare/blob/master/LICENSE).
-- 
