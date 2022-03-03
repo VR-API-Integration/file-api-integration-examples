@@ -1,4 +1,5 @@
 # This example shows how to download all the files specified in a filter.
+$ErrorActionPreference = "Stop"
 
 Write-Host "========================================================="
 Write-Host "File API example: Download files specified in a filter."
@@ -35,12 +36,12 @@ $fileApiBaseUrl = "https://api-test.raet.com/mft/v1.0"
 Write-Host "----"
 Write-Host "Retrieving the authentication token."
 
-# [AuthenticationApiService] $authenticationApiService = [AuthenticationApiService]::new($authTokenApiBaseUrl)
-# $authResponse = $authenticationApiService.NewToken($clientId, $clientSecret)
-# $token = $authResponse.access_token
+$authenticationApiClient = [AuthenticationApiClient]::new($authTokenApiBaseUrl)
+$authResponse = $authenticationApiClient.NewToken($clientId, $clientSecret)
+$token = $authResponse.access_token
 
 # XXX
-$token = $config.XXXToken
+# $token = $config.XXXToken
 
 Write-Host "Authentication token retrieved."
 
@@ -54,7 +55,7 @@ if ($filter) {
     Write-Host "| Filter: $($filter)"
 }
 
-[FileApiService] $fileApiService = [FileApiService]::new(
+$fileApiClient = [FileApiClient]::new(
     $fileApiBaseUrl,
     $tenantId,
     $token
@@ -65,7 +66,7 @@ $pageSize = 20
 $isLastPage = $false
 $filesInfo = @()
 do {
-    $listResponse = $fileApiService.ListFiles($role, $pageIndex, $pageSize, $filter)
+    $listResponse = $fileApiClient.ListFiles($role, $pageIndex, $pageSize, $filter)
 
     foreach ($fileData in $listResponse.data) {
         $filesInfo += @{
@@ -101,7 +102,7 @@ foreach ($fileInfo in $filesInfo) {
         Write-Host "| New name: $($fileInfo.Name)"
     }
 
-    $fileApiService.DownloadFile($role, $fileInfo, $downloadPath)
+    $fileApiClient.DownloadFile($role, $fileInfo, $downloadPath)
     $downloadedFilesCount++
         
     Write-Host "The file was downloaded."
@@ -118,12 +119,12 @@ Write-Host "| Path: $($downloadPath)"
 
 #region Classes
 
-class FileApiService {
+class FileApiClient {
     [string] $BaseUrl
     
     hidden [PSCustomObject] $_defaultHeaders
 
-    FileApiService (
+    FileApiClient (
         [string] $baseUrl,
         [string] $tenantId,
         [string] $token
@@ -160,10 +161,10 @@ class FileApiService {
     }
 }
 
-class AuthenticationApiService {
+class AuthenticationApiClient {
     hidden [string] $_baseUrl
     
-    AuthenticationApiService([string] $baseUrl) {
+    AuthenticationApiClient([string] $baseUrl) {
         $this._baseUrl = $baseUrl
     }
 
