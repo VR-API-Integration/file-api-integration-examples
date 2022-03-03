@@ -33,10 +33,11 @@ $fileApiBaseUrl = "https://api-test.raet.com/mft/v1.0"
 #region Retrieve_authentication_token
 
 Write-Host "----"
-Write-Host "Retrieving the authentication token..."
+Write-Host "Retrieving the authentication token."
 
 # [AuthenticationApiService] $authenticationApiService = [AuthenticationApiService]::new($authTokenApiBaseUrl)
-# $token = $authenticationApiService.NewToken($clientId, $clientSecret)
+# $authResponse = $authenticationApiService.NewToken($clientId, $clientSecret)
+# $token = $authResponse.access_token
 
 # XXX
 $token = $config.XXXToken
@@ -48,7 +49,10 @@ Write-Host "Authentication token retrieved."
 #region List
 
 Write-Host "----"
-Write-Host "Retrieving the files that fulfill the filter <$($filter)>..."
+Write-Host "Retrieving list of files."
+if ($filter) {
+    Write-Host "| Filter: $($filter)"
+}
 
 [FileApiService] $fileApiService = [FileApiService]::new(
     $fileApiBaseUrl,
@@ -142,15 +146,17 @@ class FileApiService {
         return $response
     }
 
-    [void] DownloadFile([string] $role, [PSCustomObject] $fileInfo, [string] $downloadPath) {
+    [PSCustomObject] DownloadFile([string] $role, [PSCustomObject] $fileInfo, [string] $downloadPath) {
         $headers = $this._defaultHeaders
         $headers.Accept = "application/octet-stream"
 
-        Invoke-RestMethod `
+        $response = Invoke-RestMethod `
             -Method "Get" `
             -Uri "$($this.BaseUrl)/files/$($fileInfo.Id)?role=$($role)" `
             -Headers $headers `
             -OutFile "$($downloadPath)\$($fileInfo.Name)"
+
+        return $response
     }
 }
 
@@ -161,7 +167,7 @@ class AuthenticationApiService {
         $this._baseUrl = $baseUrl
     }
 
-    [string] NewToken([string] $clientId, [string] $clientSecret) {
+    [PSCustomObject] NewToken([string] $clientId, [string] $clientSecret) {
         $headers = @{
             "Content-Type"  = "application/x-www-form-urlencoded";
             "Cache-Control" = "no-cache";
@@ -178,9 +184,7 @@ class AuthenticationApiService {
             -Headers $headers `
             -Body $body
 
-        $token = $response.access_token
-
-        return $token
+        return $response
     }
 }
 
