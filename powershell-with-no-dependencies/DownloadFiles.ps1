@@ -1,4 +1,4 @@
-# This example shows how to download all the files specified in a filter
+# This example shows how to download all the files specified in a filter.
 
 Write-Host "========================================================="
 Write-Host "File API example: Download files specified in a filter."
@@ -47,66 +47,71 @@ function ConvertTo-UniqueName_FileAPIHelper {
 
 class FileApiService {
     [string] $BaseUrl
-    [int] $PageIndex
-    [bool] $IsLastPage
     
-    hidden [int] $_pageSize
-    hidden [int] $_totalFilesAmount
     hidden [PSCustomObject] $_defaultHeaders
-    hidden [string] $_listFilter
-    hidden [string] $_role
 
     FileApiService (
         [string] $baseUrl,
-        [string] $role,
         [string] $tenantId,
-        [string] $token,
-        [string] $listFilter
+        [string] $token
     ) {
         $this.BaseUrl = $baseUrl
-        $this.PageIndex = 0
-        $this.IsLastPage = $false
-
-        $this._role = $role
-        $this._pageSize = 20
-        $this._listFilter = $listFilter
         $this._defaultHeaders = @{
             "x-raet-tenant-id" = $tenantId;
             "Authorization"    = "Bearer $($token)";
         }
     }
 
-    [PSCustomObject] NextListPage() {
+    [PSCustomObject] ListFiles([string] $role, [int] $pageIndex, [int] $pageSize, [string] $filter) {
+        $headers = $this._defaultHeaders
+
         $response = Invoke-RestMethod `
             -Method "Get" `
-            -Uri "$($this.BaseUrl)/files?role=$($this._role)&pageIndex=$($this.PageIndex)&pageSize=$($this._pageSize)&`$filter=$($this._listFilter)&`$orderBy=uploadDate asc" `
-            -Headers $this._defaultHeaders `
-        
-        $files = @()
-        foreach ($fileData in $response.data) {
-            $files += @{
-                Id   = $fileData.fileId
-                Name = $fileData.fileName
-                Size = $fileData.fileSize
-            }
-        }
+            -Uri "$($this.BaseUrl)/files?role=$($role)&pageIndex=$($pageIndex)&pageSize=$($pageSize)&`$filter=$($filter)&`$orderBy=uploadDate asc" `
+            -Headers $headers
 
-        $this._totalFilesAmount = $response.count
-        $this.IsLastPage = $this._pageSize * ($this.PageIndex + 1) -ge $this._totalFilesAmount
-        
-        $this.PageIndex++
-        return $files
+        return $response
     }
 
-    [void] DownloadFile([PSCustomObject] $fileInfo, [string] $downloadPath) {
+    [void] DownloadFile([string] $role, [PSCustomObject] $fileInfo, [string] $downloadPath) {
         $headers = $this._defaultHeaders
         $headers.Accept = "application/octet-stream"
 
         Invoke-RestMethod `
             -Method "Get" `
-            -Uri "$($this.BaseUrl)/files/$($fileInfo.Id)?role=$($this._role)" `
+            -Uri "$($this.BaseUrl)/files/$($fileInfo.Id)?role=$($role)" `
             -Headers $headers `
             -OutFile "$($downloadPath)\$($fileInfo.Name)"
+    }
+}
+
+class AuthenticationApiService {
+    hidden [string] $_baseUrl
+    
+    AuthenticationApiService([string] $baseUrl) {
+        $this._baseUrl = $baseUrl
+    }
+
+    [string] NewToken([string] $clientId, [string] $clientSecret) {
+        $headers = @{
+            "Content-Type"  = "application/x-www-form-urlencoded";
+            "Cache-Control" = "no-cache";
+        }
+        $body = @{
+            "grant_type"    = "client_credentials";
+            "client_id"     = $clientId;
+            "client_secret" = $clientSecret;
+        }
+
+        $response = Invoke-RestMethod `
+            -Method "Post" `
+            -Uri "$($this._baseUrl)/token" `
+            -Headers $headers `
+            -Body $body
+
+        $token = $response.access_token
+
+        return $token
     }
 }
 
@@ -125,37 +130,26 @@ $config = $configDocument.Configuration
 $clientId = $config.Credentials.ClientId
 $clientSecret = $config.Credentials.ClientSecret
 $tenantId = $config.TenantId
-$listFilter = $config.List.Filter
+$filter = $config.List.Filter
 
 $role = $Config.Download.Role
 $downloadPath = $config.Download.Path
 $ensureUniqueNames = $config.Download.EnsureUniqueNames
-$maxChunkSize = ([long]$config.Download.MaxChunkSizeMB) * 1024 * 1024
-# $maxChunkSize = 30 # XXX
 
 # $authTokenApiBaseUrl = "https://api.raet.com/authentication"
 # $fileApiBaseUrl = "https://api.raet.com/mft/v1.0"
-# $authTokenApiBaseUrl = "https://api-test.raet.com/authentication"
+$authTokenApiBaseUrl = "https://api-test.raet.com/authentication"
 $fileApiBaseUrl = "https://api-test.raet.com/mft/v1.0"
 
 #endregion
 
 #region Retrieve_authentication_token
 
+Write-Host "----"
 Write-Host "Retrieving the authentication token..."
 
-# $authHeaders = @{
-#     "Content-Type"  = "application/x-www-form-urlencoded";
-#     "Cache-Control" = "no-cache";
-# }
-# $authBody = @{
-#     "grant_type"    = "client_credentials";
-#     "client_id"     = $clientId;
-#     "client_secret" = $clientSecret;
-# }
-
-# $authTokenResponse = Invoke-RestMethod -Method "Post" -Uri "$($authTokenApiBaseUrl)/token" -Headers $authHeaders -Body $authBody
-# $token = $authTokenResponse.access_token
+# [AuthenticationApiService] $authenticationApiService = [AuthenticationApiService]::new($authTokenApiBaseUrl)
+# $token = $authenticationApiService.NewToken($clientId, $clientSecret)
 
 # XXX
 $token = $config.XXXToken
@@ -164,38 +158,67 @@ Write-Host "Authentication token retrieved."
 
 #endregion
 
-Write-Host "Calling the 'list' endpoint..."
+#region List
+
+Write-Host "----"
+Write-Host "Retrieving the files that fulfill the filter <$($filter)>..."
 
 [FileApiService] $fileApiService = [FileApiService]::new(
     $fileApiBaseUrl,
-    $role,
     $tenantId,
-    $token,
-    $listFilter
+    $token
 )
 
-Write-Host "List of files retrieved."
+$pageIndex = 0
+$pageSize = 20
+$isLastPage = $false
+$filesInfo = @()
+do {
+    $listResponse = $fileApiService.ListFiles($role, $pageIndex, $pageSize, $filter)
 
-Write-Host "Calling the 'download' endpoint..."
-
-while (-not $fileApiService.IsLastPage) {
-    $filesInfo = $fileApiService.NextListPage()
-
-    foreach ($fileInfo in $filesInfo) {
-        Write-Host "Downloading file <$($fileInfo.Id)> with name <$($fileInfo.Name)>."
-
-        if (($ensureUniqueNames -eq $true) -and (Test-Path "$($downloadPath)\$($fileInfo.Name)" -PathType Leaf)) {
-            Write-Host "There is already a file with the same name in the download path. Renaming the file to be downloaded..."
-            $fileInfo.Name = ConvertTo-UniqueName_FileAPIHelper $fileInfo.Name
-            Write-Host "File will be downloaded with name <$($fileInfo.Name)>."
+    foreach ($fileData in $listResponse.data) {
+        $filesInfo += @{
+            Id   = $fileData.fileId
+            Name = $fileData.fileName
+            Size = $fileData.fileSize
         }
-
-        $fileApiService.DownloadFile($fileInfo, $downloadPath)
-        
-        Write-Host "File <$($fileInfo.Id)> with name <$($fileInfo.Name)> was downloaded."
     }
 
-    Write-Host "All files were downloaded. You can find them in $($downloadPath)"
+    $isLastPage = $pageSize * ($pageIndex + 1) -ge $listResponse.count
+    $pageIndex++
+} while (-not $isLastPage)
+
+Write-Host "$($filesInfo.Count) files retrieved."
+
+#endregion
+
+#region Download
+
+$downloadedFilesCount = 0
+foreach ($fileInfo in $filesInfo) {
+    Write-Host "----"
+    Write-Host "Downloading file $($downloadedFilesCount + 1)/$($filesInfo.Count)."
+    Write-Host "| ID: $($fileInfo.Id)"
+    Write-Host "| Name: $($fileInfo.Name)"
+
+    if (($ensureUniqueNames -eq $true) -and (Test-Path "$($downloadPath)\$($fileInfo.Name)" -PathType Leaf)) {
+        Write-Host "There is already a file with the same name in the download path."
+
+        $fileInfo.Name = ConvertTo-UniqueName_FileAPIHelper $fileInfo.Name
+
+        Write-Host "| New name: $($fileInfo.Name)"
+    }
+
+    $fileApiService.DownloadFile($role, $fileInfo, $downloadPath)
+    $downloadedFilesCount++
+        
+    Write-Host "The file was downloaded."
 }
+
+Write-Host "----"
+Write-Host "All files were downloaded."
+Write-Host "| Path: $($downloadPath)"
+
+#endregion
 
 #endregion
