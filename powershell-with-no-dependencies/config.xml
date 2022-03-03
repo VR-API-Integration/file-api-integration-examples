@@ -1,7 +1,7 @@
 <Configuration>
     <Credentials>
-        <ApiKey>EnterYourClientId</ApiKey>
-        <SecretKey>EnterYourClientSecret</SecretKey>
+        <ClientId>EnterYourClientId</ClientId>
+        <ClientSecret>EnterYourClientSecret</ClientSecret>
     </Credentials>
     <TenantId>EnterYourTenantId</TenantId>
 

@@ -45,119 +45,68 @@ function ConvertTo-UniqueName_FileAPIHelper {
     return $uniqueFileName
 }
 
-class DownloadChunkManager {
-    [long]$ChunkStart
-    [long]$ChunkEnd
-
-    hidden [string] $_fileApiBaseUrl
-    hidden [string] $_fileApiDownloadUrl
-    hidden [string] $_fileId
-    hidden [long] $_fileSize
-    hidden [long] $_chunkSize
-    hidden [string] $_fullDownloadPath
+class FileApiService {
+    [string] $BaseUrl
+    [int] $PageIndex
+    [bool] $IsLastPage
+    
+    hidden [int] $_pageSize
+    hidden [int] $_totalFilesAmount
+    hidden [PSCustomObject] $_defaultHeaders
+    hidden [string] $_listFilter
     hidden [string] $_role
-    hidden [string] $_tenantId
-    hidden [string] $_token
 
-    hidden [long] $_byteReadCount
-    hidden [long] $_bufferSize
-    # hidden [string[]] $_downloadHeaders
-    hidden [PSCustomObject] $_downloadHeaders
-    hidden [PSCustomObject] $_downloadBody
-
-    hidden [bool] $_isFirstRequest
-    hidden [string] $_chunksUniqueIdentifier
-    hidden [int] $_chunkCount
-
-    DownloadChunkManager(
-        [string] $fileApiBaseUrl,
-        [string] $fileId,
-        [long] $fileSize,
-        [long] $chunkSize,
-        [string] $fullDownloadPath,
+    FileApiService (
+        [string] $baseUrl,
         [string] $role,
         [string] $tenantId,
-        [string] $token
+        [string] $token,
+        [string] $listFilter
     ) {
-        $this._fileApiBaseUrl = $fileApiBaseUrl
-        $this._fileId = $fileId
-        $this._fileSize = $fileSize
-        $this._chunkSize = $chunksize
-        $this._fullDownloadPath = $fullDownloadPath
+        $this.BaseUrl = $baseUrl
+        $this.PageIndex = 0
+        $this.IsLastPage = $false
+
         $this._role = $role
-        $this._tenantId = $tenantId
-        $this._token = $token
-
-        $this.StartValues()
-    }
-
-    [void] Download() {
-        # XXX Check what happens if the path doesn't exist.
-        # XXX I think it would be better to name the files .tmp and change the extension after the file is downloaded.
-        $streamWriter = [System.IO.StreamWriter]::new($this._fullDownloadPath)
-
-        while (-not $this.HasFinished()) {
-            $response = $this.NextChunk()
-
-            $streamReader = [System.IO.StreamReader]::new($response.GetResponseStream())
-            # $streamReader = [System.IO.StreamReader]::new($response.GetResponseStream(), [System.Text.Encoding]::Default, $true)
-            $buffer = [char[]]::new($this._bufferSize)
-    
-            while ($bytesRead = $streamReader.Read($buffer, 0, $buffer.Length)) {
-                $streamWriter.Write($buffer, 0, $bytesRead) # XXX Check what happens if the path doesn't exist.
-                $streamWriter.Flush()
-            }
-    
-            $streamReader.Dispose()
+        $this._pageSize = 20
+        $this._listFilter = $listFilter
+        $this._defaultHeaders = @{
+            "x-raet-tenant-id" = $tenantId;
+            "Authorization"    = "Bearer $($token)";
         }
-
-        $streamWriter.Dispose()
     }
 
-    [System.Net.WebResponse] NextChunk() {
-        $request = [System.Net.WebRequest]::Create($this._fileApiDownloadUrl)
-        $request.Method = "GET"
-        $request.Headers.Add("x-raet-tenant-id", $this._tenantId)
-        $request.Headers.Add("Authorization", "Bearer $($this._token)")
-
-        $request.Accept = "application/octet-stream"
-        $request.AddRange("bytes", $this.ChunkStart, $this.ChunkEnd)
-
-        $response = $request.GetResponse()
-
-        $this.UpdateValues()
-        return $response
-    }
-
-    [bool] HasFinished() {
-        return $this._byteReadCount -ge ($this._fileSize - 1)
-    }
-
-    [void] StartValues() {
-        $this._fileApiDownloadUrl = "$($this._fileApiBaseUrl)/files/$($this._fileId)?role=$($this._role)"
-
-        $this._chunkCount = 0
-        $this.ChunkStart = 0
-        $this.ChunkEnd = $this.ChunkStart + $this._chunkSize - 1
-
-        $this._bufferSize = 1024 # Put this in the config.xml. This is the memory that the script will use, so it affects the users.
+    [PSCustomObject] NextListPage() {
+        $response = Invoke-RestMethod `
+            -Method "Get" `
+            -Uri "$($this.BaseUrl)/files?role=$($this._role)&pageIndex=$($this.PageIndex)&pageSize=$($this._pageSize)&`$filter=$($this._listFilter)&`$orderBy=uploadDate asc" `
+            -Headers $this._defaultHeaders `
         
-        $this._isFirstRequest = $true
-        $this._chunksUniqueIdentifier = ".$(New-Guid).tmp"
-        $this._byteReadCount = 0
+        $files = @()
+        foreach ($fileData in $response.data) {
+            $files += @{
+                Id   = $fileData.fileId
+                Name = $fileData.fileName
+                Size = $fileData.fileSize
+            }
+        }
+
+        $this._totalFilesAmount = $response.count
+        $this.IsLastPage = $this._pageSize * ($this.PageIndex + 1) -ge $this._totalFilesAmount
+        
+        $this.PageIndex++
+        return $files
     }
 
-    hidden [void] UpdateValues() {
-        $this._chunkCount++
-        $this._byteReadCount += $this.ChunkEnd - $this.ChunkStart + 1
-        $this.ChunkStart = $this.ChunkEnd + 1
+    [void] DownloadFile([PSCustomObject] $fileInfo, [string] $downloadPath) {
+        $headers = $this._defaultHeaders
+        $headers.Accept = "application/octet-stream"
 
-        if (($this.ChunkEnd + $this._chunkSize) -ge $this._fileSize) {
-            $this.ChunkEnd = $this._fileSize - 1
-        }
-        else {
-            $this.ChunkEnd = $this.ChunkEnd + $this._chunkSize
-        }
+        Invoke-RestMethod `
+            -Method "Get" `
+            -Uri "$($this.BaseUrl)/files/$($fileInfo.Id)?role=$($this._role)" `
+            -Headers $headers `
+            -OutFile "$($downloadPath)\$($fileInfo.Name)"
     }
 }
 
@@ -173,8 +122,8 @@ $configPath = "C:\Users\AlbertoInf\Inbox\PBI FTaaS Improve curl examples\config.
 [xml]$configDocument = Get-Content $configPath
 $config = $configDocument.Configuration
 
-$clientId = $config.Credentials.ApiKey
-$clientSecret = $config.Credentials.SecretKey
+$clientId = $config.Credentials.ClientId
+$clientSecret = $config.Credentials.ClientSecret
 $tenantId = $config.TenantId
 $listFilter = $config.List.Filter
 
@@ -215,136 +164,38 @@ Write-Host "Authentication token retrieved."
 
 #endregion
 
-#region List_files
-
 Write-Host "Calling the 'list' endpoint..."
 
-# $listHeaders = @{
-#     "x-raet-tenant-id" = $tenantId;
-#     "Authorization"    = "Bearer $($token)";
-# }
-# $listBody = @{
-#     '$filter' = $listFilter;
-#     "role"    = $role
-# }
-
-# $listResponse = Invoke-RestMethod -Method "Get" -Uri "$($fileApiBaseUrl)/files" -Headers $listHeaders -Body $listBody
-# # $randomBinFiles = $content.links | where {$_.innerHTML -like 'random*'} | select href
-# $filesToDownload = @()
-# foreach ($fileData in $listResponse.data) {
-#     $filesToDownload += @{
-#         Id   = $fileData.fileId
-#         Name = $fileData.fileName
-#         Size = $fileData.fileSize
-#     }
-# }
-
-# $filesToDownload = @(
-#     @{
-#         Id   = "c5d7438e-5c29-47e7-b518-01e5a39d6711"
-#         Name = "sandbox_test_file.txt"
-#         Size = 33
-#     }
-#     # @{
-#     #     Id   = "d92ffb21-7938-488b-a405-bcbc9e0a9696"
-#     #     Name = "sandbox_test_file.xml"
-#     #     Size = 107
-#     # }
-# )
-
-# $filesToDownload = @(
-#     # @{
-#     #     Id   = "177bfedb-1cf9-4d51-9450-0663e190c906"
-#     #     Name = "testFile.txt"
-#     #     Size = 8388608
-#     # },
-#     @{
-#         Id   = "ee42afe3-e95f-4e66-ab70-505d2926fdc5"
-#         Name = "testFile-small.txt"
-#         Size = 38
-#     }
-# )
-
-$filesToDownload = @(
-    # ,@{
-    #     Id   = "10527477-3400-4d91-9db9-556225ad885c"
-    #     Name = "File_8M.txt"
-    #     Size = 8388733
-    # }
-    # ,@{
-    #     Id   = "84f3b847-a62c-4ea8-8945-cbc7d1556bc9"
-    #     Name = "File_110M.txt"
-    #     Size = 112639601
-    # }
-    # ,@{
-    #     Id   = "e2ff4e01-8996-4458-a427-c952f94c95b9"
-    #     Name = "small file.txt"
-    #     Size = 3
-    # }
-    # This one doesn't work.
-    # ,@{
-    #     Id   = "638bba65-1bb8-4860-b666-397136eb5e58"
-    #     Name = "File_zipped.zip"
-    #     Size = 121505
-    # }
-    ,@{
-        Id   = "4621ad38-5b04-45ab-99fd-28661543d935"
-        Name = "small file.zip"
-        Size = 167
-    }
+[FileApiService] $fileApiService = [FileApiService]::new(
+    $fileApiBaseUrl,
+    $role,
+    $tenantId,
+    $token,
+    $listFilter
 )
 
 Write-Host "List of files retrieved."
 
-#endregion
-
-#region Download_files
-
 Write-Host "Calling the 'download' endpoint..."
 
-# $downloadHeaders = @{
-#     "x-raet-tenant-id" = $tenantId;
-#     "Authorization"    = "Bearer $($token)";
-#     "Accept"           = "application/octet-stream";
-# }
-# $downloadBody = @{
-#     "role" = $role;
-# }
+while (-not $fileApiService.IsLastPage) {
+    $filesInfo = $fileApiService.NextListPage()
 
-foreach ($fileToDownload in $filesToDownload) {
-    Write-Host "Downloading file <$($fileToDownload.Id)> with name <$($fileToDownload.Name)>."
+    foreach ($fileInfo in $filesInfo) {
+        Write-Host "Downloading file <$($fileInfo.Id)> with name <$($fileInfo.Name)>."
 
-    if (($ensureUniqueNames -eq $true) -and (Test-Path "$($downloadPath)\$($fileToDownload.Name)" -PathType Leaf)) {
-        Write-Host "There is already a file with the same name in the download path. Renaming the file to be downloaded..."
-        $fileToDownload.Name = ConvertTo-UniqueName_FileAPIHelper $fileToDownload.Name
-        Write-Host "File will be downloaded with name <$($fileToDownload.Name)>."
+        if (($ensureUniqueNames -eq $true) -and (Test-Path "$($downloadPath)\$($fileInfo.Name)" -PathType Leaf)) {
+            Write-Host "There is already a file with the same name in the download path. Renaming the file to be downloaded..."
+            $fileInfo.Name = ConvertTo-UniqueName_FileAPIHelper $fileInfo.Name
+            Write-Host "File will be downloaded with name <$($fileInfo.Name)>."
+        }
+
+        $fileApiService.DownloadFile($fileInfo, $downloadPath)
+        
+        Write-Host "File <$($fileInfo.Id)> with name <$($fileInfo.Name)> was downloaded."
     }
 
-    [DownloadChunkManager] $downloadChunkManager = [DownloadChunkManager]::new(
-        $fileApiBaseUrl,
-        $fileToDownload.Id,
-        $fileToDownload.Size,
-        $maxChunkSize,
-        "$($downloadPath)\$($fileToDownload.Name)",
-        $role,
-        $tenantId,
-        $token
-    )
-
-    $downloadChunkManager.Download()
-
-    # Invoke-RestMethod `
-    #     -Method "Get" `
-    #     -Uri "$($fileApiBaseUrl)/files/$($fileToDownload.Id)" `
-    #     -Headers $downloadHeaders `
-    #     -Body $downloadBody `
-    #     -OutFile "$($downloadPath)\$($fileToDownload.Name)"
-        
-    Write-Host "File <$($fileToDownload.Id)> with name <$($fileToDownload.Name)> was downloaded."
+    Write-Host "All files were downloaded. You can find them in $($downloadPath)"
 }
-
-Write-Host "All files were downloaded. You can find them in $($downloadPath)"
-
-#endregion
 
 #endregion
