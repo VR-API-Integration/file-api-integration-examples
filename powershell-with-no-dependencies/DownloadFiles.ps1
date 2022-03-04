@@ -31,93 +31,117 @@ $fileApiBaseUrl = "https://api-test.raet.com/mft/v1.0"
 
 #endregion Configuration
 
-#region Retrieve_authentication_token
-
-Write-Host "----"
-Write-Host "Retrieving the authentication token."
-
-$authenticationApiClient = [AuthenticationApiClient]::new($authTokenApiBaseUrl)
-$authResponse = $authenticationApiClient.NewToken($clientId, $clientSecret)
-$token = $authResponse.access_token
-
-# XXX
-# $token = $config.XXXToken
-
-Write-Host "Authentication token retrieved."
-
-#endregion Retrieve_authentication_token
-
-#region List
-
-Write-Host "----"
-Write-Host "Retrieving list of files."
-if ($filter) {
-    Write-Host "| Filter: $($filter)"
-}
-
-$fileApiClient = [FileApiClient]::new(
-    $fileApiBaseUrl,
-    $tenantId,
-    $token
+$authenticationApiService = [AuthenticationApiService]::new(
+    [AuthenticationApiClient]::new(
+        $authTokenApiBaseUrl
+    )
 )
 
-$pageIndex = 0
-$pageSize = 20
-$isLastPage = $false
-$filesInfo = @()
-do {
-    $listResponse = $fileApiClient.ListFiles($role, $pageIndex, $pageSize, $filter)
-
-    foreach ($fileData in $listResponse.data) {
-        $filesInfo += @{
-            Id   = $fileData.fileId
-            Name = $fileData.fileName
-            Size = $fileData.fileSize
-        }
-    }
-
-    $isLastPage = $pageSize * ($pageIndex + 1) -ge $listResponse.count
-    $pageIndex++
-} while (-not $isLastPage)
-
-Write-Host "$($filesInfo.Count) files retrieved."
-
-#endregion List
-
-#region Download
-
-$downloadedFilesCount = 0
-foreach ($fileInfo in $filesInfo) {
-    Write-Host "----"
-    Write-Host "Downloading file $($downloadedFilesCount + 1)/$($filesInfo.Count)."
-    Write-Host "| ID: $($fileInfo.Id)"
-    Write-Host "| Name: $($fileInfo.Name)"
-
-    if (($ensureUniqueNames -eq $true) -and (Test-Path "$($downloadPath)\$($fileInfo.Name)" -PathType Leaf)) {
-        Write-Host "There is already a file with the same name in the download path."
-
-        # $fileInfo.Name = ConvertTo-UniqueName_FileAPIHelper $fileInfo.Name
-        $fileInfo.Name = [FileNameHelper]::ConverToUnique($fileInfo.Name) # XXX Not working.
-
-        Write-Host "| New name: $($fileInfo.Name)"
-    }
-
-    $fileApiClient.DownloadFile($role, $fileInfo, $downloadPath)
-    $downloadedFilesCount++
-        
-    Write-Host "The file was downloaded."
+try {
+    # $token = $authenticationApiService.NewToken($clientId, $clientSecret)
+    # XXX
+    $token = $config.XXXToken
+}
+catch {
+    [Helper]::WriteDetailedError($_, "Failure while retrieving the authentication token.")
+    exit 1
 }
 
-Write-Host "----"
-Write-Host "All files were downloaded."
-Write-Host "| Path: $($downloadPath)"
+$fileApiService = [FileApiService]::new(
+    [FileApiClient]::new(
+        $fileApiBaseUrl,
+        $tenantId,
+        $token
+    )
+)
 
-#endregion Download
+try {
+    $filesInfo = $fileApiService.GetFilesInfo($role, $filter)
+}
+catch {
+    [Helper]::WriteDetailedError($_, "Failure while retrieving the files.")
+    exit 1
+}
+
+try {
+    $fileApiService.DownloadFiles($role, $filesInfo, $downloadPath, $ensureUniqueNames)
+}
+catch {
+    [Helper]::WriteDetailedError($_, "Failure while downloading the files.")
+    exit 1
+}
 
 # -------- END OF THE PROGRAM --------
 # Bellow there are classes to help the readability of the program
 
 #region Classes
+
+class FileApiService {
+    hidden [FileApiClient] $_fileApiClient
+
+    FileApiService([FileApiClient] $fileApiClient) {
+        $this._fileApiClient = $fileApiClient
+    }
+
+    [PSCustomObject] GetFilesInfo([string] $role, [string] $filter) {
+        Write-Host "----"
+        Write-Host "Retrieving list of files."
+        if ($filter) {
+            Write-Host "| Filter: $($filter)"
+        }
+
+        $pageIndex = 0
+        $pageSize = 20
+        $isLastPage = $false
+        $filesInfo = @()
+        do {
+            $response = $this._fileApiClient.ListFiles($role, $pageIndex, $pageSize, $filter)
+
+            foreach ($fileData in $response.data) {
+                $filesInfo += @{
+                    Id   = $fileData.fileId
+                    Name = $fileData.fileName
+                    Size = $fileData.fileSize
+                }
+            }
+
+            $isLastPage = $pageSize * ($pageIndex + 1) -ge $response.count
+            $pageIndex++
+        } while (-not $isLastPage)
+
+        Write-Host "$($filesInfo.Count) files retrieved."
+
+        return $filesInfo
+    }
+
+    [void] DownloadFiles([string] $role, [PSCustomObject[]] $filesInfo, [string] $path, [bool] $ensureUniqueNames) {
+        $downloadedFilesCount = 0
+        foreach ($fileInfo in $filesInfo) {
+            Write-Host "----"
+            Write-Host "Downloading file $($downloadedFilesCount + 1)/$($filesInfo.Count)."
+            Write-Host "| ID: $($fileInfo.Id)"
+            Write-Host "| Name: $($fileInfo.Name)"
+
+            if (($ensureUniqueNames -eq $true) -and (Test-Path "$($path)\$($fileInfo.Name)" -PathType Leaf)) {
+                Write-Host "There is already a file with the same name in the download path."
+
+                $fileInfo.Name = [Helper]::ConverToUniqueFileName($fileInfo.Name)
+
+                Write-Host "| New name: $($fileInfo.Name)"
+            }
+
+            $this._fileApiClient.DownloadFile($role, $fileInfo, $path)
+            $downloadedFilesCount++
+        
+            Write-Host "The file was downloaded."
+        }
+
+        Write-Host "----"
+        Write-Host "All files were downloaded."
+        Write-Host "| Amount: $($downloadedFilesCount)"
+        Write-Host "| Path: $($path)"
+    }
+}
 
 class FileApiClient {
     [string] $BaseUrl
@@ -161,6 +185,26 @@ class FileApiClient {
     }
 }
 
+class AuthenticationApiService {
+    hidden [AuthenticationApiClient] $_authenticationApiClient
+
+    AuthenticationApiService([AuthenticationApiClient] $authenticationApiClient) {
+        $this._authenticationApiClient = $authenticationApiClient
+    }
+
+    [string] NewToken([string] $clientId, [string] $clientSecret) {
+        Write-Host "----"
+        Write-Host "Retrieving the authentication token."
+
+        $response = $this._authenticationApiClient.NewToken($clientId, $clientSecret)
+        $token = $response.access_token
+
+        Write-Host "Authentication token retrieved."
+
+        return $token
+    }
+}
+
 class AuthenticationApiClient {
     hidden [string] $_baseUrl
     
@@ -189,9 +233,9 @@ class AuthenticationApiClient {
     }
 }
 
-class FileNameHelper {
-    static [string] ConverToUnique([string] $fileName) {
-        $fileNameInfo = [FileNameHelper]::GetInfo($fileName)
+class Helper {
+    static [string] ConverToUniqueFileName([string] $fileName) {
+        $fileNameInfo = [Helper]::GetFileNameInfo($fileName)
         $fileNameWithoutExtension = $fileNameInfo.Name
         $fileExtension = $fileNameInfo.Extension
         $timestamp = Get-Date -Format FileDateTimeUniversal
@@ -200,7 +244,7 @@ class FileNameHelper {
         return $uniqueFileName
     }
 
-    static [PSCustomObject] GetInfo([string] $fileName) {
+    static [PSCustomObject] GetFileNameInfo([string] $fileName) {
         $fileNameInfo = @{
             Name      = $fileName
             Extension = ""
@@ -213,6 +257,27 @@ class FileNameHelper {
         }
     
         return $fileNameInfo
+    }
+
+    static [void] WriteDetailedError([System.Management.Automation.ErrorRecord] $errorRecord, [string] $genericErrorMessage) {
+        Write-Host "ERROR - $($genericErrorMessage)" -ForegroundColor "Red"
+
+        $errorMessage = "Unknown error."
+        if ($errorRecord.ErrorDetails.Message) {
+            $errorDetails = $errorRecord.ErrorDetails.Message | ConvertFrom-Json
+            if ($errorDetails.message) {
+                $errorMessage = $errorDetails.message
+            }
+            elseif ($errorDetails.error.message) {
+                $errorMessage = $errorDetails.error.message
+            }
+        }
+        elseif ($errorRecord.Exception.message) {
+            $errorMessage = $errorRecord.Exception.message
+        }
+
+        Write-Host "| Error message: $($errorMessage)" -ForegroundColor "Red"
+        Write-Host "| Line: $($errorRecord.InvocationInfo.ScriptLineNumber)" -ForegroundColor "Red"
     }
 }
 
