@@ -31,11 +31,8 @@ $fileApiBaseUrl = "https://api-test.raet.com/mft/v1.0"
 
 #endregion Configuration
 
-$authenticationApiService = [AuthenticationApiService]::new(
-    [AuthenticationApiClient]::new(
-        $authTokenApiBaseUrl
-    )
-)
+$authenticationApiClient = [AuthenticationApiClient]::new($authTokenApiBaseUrl)
+$authenticationApiService = [AuthenticationApiService]::new($authenticationApiClient)
 
 try {
     # $token = $authenticationApiService.NewToken($clientId, $clientSecret)
@@ -47,16 +44,11 @@ catch {
     exit 1
 }
 
-$fileApiService = [FileApiService]::new(
-    [FileApiClient]::new(
-        $fileApiBaseUrl,
-        $tenantId,
-        $token
-    )
-)
+$fileApiClient = [FileApiClient]::new($fileApiBaseUrl, $token, $tenantId)
+$fileApiService = [FileApiService]::new($fileApiClient, $role)
 
 try {
-    $filesInfo = $fileApiService.GetFilesInfo($role, $filter)
+    $filesInfo = $fileApiService.GetFilesInfo($filter)
 }
 catch {
     [Helper]::WriteDetailedError($_, "Failure while retrieving the files.")
@@ -64,7 +56,7 @@ catch {
 }
 
 try {
-    $fileApiService.DownloadFiles($role, $filesInfo, $downloadPath, $ensureUniqueNames)
+    $fileApiService.DownloadFiles($filesInfo, $downloadPath, $ensureUniqueNames)
 }
 catch {
     [Helper]::WriteDetailedError($_, "Failure while downloading the files.")
@@ -78,12 +70,17 @@ catch {
 
 class FileApiService {
     hidden [FileApiClient] $_fileApiClient
+    hidden [string] $_role
 
-    FileApiService([FileApiClient] $fileApiClient) {
+    FileApiService (
+        [FileApiClient] $fileApiClient,
+        [string] $role
+    ) {
         $this._fileApiClient = $fileApiClient
+        $this._role = $role
     }
 
-    [PSCustomObject] GetFilesInfo([string] $role, [string] $filter) {
+    [PSCustomObject] GetFilesInfo([string] $filter) {
         Write-Host "----"
         Write-Host "Retrieving list of files."
         if ($filter) {
@@ -95,7 +92,7 @@ class FileApiService {
         $isLastPage = $false
         $filesInfo = @()
         do {
-            $response = $this._fileApiClient.ListFiles($role, $pageIndex, $pageSize, $filter)
+            $response = $this._fileApiClient.ListFiles($this._role, $pageIndex, $pageSize, $filter)
 
             foreach ($fileData in $response.data) {
                 $filesInfo += @{
@@ -114,7 +111,7 @@ class FileApiService {
         return $filesInfo
     }
 
-    [void] DownloadFiles([string] $role, [PSCustomObject[]] $filesInfo, [string] $path, [bool] $ensureUniqueNames) {
+    [void] DownloadFiles([PSCustomObject[]] $filesInfo, [string] $path, [bool] $ensureUniqueNames) {
         $downloadedFilesCount = 0
         foreach ($fileInfo in $filesInfo) {
             Write-Host "----"
@@ -130,7 +127,7 @@ class FileApiService {
                 Write-Host "| New name: $($fileInfo.Name)"
             }
 
-            $this._fileApiClient.DownloadFile($role, $fileInfo, $path)
+            $this._fileApiClient.DownloadFile($this._role, $fileInfo, $path)
             $downloadedFilesCount++
         
             Write-Host "The file was downloaded."
@@ -150,8 +147,8 @@ class FileApiClient {
 
     FileApiClient (
         [string] $baseUrl,
-        [string] $tenantId,
-        [string] $token
+        [string] $token,
+        [string] $tenantId
     ) {
         $this.BaseUrl = $baseUrl
         $this._defaultHeaders = @{
