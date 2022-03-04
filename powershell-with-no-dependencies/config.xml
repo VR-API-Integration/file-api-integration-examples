@@ -2,11 +2,15 @@
     <Credentials>
         <ClientId>EnterYourClientId</ClientId>
         <ClientSecret>EnterYourClientSecret</ClientSecret>
+        <TenantId>EnterYourTenantId</TenantId>
+        <Role>Subscriber</Role>
     </Credentials>
-    <TenantId>EnterYourTenantId</TenantId>
+    
+    <WebClient>
+        <WaitTimeBetweenCallsMS>200</WaitTimeBetweenCallsMS>
+    </WebClient>
 
     <Download>
-        <Role>Subscriber</Role>
         <Path>EnterTheFolderPathWhereYouWantToDownloadTheFiles (e.g. C:\Visma\File API\Download)</Path>
         <EnsureUniqueNames>true</EnsureUniqueNames>
     </Download>

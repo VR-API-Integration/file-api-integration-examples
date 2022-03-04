@@ -17,10 +17,13 @@ $config = $configDocument.Configuration
 
 $clientId = $config.Credentials.ClientId
 $clientSecret = $config.Credentials.ClientSecret
-$tenantId = $config.TenantId
+$tenantId = $config.Credentials.TenantId
+$role = $Config.Credentials.Role
+
+$waitTimeBetweenCallsMS = $config.WebClient.WaitTimeBetweenCallsMS
+
 $filter = $config.List.Filter
 
-$role = $Config.Download.Role
 $downloadPath = $config.Download.Path
 $ensureUniqueNames = $config.Download.EnsureUniqueNames
 
@@ -35,9 +38,9 @@ $authenticationApiClient = [AuthenticationApiClient]::new($authTokenApiBaseUrl)
 $authenticationApiService = [AuthenticationApiService]::new($authenticationApiClient)
 
 try {
-    # $token = $authenticationApiService.NewToken($clientId, $clientSecret)
+    $token = $authenticationApiService.NewToken($clientId, $clientSecret)
     # XXX
-    $token = $config.XXXToken
+    # $token = $config.XXXToken
 }
 catch {
     [Helper]::WriteDetailedError($_, "Failure while retrieving the authentication token.")
@@ -45,7 +48,7 @@ catch {
 }
 
 $fileApiClient = [FileApiClient]::new($fileApiBaseUrl, $token, $tenantId)
-$fileApiService = [FileApiService]::new($fileApiClient, $role)
+$fileApiService = [FileApiService]::new($fileApiClient, $role, $waitTimeBetweenCallsMS)
 
 try {
     $filesInfo = $fileApiService.GetFilesInfo($filter)
@@ -53,6 +56,10 @@ try {
 catch {
     [Helper]::WriteDetailedError($_, "Failure while retrieving the files.")
     exit 1
+}
+
+if ($filesInfo.Count -eq 0) {
+    exit
 }
 
 try {
@@ -66,18 +73,21 @@ catch {
 # -------- END OF THE PROGRAM --------
 # Bellow there are classes to help the readability of the program
 
-#region Classes
+#region Helper_classes
 
 class FileApiService {
     hidden [FileApiClient] $_fileApiClient
     hidden [string] $_role
+    hidden [string] $_waitTimeBetweenCallsMS
 
     FileApiService (
         [FileApiClient] $fileApiClient,
-        [string] $role
+        [string] $role,
+        [int] $waitTimeBetweenCallsMS
     ) {
         $this._fileApiClient = $fileApiClient
         $this._role = $role
+        $this._waitTimeBetweenCallsMS = $waitTimeBetweenCallsMS
     }
 
     [PSCustomObject] GetFilesInfo([string] $filter) {
@@ -104,6 +114,8 @@ class FileApiService {
 
             $isLastPage = $pageSize * ($pageIndex + 1) -ge $response.count
             $pageIndex++
+
+            Start-Sleep -Milliseconds $this._waitTimeBetweenCallsMS
         } while (-not $isLastPage)
 
         Write-Host "$($filesInfo.Count) files retrieved."
@@ -131,6 +143,8 @@ class FileApiService {
             $downloadedFilesCount++
         
             Write-Host "The file was downloaded."
+
+            Start-Sleep -Milliseconds $this._waitTimeBetweenCallsMS
         }
 
         Write-Host "----"
@@ -278,4 +292,4 @@ class Helper {
     }
 }
 
-#endregion Classes
+#endregion Helper_classes
