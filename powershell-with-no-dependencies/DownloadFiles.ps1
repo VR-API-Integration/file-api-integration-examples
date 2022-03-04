@@ -9,9 +9,7 @@ Write-Host "(you can stop the script at any moment by pressing the buttons 'CTRL
 
 #region Configuration
 
-# XXX
-# $configPath = "$($PSScriptRoot)\config.xml"
-$configPath = "C:\Users\AlbertoInf\Inbox\PBI FTaaS Improve curl examples\config.xml"
+$configPath = "$($PSScriptRoot)\config.xml"
 $configDocument = [xml](Get-Content $configPath)
 $config = $configDocument.Configuration
 
@@ -20,17 +18,12 @@ $clientSecret = $config.Credentials.ClientSecret
 $tenantId = $config.Credentials.TenantId
 $role = $Config.Credentials.Role
 
-$waitTimeBetweenCallsMS = $config.WebClient.WaitTimeBetweenCallsMS
-
-$filter = $config.List.Filter
-
 $downloadPath = $config.Download.Path
 $ensureUniqueNames = $config.Download.EnsureUniqueNames
+$filter = $config.Download.Filter
 
-# $authTokenApiBaseUrl = "https://api.raet.com/authentication"
-# $fileApiBaseUrl = "https://api.raet.com/mft/v1.0"
-$authTokenApiBaseUrl = "https://api-test.raet.com/authentication"
-$fileApiBaseUrl = "https://api-test.raet.com/mft/v1.0"
+$authTokenApiBaseUrl = "https://api.raet.com/authentication"
+$fileApiBaseUrl = "https://api.raet.com/mft/v1.0"
 
 #endregion Configuration
 
@@ -39,27 +32,25 @@ $authenticationApiService = [AuthenticationApiService]::new($authenticationApiCl
 
 try {
     $token = $authenticationApiService.NewToken($clientId, $clientSecret)
-    # XXX
-    # $token = $config.XXXToken
 }
 catch {
     [Helper]::WriteDetailedError($_, "Failure while retrieving the authentication token.")
-    exit 1
+    [Helper]::EndProgramWithError()
 }
 
 $fileApiClient = [FileApiClient]::new($fileApiBaseUrl, $token, $tenantId)
-$fileApiService = [FileApiService]::new($fileApiClient, $role, $waitTimeBetweenCallsMS)
+$fileApiService = [FileApiService]::new($fileApiClient, $role, 200)
 
 try {
     $filesInfo = $fileApiService.GetFilesInfo($filter)
 }
 catch {
     [Helper]::WriteDetailedError($_, "Failure while retrieving the files.")
-    exit 1
+    [Helper]::EndProgramWithError()
 }
 
 if ($filesInfo.Count -eq 0) {
-    exit
+    [Helper]::EndProgram()
 }
 
 try {
@@ -67,8 +58,10 @@ try {
 }
 catch {
     [Helper]::WriteDetailedError($_, "Failure while downloading the files.")
-    exit 1
+    [Helper]::EndProgramWithError()
 }
+
+[Helper]::EndProgram()
 
 # -------- END OF THE PROGRAM --------
 # Bellow there are classes to help the readability of the program
@@ -289,6 +282,20 @@ class Helper {
 
         Write-Host "| Error message: $($errorMessage)" -ForegroundColor "Red"
         Write-Host "| Line: $($errorRecord.InvocationInfo.ScriptLineNumber)" -ForegroundColor "Red"
+    }
+
+    static [void] EndProgram() {
+        Write-Host "---"
+        Write-Host -NoNewLine 'Press any key to continue...';
+        cmd /c pause
+        exit
+    }
+
+    static [void] EndProgramWithError() {
+        Write-Host "---"
+        Write-Host -NoNewLine 'Press any key to continue...';
+        cmd /c pause
+        exit 1
     }
 }
 

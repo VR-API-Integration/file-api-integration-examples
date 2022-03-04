@@ -1,18 +1,18 @@
-# File API Powershell Examples
+# File API Powershell (File API SDK) Examples
 
 **powershell-with-file-api-sdk** folder includes a collection of examples that show how to integrate the File API SDK with Powershell.
 
-## Getting Started
-
-Download **powershell-with-file-api-sdk** folder. Required data is commented in the example Powershell scripts. Fill required data and run the example scripts as described in Running Examples section.
-
-### Prerequisites
+## Prerequisites
 
 Minimim requirement is PowerShell V3. For PowerShell V3 before running the scripts TLS setting must be set by using the following PowerShell script:
 
 ```powershell
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls
 ```
+
+## Getting Started
+
+Download **powershell-with-file-api-sdk** folder. Required data is commented in the example Powershell scripts. Fill required data and run the example scripts as described in Running Examples section.
 
 ## Running Examples
 
