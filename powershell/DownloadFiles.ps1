@@ -299,8 +299,8 @@ class Helper {
 
     hidden static [void] FinishProgram([bool] $finishWithError) {
         Write-Host "---"
-        Write-Host -NoNewLine 'Press any key to finish...';
-        cmd /c pause
+        Write-Host "Press any key to finish... " -NoNewLine
+        [System.Console]::ReadKey()
 
         if ($finishWithError) {
             exit 1
