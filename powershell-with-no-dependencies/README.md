@@ -41,8 +41,8 @@ __false__ means that if there is already a file with the same name in the downlo
 __true__ means that if there is already a file with the same name in the download path, the file to be downloaded will be **renamed** so it doesn't collide with the existing one.  
 The new name will have this format: __original file name - \<timestamp>.original extension__.  
 E.g. original file: __TestFile.txt__ / renamed file: __TestFile - 20220304T1229027372Z.txt__.
-- **\<Download>\<Filter>**: Indicates what kind of files will be downloaded.  
-If empty, all the available (not downloaded yet) files will be downloaded.  
+- **\<List>\<Filter>**: Indicates what kind of files will be retrieved from the list. These files will be also downloaded  
+If empty, all the available (not downloaded yet) files will be listed.  
 You can learn more about filters in the [File API documentation](https://vr-api-integration.github.io/file-api-documentation/guides__search__for__files.html).
 
 
