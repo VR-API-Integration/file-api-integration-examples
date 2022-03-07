@@ -5,6 +5,8 @@
     <TargetFramework>netcoreapp2.2</TargetFramework>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <DisableImplicitNuGetFallbackFolder>true</DisableImplicitNuGetFallbackFolder>
+    <Company>Visma</Company>
+    <Copyright>Copyright © 2021 Visma</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
