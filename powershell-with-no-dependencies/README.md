@@ -29,7 +29,7 @@ The script will download all the files specified in the configuration.
 ## Understanding configuration parameters
 
 Inside the **config.xml** file you will see theses parameters:
-- **<Configuration><ClientId>**: Client identifier of your application.  
+- **\<Configuration\>\<ClientId>**: Client identifier of your application.  
 Also known as **Consumer Key**.
 - **<Configuration><ClientSecret>**: Client secret of your application.  
 Also known as **Secret Key**.
