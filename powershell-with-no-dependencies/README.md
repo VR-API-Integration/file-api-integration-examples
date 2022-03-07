@@ -19,7 +19,7 @@ Inside the folder there are two files:
 
 1. Place the files **config.xml** and **DownloadFiles.ps1** in the same folder. Do not rename **config.xml**.
 2. Open **config.xml** with any text editor (e.g. Notepad) and fill the parameters.  
-See **Understanding configuration parameters** section to see the meaning of each parameter.
+See **Understanding configuration parameters** section to understand the meaning of each parameter.
 3. Double click the file **DownloadFiles.ps1** to run the script
 
 The script will download all the files specified in the configuration.
@@ -27,16 +27,22 @@ The script will download all the files specified in the configuration.
 ## Understanding configuration parameters
 
 Inside the **config.xml** file you will see theses parameters:
-- **\<Configuration>\<ClientId>**: Client identifier of your application.  
+- **\<Configuration>\<ClientId>**:  
+Client identifier of your application.  
 Also known as **Consumer Key**.
-- **\<Configuration>\<ClientSecret>**: Client secret of your application.  
+- **\<Configuration>\<ClientSecret>**:  
+Client secret of your application.  
 Also known as **Secret Key**.
-- **\<Configuration>\<TenantId>**: Tenant of your application.
-- **\<Configuration>\<Role>**: Role of your application.  
+- **\<Configuration>\<TenantId>**:  
+Tenant of your application.
+- **\<Configuration>\<Role>**:  
+Role of your application.  
 __subscriber__ if you to consume files (the most common scenario).  
 __publisher__ if you provide files.
-- **\<Download>\<Path>**: Path where the files will be downloaded.
-- **\<Download>\<EnsureUniqueNames>**: Indicates if you want to rename the files to be unique before downloading them.  
+- **\<Download>\<Path>**:  
+Path where the files will be downloaded.
+- **\<Download>\<EnsureUniqueNames>**:  
+Indicates if you want to rename the files to be unique before downloading them.  
 __true__ means that if there is already a file with the same name in the download path, the file to be downloaded will be **renamed** so it doesn't collide with the existing one.  
 __false__ means that if there is already a file with the same name in the download path, the file will be **replaced** by the new one. The new name will have this format: __original file name - \<timestamp>.original extension__.  
 E.g. original file: __TestFile.txt__ / renamed file: __TestFile - 20220304T1229027372Z.txt__.
