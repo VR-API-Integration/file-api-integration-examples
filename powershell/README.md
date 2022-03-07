@@ -1,6 +1,6 @@
-# File API Powershell (no dependencies) Examples
+# File API Powershell examples
 
-**powershell-with-no-dependencies** folder includes a collection of examples that show how to integrate the **File API** with **native Powershell**.
+**powershell** folder includes a collection of examples that show how to integrate the **File API** with **native Powershell**.
 
 ## Prerequisites
 
@@ -9,7 +9,7 @@
 
 ## Getting Started 
 
-Download the **file-api-integration-examples** repository. These examples use the folder **powershell-with-no-dependencies**.
+Download the **file-api-integration-examples** repository. These examples use the folder **powershell**.
 
 Inside the folder there are two files:
 - **DownloadFiles.ps1**: Powershell example to download specified files.
