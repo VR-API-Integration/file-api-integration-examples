@@ -1,6 +1,6 @@
 # File API Powershell examples
 
-**powershell** folder includes a collection of examples that show how to integrate the **File API** with **native Powershell**.
+A collection of examples to integrate with the File API using **Powershell**.
 
 ## Prerequisites
 
