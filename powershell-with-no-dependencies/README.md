@@ -20,7 +20,7 @@ Inside the folder there are two files:
 1. Place the files **config.xml** and **DownloadFiles.ps1** in the same folder. Do not rename **config.xml**.
 2. Open **config.xml** with any text editor (e.g. Notepad) and fill the parameters.  
 See **Understanding configuration parameters** section to understand the meaning of each parameter.
-3. Double click the file **DownloadFiles.ps1** to run the script
+3. Run the **DownloadFiles.ps1** script.
 
 The script will download all the files specified in the configuration.
 
