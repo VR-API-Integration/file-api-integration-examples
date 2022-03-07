@@ -9,7 +9,7 @@
 
 ## Getting Started 
 
-Download **powershell-with-no-dependencies** folder.
+Download the **file-api-integration-examples** repository. These examples use the folder **powershell-with-no-dependencies**.
 
 Inside the folder there is a batch file called **DownloadFiles.bat** which can be used to download a file from File API.
 
