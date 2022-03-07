@@ -11,7 +11,7 @@
 
 Download the **file-api-integration-examples** repository. These examples use the folder **powershell-with-no-dependencies**.
 
-Inside the folder there is a batch file called **DownloadFiles.bat** which can be used to download a file from File API.
+Inside the folder there is a Powershell script called **DownloadFiles.ps1** which can be used to download files from the File API.
 
 Inside the folder there are two files:
 - DownloadFiles.ps1: Powershell example to download specified files.
