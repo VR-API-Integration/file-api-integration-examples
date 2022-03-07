@@ -116,6 +116,14 @@ class FileApiService {
     }
 
     [void] DownloadFiles([PSCustomObject[]] $filesInfo, [string] $path, [bool] $ensureUniqueNames) {
+        if (-not (Test-Path $path -PathType Container)) {
+            Write-Host "----"
+            Write-Host "Download path doesn't exist. Creating it."
+            Write-Host "| Path: $($path)"
+            
+            New-Item -ItemType Directory -Force -Path $path
+        }
+
         $downloadedFilesCount = 0
         foreach ($fileInfo in $filesInfo) {
             Write-Host "----"
