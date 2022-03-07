@@ -7,25 +7,27 @@ Write-Host "========================================================="
 
 Write-Host "(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')"
 
-#region Configuration
+try {
+    $configPath = "$($PSScriptRoot)\config.xml"
+    $configDocument = [xml](Get-Content $configPath)
+    $config = $configDocument.Configuration
 
-$configPath = "$($PSScriptRoot)\config.xml"
-$configDocument = [xml](Get-Content $configPath)
-$config = $configDocument.Configuration
+    $clientId = $config.Credentials.ClientId
+    $clientSecret = $config.Credentials.ClientSecret
+    $tenantId = $config.Credentials.TenantId
+    $role = $Config.Credentials.Role
 
-$clientId = $config.Credentials.ClientId
-$clientSecret = $config.Credentials.ClientSecret
-$tenantId = $config.Credentials.TenantId
-$role = $Config.Credentials.Role
-
-$downloadPath = $config.Download.Path
-$ensureUniqueNames = $config.Download.EnsureUniqueNames
-$filter = $config.Download.Filter
+    $downloadPath = $config.Download.Path
+    $ensureUniqueNames = [System.Convert]::ToBoolean($config.Download.EnsureUniqueNames)
+    $filter = $config.Download.Filter
+}
+catch {
+    [Helper]::WriteDetailedError($_, "Failure while retrieving the configuration. See the README.MD to check the format of the parameters.")
+    [Helper]::EndProgramWithError()
+}
 
 $authTokenApiBaseUrl = "https://api.raet.com/authentication"
 $fileApiBaseUrl = "https://api.raet.com/mft/v1.0"
-
-#endregion Configuration
 
 $authenticationApiClient = [AuthenticationApiClient]::new($authTokenApiBaseUrl)
 $authenticationApiService = [AuthenticationApiService]::new($authenticationApiClient)
@@ -281,21 +283,28 @@ class Helper {
         }
 
         Write-Host "| Error message: $($errorMessage)" -ForegroundColor "Red"
-        Write-Host "| Line: $($errorRecord.InvocationInfo.ScriptLineNumber)" -ForegroundColor "Red"
+        Write-Host "| Error line in the script: $($errorRecord.InvocationInfo.ScriptLineNumber)" -ForegroundColor "Red"
     }
 
     static [void] EndProgram() {
-        Write-Host "---"
-        Write-Host -NoNewLine 'Press any key to continue...';
-        cmd /c pause
-        exit
+        [helper]::FinishProgram($false)
     }
 
     static [void] EndProgramWithError() {
+        [helper]::FinishProgram($true)
+    }
+
+    hidden static [void] FinishProgram([bool] $finishWithError) {
         Write-Host "---"
-        Write-Host -NoNewLine 'Press any key to continue...';
+        Write-Host -NoNewLine 'Press any key to finish...';
         cmd /c pause
-        exit 1
+
+        if ($finishWithError) {
+            exit 1
+        }
+        else {
+            exit
+        }
     }
 }
 
