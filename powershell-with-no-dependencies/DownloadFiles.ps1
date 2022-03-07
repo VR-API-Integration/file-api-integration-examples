@@ -19,11 +19,11 @@ try {
 
     $downloadPath = $config.Download.Path
     $ensureUniqueNames = [System.Convert]::ToBoolean($config.Download.EnsureUniqueNames)
-    $filter = $config.Download.Filter
+
+    $filter = $config.List.Filter
 }
 catch {
-    [Helper]::WriteDetailedError($_, "Failure while retrieving the configuration. See the README.MD to check the format of the parameters.")
-    [Helper]::EndProgramWithError()
+    [Helper]::EndProgramWithError($_, "Failure while retrieving the configuration. See the README.MD to check the format of the parameters.")
 }
 
 $authTokenApiBaseUrl = "https://api.raet.com/authentication"
@@ -36,8 +36,7 @@ try {
     $token = $authenticationApiService.NewToken($clientId, $clientSecret)
 }
 catch {
-    [Helper]::WriteDetailedError($_, "Failure while retrieving the authentication token.")
-    [Helper]::EndProgramWithError()
+    [Helper]::EndProgramWithError($_, "Failure while retrieving the authentication token.")
 }
 
 $fileApiClient = [FileApiClient]::new($fileApiBaseUrl, $token, $tenantId)
@@ -47,8 +46,7 @@ try {
     $filesInfo = $fileApiService.GetFilesInfo($filter)
 }
 catch {
-    [Helper]::WriteDetailedError($_, "Failure while retrieving the files.")
-    [Helper]::EndProgramWithError()
+    [Helper]::EndProgramWithError($_, "Failure while retrieving the files.")
 }
 
 if ($filesInfo.Count -eq 0) {
@@ -59,8 +57,7 @@ try {
     $fileApiService.DownloadFiles($filesInfo, $downloadPath, $ensureUniqueNames)
 }
 catch {
-    [Helper]::WriteDetailedError($_, "Failure while downloading the files.")
-    [Helper]::EndProgramWithError()
+    [Helper]::EndProgramWithError($_, "Failure while downloading the files.")
 }
 
 [Helper]::EndProgram()
@@ -265,7 +262,11 @@ class Helper {
         return $fileNameInfo
     }
 
-    static [void] WriteDetailedError([System.Management.Automation.ErrorRecord] $errorRecord, [string] $genericErrorMessage) {
+    static [void] EndProgram() {
+        [helper]::FinishProgram($false)
+    }
+
+    static [void] EndProgramWithError([System.Management.Automation.ErrorRecord] $errorRecord, [string] $genericErrorMessage) {
         Write-Host "ERROR - $($genericErrorMessage)" -ForegroundColor "Red"
 
         $errorMessage = "Unknown error."
@@ -284,13 +285,7 @@ class Helper {
 
         Write-Host "| Error message: $($errorMessage)" -ForegroundColor "Red"
         Write-Host "| Error line in the script: $($errorRecord.InvocationInfo.ScriptLineNumber)" -ForegroundColor "Red"
-    }
 
-    static [void] EndProgram() {
-        [helper]::FinishProgram($false)
-    }
-
-    static [void] EndProgramWithError() {
         [helper]::FinishProgram($true)
     }
 
