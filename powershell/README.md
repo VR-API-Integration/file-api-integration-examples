@@ -77,7 +77,7 @@ Values:
 ```
 
 `Path`
-```
+<!-- ``` -->
 <div>
 Path where the files will be downloaded.
 
@@ -86,7 +86,7 @@ Example: C:\Visma\Integrations\Download
   fds
             jfklds
 </div>
-```
+<!-- ``` -->
 
 > `EnsureUniqueNames`
 >
