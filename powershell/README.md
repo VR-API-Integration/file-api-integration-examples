@@ -64,6 +64,7 @@ Example: diUer712Lkfd9fDh
 > Tenant you will use to download the files.
 > 
 > Example: 1122334
+
 <br/><br/>
 
 `Role`
@@ -72,12 +73,15 @@ Example: diUer712Lkfd9fDh
 > Values:  
 > &nbsp;&nbsp;**·Subscriber:** to download files provided to you (the most common scenario).  
 > &nbsp;&nbsp;**·Publisher:** to download files provided by you.
+
 <br/>
 
 `Path`
 > Path where the files will be downloaded.
 > 
 > Example: C:\Visma\Integrations\Download
+
+<br/><br/><br/><br/><br/><br/>
 
 `EnsureUniqueNames`
 > Indicates if you want to rename the files to be unique before downloading them.
