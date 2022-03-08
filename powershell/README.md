@@ -47,6 +47,11 @@ Client identifier of your application.
 Also known as **Consumer Key**.
 > Example: K82ixRsw0oiwWerjm123FKdhjfpqel2q**
 
+`ClientSecret`  
+Client secret of your application.  
+Also known as **Secret Key**.
+> Example: diUer712Lkfd9fDh**
+
 - **\<Credentials>\<ClientId>**: Client identifier of your application.  
 Also known as **Consumer Key**.
 - **\<Credentials>\<ClientSecret>**: Client secret of your application.  
