@@ -24,7 +24,7 @@ Inside the **powershell** folder you can find these files:
 See **Understanding configuration parameters** section to understand the meaning of each parameter.
 3. Run the **DownloadFiles.ps1** script.
 
-The script will download all the files specified in the configuration.
+The script will download all the files matching the configuration parameters.
 
 ## Understanding configuration parameters
 
