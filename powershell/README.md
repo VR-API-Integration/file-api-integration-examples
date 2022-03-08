@@ -63,14 +63,14 @@ Example: diUer712Lkfd9fDh
 `TenantId`
 > Tenant you will use to download the files.
 > 
-> Example: 1122334
+> **Example:** 1122334
 
 <br/>
 
 `Role`
 > Role of your application.
 > 
-> Values:  
+> **Values:**  
 > &nbsp;&nbsp;**·Subscriber:** to download files provided to you (the most common scenario).  
 > &nbsp;&nbsp;**·Publisher:** to download files provided by you.
 
@@ -79,7 +79,7 @@ Example: diUer712Lkfd9fDh
 `Path`
 > Path where the files will be downloaded.
 > 
-> Example: C:\Visma\Integrations\Download
+> **Example:** C:\Visma\Integrations\Download
 
 <br/>
 
