@@ -104,7 +104,7 @@ You can learn more about filters in the [File API documentation](https://vr-api-
 Example: startsWith(FileName, 'employee_profile') and uploadDate gt 2022-02-08T11:02:00Z
 ```
 
-## Example of a valid **config.xml**
+## Example of a valid configuration
 
     <Configuration>
         <Credentials>
