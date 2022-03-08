@@ -32,6 +32,8 @@ See **Understanding the configuration** section to understand the meaning of eac
 > 
 > **Mandatory:** False  
 > **Default value:** {DownloadFiles.ps1 folder}\config.xml 
+>
+> **Example:** -ConfigPath "C:\Users\Foorby\config.xml"
 
 #### Example 1. Download files using the default configuration path
 
@@ -64,6 +66,20 @@ Inside the **config.xml** file you will find these parameters:
 > Also known as Secret Key.
 > 
 > **Example:** diUer712Lkfd9fDh
+
+### Attributes of the `Services` element
+
+**`Files`**
+> File API base URL. 
+> 
+> In the vast majority of scenarios, it should be set to **https://api.raet.com/mft/v1.0**
+
+<br/>
+
+**`AuthenticationToken`**
+> Authorization token API base URL. 
+> 
+> In the vast majority of scenarios, it should be set to **https://api.raet.com/authentication**
 
 ### Attributes of the `Download` element
 
@@ -116,6 +132,11 @@ Inside the **config.xml** file you will find these parameters:
         <ClientId>K82ixRsw0oiwWerjm123FKdhjfpqel2q</ClientId>
         <ClientSecret>diUer712Lkfd9fDh</ClientSecret>
     </Credentials>
+
+    <Services>
+        <Files>https://api.raet.com/mft/v1.0</Files>
+        <AuthenticationToken>https://api.raet.com/authentication</AuthenticationToken>
+    </Services>
 
     <Download>
         <TenantId>1122334</TenantId>
