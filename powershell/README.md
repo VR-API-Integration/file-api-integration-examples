@@ -25,18 +25,15 @@ See **Understanding the configuration** section to understand the meaning of eac
 3. Run the **DownloadFiles.ps1** script.  
 **Parameters**:  
     `-ConfigPath`
-    | Type: | string
-
     | Name       | Type          | Mandatory  | Description               | Example                                  |
     |-----------:|--------------:|-----------:|--------------------------:|-----------------------------------------:|
     | ConfigPath |  string       | False      | Path of the configuration | -ConfigPath "C:\Visma\File API\Download" |
+    > Mandatory: The note content
+    > Type: foo
 
-1. Ist Item  
-First item with having index value 1
-1. 2nd Item  
-Second item having index value 2, beside we gave it 1, which indicates that markdown parser does not break the list.
-1. **3rd Item:**  
-&nbsp;&nbsp;&nbsp;&nbsp;If you want to do something fancy with your list
+    | Foo | Bar |
+    | foo | bar |
+    | quz | qux |
 
 The script will download all the files matching the configuration.
 
