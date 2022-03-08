@@ -5,7 +5,7 @@
 Param(
     [Alias("ConfigPath")]
     [Parameter(Mandatory = $false, HelpMessage = 'Full path of the configuration (e.g. C:\Visma\File API\Download\config.xml). If not provided the default configuration will be used.')]
-    [string] $configPath
+    [string] $configurationPath
 )
 
 $ErrorActionPreference = "Stop"
@@ -20,15 +20,15 @@ try {
     Write-Host "----"
     Write-Host "Retrieving the configuration."
     
-    if (-not $configPath) {
-        $configPath = "$($PSScriptRoot)\config.xml"
+    if (-not $configurationPath) {
+        $configurationPath = "$($PSScriptRoot)\config.xml"
     }
 
-    if (-not (Test-Path $configPath -PathType Leaf)) {
-        throw "Configuration not found.`r`n| Path: $configPath"
+    if (-not (Test-Path $configurationPath -PathType Leaf)) {
+        throw "Configuration not found.`r`n| Path: $configurationPath"
     }
     
-    $configDocument = [xml](Get-Content $configPath)
+    $configDocument = [xml](Get-Content $configurationPath)
     $config = $configDocument.Configuration
 
     $clientId = $config.Credentials.ClientId
