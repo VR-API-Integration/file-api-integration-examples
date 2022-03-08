@@ -45,23 +45,37 @@ Inside the **config.xml** file you will see these parameters:
 `ClientId`  
 ```
 Client identifier of your application.  
-Also known as `*Consumer Key`*.
+Also known as Consumer Key.
 
-Example: K82ixRsw0oiwWerjm123FKdhjfpqel2q**
+Example: K82ixRsw0oiwWerjm123FKdhjfpqel2q
 ```
 
 `ClientSecret`  
 ```
 Client secret of your application.  
-Also known as **Secret Key**.
+Also known as Secret Key.
 
-Example: diUer712Lkfd9fDh**
+Example: diUer712Lkfd9fDh
 ```
 
-- **\<Credentials>\<ClientId>**: Client identifier of your application.  
-Also known as **Consumer Key**.
-- **\<Credentials>\<ClientSecret>**: Client secret of your application.  
-Also known as **Secret Key**.
+### Attributes of the `Download` element
+
+`ClientId`  
+```
+Tenant of the application you will use to download.
+
+Example: 1122334
+```
+
+`Role`  
+```
+Role of your application.
+
+Values:
+    > Subscriber: foo
+    > Publisher: Bar
+```
+
 - **\<Download>\<TenantId>**: Tenant of your application.
 - **\<Download>\<Role>**: Role of your application.  
 __subscriber__ if you consume files (the most common scenario).  
