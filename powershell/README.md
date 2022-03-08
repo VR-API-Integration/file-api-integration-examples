@@ -32,7 +32,7 @@ See **Understanding the configuration** section to understand the meaning of eac
 > Mandatory:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;False  
 > Default value:  {DownloadFiles.ps1 folder}\config.xml  
 > Description:    Path of the configuration.  
-> Example:        -ConfigPath "C:\Visma\File API\Download"
+> Example:&emsp;&emsp;-ConfigPath "C:\Visma\File API\Download"
 
 ## Understanding the configuration
 
