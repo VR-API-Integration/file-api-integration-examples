@@ -96,12 +96,12 @@ Values:
         Renamed : TestFile_20220304T1229027372Z.txt
 ```
 
-`Filter`
-
+> `Filter`
+>
 > If empty, all the available (not downloaded yet) files will be listed.  
 > You can learn more about filters in the [File API documentation](https://vr-api-integration.github.io/file-api-documentation/guides__search__for__files.html).
 >
-> Example: startsWith(FileName, 'employee_profile') and uploadDate gt 2022-02-08T11:02:00Z
+> **Example:** startsWith(FileName, 'employee_profile') and uploadDate gt 2022-02-08T11:02:00Z
 
 ## Example of a valid configuration
 
