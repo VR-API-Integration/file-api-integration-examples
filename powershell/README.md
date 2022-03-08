@@ -38,7 +38,10 @@ Example:        -ConfigPath "C:\Visma\File API\Download"
 
 ## Understanding the configuration
 
-Inside the **config.xml** file you will see theses parameters:
+Inside the **config.xml** file you will see these parameters:
+
+### Attributes of the `Credentials` element
+
 - **\<Credentials>\<ClientId>**: Client identifier of your application.  
 Also known as **Consumer Key**.
 - **\<Credentials>\<ClientSecret>**: Client secret of your application.  
