@@ -28,9 +28,9 @@ The script will download all the files matching the configuration parameters.
 
 #### Parameters
 
-| Name       | Type          | Mandatory  | Description               |
-|------------|:-------------:|:----------:|:-------------------------:|
-| ConfigPath |  string       | False      | Path of the configuration |
+| Name       | Type          | Mandatory  | Description               | Example                                  |
+|-----------:|--------------:|-----------:|--------------------------:|-----------------------------------------:|
+| ConfigPath |  string       | False      | Path of the configuration | -ConfigPath "C:\Visma\File API\Download" |
 
 ---
 **NOTE**
