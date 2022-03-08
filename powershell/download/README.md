@@ -36,13 +36,13 @@ See **Understanding the configuration** section to understand the meaning of eac
 #### Example 1. Download files using the default configuration path
 
 ```powershell
-& "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1"
+PS> & "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1"
 ```
 
 #### Example 2. Download files specifying the configuration path
 
 ```powershell
-& "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1" -ConfigPath "C:\Users\Foorby\config.xml"
+PS> & "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1" -ConfigPath "C:\Users\Foorby\config.xml"
 ```
 
 ## Understanding the configuration
