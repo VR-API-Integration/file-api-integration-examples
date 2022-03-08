@@ -24,8 +24,8 @@ Inside the **powershell** folder you can find these files:
 See **Understanding the configuration** section to understand the meaning of each parameter.
 3. Run the **DownloadFiles.ps1** script.  
 **Parameters**:  
-    `-ConfigPath`
     ```
+    `-ConfigPath`
     Type:         string  
     Mandatory:    False  
     Description:  Path of the configuration  
