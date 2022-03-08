@@ -45,10 +45,7 @@ Inside the **config.xml** file you will see these parameters:
 `ClientId`  
 Client identifier of your application.  
 Also known as **Consumer Key**.
-```
-Default:        -
-Example:        K82ixRsw0oiwWerjm123FKdhjfpqel2q
-```
+> Example: K82ixRsw0oiwWerjm123FKdhjfpqel2q**
 
 - **\<Credentials>\<ClientId>**: Client identifier of your application.  
 Also known as **Consumer Key**.
