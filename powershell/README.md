@@ -83,25 +83,16 @@ Path where the files will be downloaded.
 Example: C:\Visma\Integrations\Download
 ```
 
-`EnsureUniqueNames`
-```
-Indicates if you want to rename the files to be unique before downloading them.
-
-Values:
-> false: the downloaded file will replace any existing file with the same name.
-> true: the downloaded file will be renamed if there is any existing file with the same name.
-    Format: {original file name}_{timestamp}.{original extension}
-    Example:
-        Original: TestFile.txt
-        Renamed : TestFile_20220304T1229027372Z.txt
-```
-
-> `Filter`
->
-> If empty, all the available (not downloaded yet) files will be listed.  
-> You can learn more about filters in the [File API documentation](https://vr-api-integration.github.io/file-api-documentation/guides__search__for__files.html).
->
-> **Example:** startsWith(FileName, 'employee_profile') and uploadDate gt 2022-02-08T11:02:00Z
+> `EnsureUniqueNames`
+> Indicates if you want to rename the files to be unique before downloading them.
+> 
+> Values:
+> > false: the downloaded file will replace any existing file with the same name.
+> > true: the downloaded file will be renamed if there is any existing file with the same name.
+>     Format: {original file name}_{timestamp}.{original extension}
+>     Example:
+>         Original: TestFile.txt
+>         Renamed : TestFile_20220304T1229027372Z.txt
 
 > `Filter`
 >
