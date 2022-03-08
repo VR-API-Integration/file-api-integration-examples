@@ -61,13 +61,11 @@ Example: diUer712Lkfd9fDh
 ### Attributes of the `Download` element
 
 `TenantId`
-
 > Tenant you will use to download the files.
 > 
 > Example: 1122334
 
 `Role`
-
 > Role of your application.
 > 
 > Values:  
@@ -75,13 +73,11 @@ Example: diUer712Lkfd9fDh
 > &nbsp;&nbsp;**·Publisher:** to download files provided by you.
 
 `Path`
-
 > Path where the files will be downloaded.
 > 
 > Example: C:\Visma\Integrations\Download
 
 `EnsureUniqueNames`
-
 > Indicates if you want to rename the files to be unique before downloading them.
 > 
 > **Values**:  
@@ -92,7 +88,6 @@ Example: diUer712Lkfd9fDh
 > &nbsp;&nbsp;&nbsp;&nbsp;Renamed: TestFile_20220304T1229027372Z.txt
 
 `Filter`
-
 > If empty, all the available (not downloaded yet) files will be listed.  
 > You can learn more about filters in the [File API documentation](https://vr-api-integration.github.io/file-api-documentation/guides__search__for__files.html).
 >
