@@ -51,7 +51,7 @@ __publisher__ if you provide files.
 - **\<Download>\<EnsureUniqueNames>**: Indicates if you want to rename the files to be unique before downloading them.  
 __false__ means that if there is already a file with the same name in the download path, the file will be **replaced** by the new one.  
 __true__ means that if there is already a file with the same name in the download path, the file to be downloaded will be **renamed** so it doesn't collide with the existing one.  
-The new name will have the format:
+The new name will have the format:  
     __{original file name}_{timestamp}.{original extension}__.  
 E.g. original file: __TestFile.txt__ / renamed file: __TestFile_20220304T1229027372Z.txt__.
 - **\<Download>\<Filter>**: Indicates the kind of files that will be retrieved from the list.  
