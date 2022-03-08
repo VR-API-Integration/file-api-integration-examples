@@ -251,7 +251,7 @@ class Helper {
         $fileExtension = $fileNameInfo.Extension
         $timestamp = Get-Date -Format FileDateTimeUniversal
     
-        $uniqueFileName = "$($fileNameWithoutExtension) - $($timestamp)$($fileExtension)"
+        $uniqueFileName = "$($fileNameWithoutExtension)_$($timestamp)$($fileExtension)"
         return $uniqueFileName
     }
 
