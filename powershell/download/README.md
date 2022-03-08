@@ -36,18 +36,18 @@ See **Understanding the configuration** section to understand the meaning of eac
 #### Example 1. Download files using the default configuration path
 
 ```powershell
-PS> & "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1"
+& "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1"
 ```
 
 #### Example 2. Download files specifying the configuration path
 
 ```powershell
-PS> & "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1" -ConfigPath "C:\Users\Foorby\config.xml"
+& "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1" -ConfigPath "C:\Users\Foorby\config.xml"
 ```
 
 ## Understanding the configuration
 
-Inside the **config.xml** file you will see these parameters:
+Inside the **config.xml** file you will find these parameters:
 
 ### Attributes of the `Credentials` element
 
