@@ -96,16 +96,13 @@ Values:
         Renamed : TestFile_20220304T1229027372Z.txt
 ```
 
-- **\<Download>\<Path>**: Path where the files will be downloaded.
-- **\<Download>\<EnsureUniqueNames>**: Indicates if you want to rename the files to be unique before downloading them.  
-__false__ means that if there is already a file with the same name in the download path, the file will be **replaced** by the new one.  
-__true__ means that if there is already a file with the same name in the download path, the file to be downloaded will be **renamed** so it doesn't collide with the existing one.  
-The new name will have the format: `{original file name}_{timestamp}.{original extension}`  
-E.g. Original file: `TestFile.txt`  
-Renamed file: `TestFile_20220304T1229027372Z.txt`
-- **\<Download>\<Filter>**: Indicates the kind of files that will be retrieved from the list.  
+`Filter`
+```
 If empty, all the available (not downloaded yet) files will be listed.  
 You can learn more about filters in the [File API documentation](https://vr-api-integration.github.io/file-api-documentation/guides__search__for__files.html).
+
+Example: startsWith(FileName, 'employee_profile') and uploadDate gt 2022-02-08T11:02:00Z
+```
 
 ## Example of a valid **config.xml**
 
