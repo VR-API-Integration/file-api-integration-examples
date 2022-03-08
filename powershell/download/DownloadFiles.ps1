@@ -318,7 +318,7 @@ class Helper {
     }
 
     hidden static [void] FinishProgram([bool] $finishWithError) {
-        Write-Host "---"
+        Write-Host "----"
         Write-Host "End of the example."
 
         if ($finishWithError) {
