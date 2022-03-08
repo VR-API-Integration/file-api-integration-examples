@@ -68,7 +68,7 @@ Example: diUer712Lkfd9fDh
 <br/>
 
 `Role`
-> Role of your application.
+> Role of your application. It must be any of these values:
 > 
 > **· Subscriber:** to download files provided to you (the most common scenario).  
 > **· Publisher:** to download files provided by you.
