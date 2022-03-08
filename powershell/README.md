@@ -28,8 +28,8 @@ The script will download all the files matching the configuration parameters.
 
 #### Parameters
 
-| Name       |      Type     |  Mandatory |  Description              |
-|------------|:-------------:|:----------:|--------------------------:|
+| Name       | Type          | Mandatory  | Description               |
+|------------|:-------------:|:----------:|:-------------------------:|
 | ConfigPath |  string       | False      | Path of the configuration |
 
 ---
