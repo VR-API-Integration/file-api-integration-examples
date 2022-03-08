@@ -84,9 +84,10 @@ Example: C:\Visma\Integrations\Download
 ```
 
 > `EnsureUniqueNames`
+>
 > Indicates if you want to rename the files to be unique before downloading them.
 > 
-> Values:
+> Values:  
 > `> false: the downloaded file will replace any existing file with the same name.  
 > `> true: the downloaded file will be renamed if there is any existing file with the same name.  
 >     Format: {original file name}_{timestamp}.{original extension}  
