@@ -51,7 +51,7 @@ Inside the **config.xml** file you will find these parameters:
 
 ### Attributes of the `Credentials` element
 
-`ClientId`
+**`ClientId`**
 > Client identifier of your application.  
 > Also known as Consumer Key.
 > 
@@ -59,7 +59,7 @@ Inside the **config.xml** file you will find these parameters:
 
 <br/>
 
-`ClientSecret`
+**`ClientSecret`**
 > Client secret of your application.  
 > Also known as Secret Key.
 > 
@@ -67,14 +67,14 @@ Inside the **config.xml** file you will find these parameters:
 
 ### Attributes of the `Download` element
 
-`TenantId`
+**`TenantId`**
 > Tenant you will use to download the files.
 > 
 > **Example:** 1122334
 
 <br/>
 
-`Role`
+**`Role`**
 > Role of your application.
 > 
 > Must be set to any of these values:  
@@ -83,14 +83,14 @@ Inside the **config.xml** file you will find these parameters:
 
 <br/>
 
-`Path`
+**`Path`**
 > Path where the files will be downloaded.
 > 
 > **Example:** C:\Visma\Integrations\Download
 
 <br/>
 
-`EnsureUniqueNames`
+**`EnsureUniqueNames`**
 > Indicates if you want to rename the files to be unique before downloading them.
 > 
 > Must be set to any of these values:  
@@ -102,7 +102,7 @@ Inside the **config.xml** file you will find these parameters:
 
 <br/>
 
-`Filter`
+**`Filter`**
 > If empty, all the available (not downloaded yet) files will be listed.  
 > You can learn more about filters in the [File API documentation](https://vr-api-integration.github.io/file-api-documentation/guides__search__for__files.html).
 >
