@@ -42,6 +42,14 @@ Inside the **config.xml** file you will see these parameters:
 
 ### Attributes of the `Credentials` element
 
+`ClientId`
+Client identifier of your application.  
+Also known as **Consumer Key**.
+```
+Default:        -
+Example:        K82ixRsw0oiwWerjm123FKdhjfpqel2q
+```
+
 - **\<Credentials>\<ClientId>**: Client identifier of your application.  
 Also known as **Consumer Key**.
 - **\<Credentials>\<ClientSecret>**: Client secret of your application.  
