@@ -25,9 +25,6 @@ See **Understanding the configuration** section to understand the meaning of eac
 3. Run the **DownloadFiles.ps1** script.  
 **Parameters**:  
     `-ConfigPath`
-    | Name       | Type          | Mandatory  | Description               | Example                                  |
-    |-----------:|--------------:|-----------:|--------------------------:|-----------------------------------------:|
-    | ConfigPath |  string       | False      | Path of the configuration | -ConfigPath "C:\Visma\File API\Download" |
     > Type:         string  
     > Mandatory:    False  
     > Description:  Path of the configuration  
