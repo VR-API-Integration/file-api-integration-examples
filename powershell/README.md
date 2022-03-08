@@ -23,14 +23,11 @@ Inside the **powershell** folder you can find these files:
 2. Open **config.xml** with any text editor (e.g. Notepad) and fill the parameters.  
 See **Understanding the configuration** section to understand the meaning of each parameter.
 3. Run the **DownloadFiles.ps1** script.
+    | Name       | Type          | Mandatory  | Description               | Example                                  |
+    |-----------:|--------------:|-----------:|--------------------------:|-----------------------------------------:|
+    | ConfigPath |  string       | False      | Path of the configuration | -ConfigPath "C:\Visma\File API\Download" |
 
-The script will download all the files matching the configuration parameters.
-
-#### Parameters
-
-| Name       | Type          | Mandatory  | Description               | Example                                  |
-|-----------:|--------------:|-----------:|--------------------------:|-----------------------------------------:|
-| ConfigPath |  string       | False      | Path of the configuration | -ConfigPath "C:\Visma\File API\Download" |
+The script will download all the files matching the configuration.
 
 ## Understanding the configuration
 
