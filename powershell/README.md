@@ -76,10 +76,26 @@ Values:
 > Publisher: to download files provided by you.
 ```
 
-- **\<Download>\<TenantId>**: Tenant of your application.
-- **\<Download>\<Role>**: Role of your application.  
-__subscriber__ if you consume files (the most common scenario).  
-__publisher__ if you provide files.
+`Path`
+```
+Path where the files will be downloaded.
+
+Example: C:\Visma\Integrations\Download
+```
+
+`EnsureUniqueNames`
+```
+Indicates if you want to rename the files to be unique before downloading them.
+
+Values:
+> false: the downloaded file will replace any existing file with the same name.
+> true: the downloaded file will be renamed if there is any existing file with the same name.
+    Format: {original file name}_{timestamp}.{original extension}
+    Example:
+        Original file - TestFile.txt
+        Renamed file  - TestFile_20220304T1229027372Z.txt
+```
+
 - **\<Download>\<Path>**: Path where the files will be downloaded.
 - **\<Download>\<EnsureUniqueNames>**: Indicates if you want to rename the files to be unique before downloading them.  
 __false__ means that if there is already a file with the same name in the download path, the file will be **replaced** by the new one.  
