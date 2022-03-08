@@ -65,7 +65,7 @@ Example: diUer712Lkfd9fDh
 > 
 > Example: 1122334
 
-<br/><br/>
+<br/>
 
 `Role`
 > Role of your application.
@@ -81,7 +81,7 @@ Example: diUer712Lkfd9fDh
 > 
 > Example: C:\Visma\Integrations\Download
 
-<br/><br/><br/><br/><br/><br/>
+<br/>
 
 `EnsureUniqueNames`
 > Indicates if you want to rename the files to be unique before downloading them.
@@ -92,6 +92,8 @@ Example: diUer712Lkfd9fDh
 > &nbsp;&nbsp;&nbsp;&nbsp;Format: {original file name}_{timestamp}.{original extension}  
 > &nbsp;&nbsp;&nbsp;&nbsp;Original: TestFile.txt  
 > &nbsp;&nbsp;&nbsp;&nbsp;Renamed: TestFile_20220304T1229027372Z.txt
+
+<br/>
 
 `Filter`
 > If empty, all the available (not downloaded yet) files will be listed.  
