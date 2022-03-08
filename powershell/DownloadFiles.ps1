@@ -1,6 +1,12 @@
 # This example shows how to download all the files specified in a filter.
 # Authors: Visma - Transporters Team
 
+[CmdletBinding()]
+Param(
+    [Parameter(Mandatory = $false, HelpMessage = 'Full path of the configuration (e.g. C:\Visma\File API\Download\config.xml). If not provided the default configuration will be used.')]
+    [string] $configPath
+)
+
 $ErrorActionPreference = "Stop"
 
 Write-Host "========================================================="
@@ -10,7 +16,17 @@ Write-Host "========================================================="
 Write-Host "(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')"
 
 try {
-    $configPath = "$($PSScriptRoot)\config.xml"
+    Write-Host "----"
+    Write-Host "Retrieving the configuration."
+
+    if (-not (Test-Path $configPath -PathType Leaf)) {
+        throw "Specified configuration doesn't exist.`r`n| Path: $configPath"
+    }
+    
+    if (-not $configPath) {
+        $configPath = "$($PSScriptRoot)\config.xml"
+    }
+    
     $configDocument = [xml](Get-Content $configPath)
     $config = $configDocument.Configuration
 
@@ -24,7 +40,7 @@ try {
     $filter = $config.Download.Filter
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure while retrieving the configuration. See the README.MD to check the format of the parameters.")
+    [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.")
 }
 
 $authTokenApiBaseUrl = "https://api.raet.com/authentication"
@@ -37,7 +53,7 @@ try {
     $token = $authenticationApiService.NewToken($clientId, $clientSecret)
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure while retrieving the authentication token.")
+    [Helper]::EndProgramWithError($_, "Failure retrieving the authentication token.")
 }
 
 $fileApiClient = [FileApiClient]::new($fileApiBaseUrl, $token, $tenantId)
@@ -47,7 +63,7 @@ try {
     $filesInfo = $fileApiService.GetFilesInfo($filter)
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure while retrieving the files.")
+    [Helper]::EndProgramWithError($_, "Failure retrieving the files.")
 }
 
 if ($filesInfo.Count -eq 0) {
@@ -58,13 +74,13 @@ try {
     $fileApiService.DownloadFiles($filesInfo, $downloadPath, $ensureUniqueNames)
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure while downloading the files.")
+    [Helper]::EndProgramWithError($_, "Failure downloading the files.")
 }
 
 [Helper]::EndProgram()
 
 # -------- END OF THE PROGRAM --------
-# Bellow there are classes to help the readability of the program
+# Below there are classes to help the readability of the program
 
 #region Helper_classes
 
@@ -300,8 +316,7 @@ class Helper {
 
     hidden static [void] FinishProgram([bool] $finishWithError) {
         Write-Host "---"
-        Write-Host "Press any key to finish... " -NoNewLine
-        [System.Console]::ReadKey()
+        Write-Host "End of the example."
 
         if ($finishWithError) {
             exit 1
