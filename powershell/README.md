@@ -26,6 +26,13 @@ See **Understanding configuration parameters** section to understand the meaning
 
 The script will download all the files matching the configuration parameters.
 
+---
+**NOTE**
+
+It works with almost all markdown flavours (the below blank line matters).
+
+---
+
 ## Understanding configuration parameters
 
 Inside the **config.xml** file you will see theses parameters:
