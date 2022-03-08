@@ -68,8 +68,9 @@ Example: diUer712Lkfd9fDh
 <br/>
 
 `Role`
-> Role of your application. It must be any of these values:
+> Role of your application.
 > 
+> It must be any of these values:  
 > **· Subscriber:** to download files provided to you (the most common scenario).  
 > **· Publisher:** to download files provided by you.
 
@@ -85,12 +86,12 @@ Example: diUer712Lkfd9fDh
 `EnsureUniqueNames`
 > Indicates if you want to rename the files to be unique before downloading them.
 > 
-> **Values**:  
-> &nbsp;&nbsp;**· false:** the downloaded file will replace any existing file with the same name.  
-> &nbsp;&nbsp;**· true:** the downloaded file will be renamed if there is any existing file with the same name.  
-> &nbsp;&nbsp;&nbsp;&nbsp;Format: {original file name}_{timestamp}.{original extension}  
-> &nbsp;&nbsp;&nbsp;&nbsp;Original: TestFile.txt  
-> &nbsp;&nbsp;&nbsp;&nbsp;Renamed: TestFile_20220304T1229027372Z.txt
+> It must be any of these values:  
+> **· false:** the downloaded file will replace any existing file with the same name.  
+> **· true:** the downloaded file will be renamed if there is any existing file with the same name.  
+> &nbsp;&nbsp;Format: {original file name}_{timestamp}.{original extension}  
+> &nbsp;&nbsp;Original: TestFile.txt  
+> &nbsp;&nbsp;Renamed: TestFile_20220304T1229027372Z.txt
 
 <br/>
 
