@@ -32,8 +32,18 @@ See **Understanding the configuration** section to understand the meaning of eac
 > 
 > **Mandatory:** False  
 > **Default value:** {DownloadFiles.ps1 folder}\config.xml 
->
-> **Example:** -ConfigPath "C:\Visma\File API\Ftaas.Examples\powershell\download\output"
+
+#### Example 1. Download files using the default configuration path
+
+```powershell
+& "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1"
+```
+
+#### Example 2. Download files specifying the configuration path
+
+```powershell
+& "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1" -ConfigPath "C:\Users\Foorby\config.xml"
+```
 
 ## Understanding the configuration
 
