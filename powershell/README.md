@@ -70,9 +70,8 @@ Example: diUer712Lkfd9fDh
 `Role`
 > Role of your application.
 > 
-> **Values:**  
-> &nbsp;&nbsp;**·Subscriber:** to download files provided to you (the most common scenario).  
-> &nbsp;&nbsp;**·Publisher:** to download files provided by you.
+> **· Subscriber:** to download files provided to you (the most common scenario).  
+> **· Publisher:** to download files provided by you.
 
 <br/>
 
