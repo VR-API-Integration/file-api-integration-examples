@@ -27,14 +27,12 @@ See **Understanding the configuration** section to understand the meaning of eac
 
 #### Parameters
 
-`-ConfigPath`  
-```
-Type:           String
-Mandatory:      False
-Default value:  {DownloadFiles.ps1 folder}\config.xml
-Description:    Path of the configuration.
-Example:        -ConfigPath "C:\Visma\File API\Download"
-```
+`-ConfigPath`
+> Type:           String  
+> Mandatory:      False  
+> Default value:  {DownloadFiles.ps1 folder}\config.xml
+> Description:    Path of the configuration.
+> Example:        -ConfigPath "C:\Visma\File API\Download"
 
 ## Understanding the configuration
 
@@ -43,20 +41,18 @@ Inside the **config.xml** file you will see these parameters:
 ### Attributes of the `Credentials` element
 
 `ClientId`
-
 > Client identifier of your application.  
 > Also known as Consumer Key.
 > 
-> Example: K82ixRsw0oiwWerjm123FKdhjfpqel2q
+> **Example:** K82ixRsw0oiwWerjm123FKdhjfpqel2q
 
 <br/>
 
 `ClientSecret`
-
 > Client secret of your application.  
 > Also known as Secret Key.
 > 
-> Example: diUer712Lkfd9fDh
+> **Example:** diUer712Lkfd9fDh
 
 ### Attributes of the `Download` element
 
