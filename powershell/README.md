@@ -92,8 +92,8 @@ Values:
 > true: the downloaded file will be renamed if there is any existing file with the same name.
     Format: {original file name}_{timestamp}.{original extension}
     Example:
-        Original file - TestFile.txt
-        Renamed file  - TestFile_20220304T1229027372Z.txt
+        Original file : TestFile.txt
+        Renamed file  : TestFile_20220304T1229027372Z.txt
 ```
 
 - **\<Download>\<Path>**: Path where the files will be downloaded.
