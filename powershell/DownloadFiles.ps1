@@ -18,13 +18,13 @@ Write-Host "(you can stop the script at any moment by pressing the buttons 'CTRL
 try {
     Write-Host "----"
     Write-Host "Retrieving the configuration."
-
-    if (-not (Test-Path $configPath -PathType Leaf)) {
-        throw "Specified configuration doesn't exist.`r`n| Path: $configPath"
-    }
     
     if (-not $configPath) {
         $configPath = "$($PSScriptRoot)\config.xml"
+    }
+
+    if (-not (Test-Path $configPath -PathType Leaf)) {
+        throw "Configuration not found.`r`n| Path: $configPath"
     }
     
     $configDocument = [xml](Get-Content $configPath)
@@ -32,19 +32,21 @@ try {
 
     $clientId = $config.Credentials.ClientId
     $clientSecret = $config.Credentials.ClientSecret
+
+    $fileApiBaseUrl = $config.Services.Files
+    $authTokenApiBaseUrl = $config.Services.AuthenticationToken
     
     $tenantId = $config.Download.TenantId
     $role = $Config.Download.Role
     $downloadPath = $config.Download.Path
     $ensureUniqueNames = [System.Convert]::ToBoolean($config.Download.EnsureUniqueNames)
     $filter = $config.Download.Filter
+
+    Write-Host "Configuration retrieved."
 }
 catch {
     [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.")
 }
-
-$authTokenApiBaseUrl = "https://api.raet.com/authentication"
-$fileApiBaseUrl = "https://api.raet.com/mft/v1.0"
 
 $authenticationApiClient = [AuthenticationApiClient]::new($authTokenApiBaseUrl)
 $authenticationApiService = [AuthenticationApiService]::new($authenticationApiClient)
