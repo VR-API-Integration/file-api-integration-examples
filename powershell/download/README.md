@@ -23,7 +23,7 @@ The script will download all the files matching the configuration.
 
 1. Open **config.xml** with any text editor (e.g. Notepad) and fill the parameters.  
 See **Understanding the configuration** section to understand the meaning of each parameter.
-2. Run the **DownloadFiles.ps1** script with the desired parameters.  
+2. Run the **DownloadFiles.ps1** script with the desired parameters.
 
 #### Parameters
 
@@ -33,7 +33,7 @@ See **Understanding the configuration** section to understand the meaning of eac
 > **Mandatory:** False  
 > **Default value:** {DownloadFiles.ps1 folder}\config.xml 
 >
-> **Example:** -ConfigPath "C:\Visma\File API\Download"
+> **Example:** -ConfigPath "C:\Visma\File API\Ftaas.Examples\powershell\download\output"
 
 ## Understanding the configuration
 
@@ -110,7 +110,7 @@ Inside the **config.xml** file you will see these parameters:
     <Download>
         <TenantId>1122334</TenantId>
         <Role>subscriber</Role>
-        <Path>C:\Visma\Integrations\Download</Path>
+        <Path>C:\Visma\File API\Ftaas.Examples\powershell\download\output</Path>
         <EnsureUniqueNames>true</EnsureUniqueNames>
         <Filter>startsWith(FileName, 'employee_profile') and uploadDate gt 2022-02-08T11:02:00Z</Filter>
     </Download>

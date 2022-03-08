@@ -12,7 +12,7 @@
     <Download>
         <TenantId>EnterYourTenantId</TenantId>
         <Role>subscriber</Role>
-        <Path>EnterTheFolderPathWhereYouWantToDownloadTheFiles (e.g. C:\Visma\File API\Download)</Path>
+        <Path>EnterTheFolderPathWhereYouWantToDownloadTheFiles (e.g. C:\Visma\File API\Ftaas.Examples\powershell\download\output)</Path>
         <EnsureUniqueNames>true</EnsureUniqueNames>
 
         <!-- Here you can find several examples for filtering the files.
