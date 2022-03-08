@@ -61,11 +61,11 @@ Example: diUer712Lkfd9fDh
 ### Attributes of the `Download` element
 
 `ClientId`
-
+```
 Tenant you will use to download the files.
 
 Example: 1122334
-
+```
 
 `Role`
 ```
@@ -106,20 +106,22 @@ Example: startsWith(FileName, 'employee_profile') and uploadDate gt 2022-02-08T1
 
 ## Example of a valid configuration
 
-    <Configuration>
-        <Credentials>
-            <ClientId>K82ixRsw0oiwWerjm123FKdhjfpqel2q</ClientId>
-            <ClientSecret>diUer712Lkfd9fDh</ClientSecret>
-        </Credentials>
-    
-        <Download>
-            <TenantId>1122334</TenantId>
-            <Role>subscriber</Role>
-            <Path>C:\Visma\Integrations\Download</Path>
-            <EnsureUniqueNames>true</EnsureUniqueNames>
-            <Filter>startsWith(FileName, 'employee_profile') and uploadDate gt 2022-02-08T11:02:00Z</Filter>
-        </Download>
-    </Configuration>
+```xml
+<Configuration>
+    <Credentials>
+        <ClientId>K82ixRsw0oiwWerjm123FKdhjfpqel2q</ClientId>
+        <ClientSecret>diUer712Lkfd9fDh</ClientSecret>
+    </Credentials>
+
+    <Download>
+        <TenantId>1122334</TenantId>
+        <Role>subscriber</Role>
+        <Path>C:\Visma\Integrations\Download</Path>
+        <EnsureUniqueNames>true</EnsureUniqueNames>
+        <Filter>startsWith(FileName, 'employee_profile') and uploadDate gt 2022-02-08T11:02:00Z</Filter>
+    </Download>
+</Configuration>
+```
 
 ## Authors
 
