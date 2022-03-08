@@ -27,7 +27,7 @@ See **Understanding the configuration** section to understand the meaning of eac
 
 #### Parameters
 
-`-ConfigPath`
+**`-ConfigPath`**
 > Configuration full path.
 > 
 > **Mandatory:** False  
