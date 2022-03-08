@@ -42,7 +42,7 @@ Inside the **config.xml** file you will see these parameters:
 
 ### Attributes of the `Credentials` element
 
-`ClientId`  
+`ClientId`
 ```
 Client identifier of your application.  
 Also known as Consumer Key.
@@ -50,7 +50,7 @@ Also known as Consumer Key.
 Example: K82ixRsw0oiwWerjm123FKdhjfpqel2q
 ```
 
-`ClientSecret`  
+`ClientSecret`
 ```
 Client secret of your application.  
 Also known as Secret Key.
@@ -60,20 +60,20 @@ Example: diUer712Lkfd9fDh
 
 ### Attributes of the `Download` element
 
-`ClientId`  
+`ClientId`
 ```
-Tenant of the application you will use to download.
+Tenant you will use to download the files.
 
 Example: 1122334
 ```
 
-`Role`  
+`Role`
 ```
 Role of your application.
 
 Values:
-    > Subscriber: foo
-    > Publisher: Bar
+> Subscriber: to download files provided to you (the most common scenario).
+> Publisher: to download files provided by you.
 ```
 
 - **\<Download>\<TenantId>**: Tenant of your application.
