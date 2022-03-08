@@ -88,11 +88,11 @@ Example: C:\Visma\Integrations\Download
 > Indicates if you want to rename the files to be unique before downloading them.
 > 
 > **Values**:  
-> &nbsp;**· false:** the downloaded file will replace any existing file with the same name.  
-> &nbsp;**· true:** the downloaded file will be renamed if there is any existing file with the same name.  
-> &nbsp;&nbsp;Format: {original file name}_{timestamp}.{original extension}  
-> &nbsp;&nbsp;Original: TestFile.txt  
-> &nbsp;&nbsp;Renamed : TestFile_20220304T1229027372Z.txt
+> &nbsp;&nbsp;**· false:** the downloaded file will replace any existing file with the same name.  
+> &nbsp;&nbsp;**· true:** the downloaded file will be renamed if there is any existing file with the same name.  
+> &nbsp;&nbsp;&nbsp;&nbsp;Format: {original file name}_{timestamp}.{original extension}  
+> &nbsp;&nbsp;&nbsp;&nbsp;Original: TestFile.txt  
+> &nbsp;&nbsp;&nbsp;&nbsp;Renamed : TestFile_20220304T1229027372Z.txt
 
 > `Filter`
 >
