@@ -24,7 +24,9 @@ Inside the **powershell** folder you can find these files:
 See **Understanding the configuration** section to understand the meaning of each parameter.
 3. Run the **DownloadFiles.ps1** script.  
 **Parameters**:  
-    **-ConfigPath**
+    `-ConfigPath`
+    | Type: | string
+
     | Name       | Type          | Mandatory  | Description               | Example                                  |
     |-----------:|--------------:|-----------:|--------------------------:|-----------------------------------------:|
     | ConfigPath |  string       | False      | Path of the configuration | -ConfigPath "C:\Visma\File API\Download" |
