@@ -33,23 +33,19 @@ Inside the **config.xml** file you will see theses parameters:
 Also known as **Consumer Key**.
 - **\<Credentials>\<ClientSecret>**: Client secret of your application.  
 Also known as **Secret Key**.
-- **\<Credentials>\<TenantId>**: Tenant of your application.
-- **\<Credentials>\<Role>**: Role of your application.  
+- **\<Download>\<TenantId>**: Tenant of your application.
+- **\<Download>\<Role>**: Role of your application.  
 __subscriber__ if you consume files (the most common scenario).  
 __publisher__ if you provide files.
-
 - **\<Download>\<Path>**: Path where the files will be downloaded.
 - **\<Download>\<EnsureUniqueNames>**: Indicates if you want to rename the files to be unique before downloading them.  
 __false__ means that if there is already a file with the same name in the download path, the file will be **replaced** by the new one.  
 __true__ means that if there is already a file with the same name in the download path, the file to be downloaded will be **renamed** so it doesn't collide with the existing one.  
 The new name will have this format: __{original file name}_\<timestamp>.{original extension}__.  
 E.g. original file: __TestFile.txt__ / renamed file: __TestFile_20220304T1229027372Z.txt__.
-
-
-- **\<List>\<Filter>**: Indicates the kind of files that will be retrieved from the list. These files will also be downloaded  
+- **\<Download>\<Filter>**: Indicates the kind of files that will be retrieved from the list.  
 If empty, all the available (not downloaded yet) files will be listed.  
 You can learn more about filters in the [File API documentation](https://vr-api-integration.github.io/file-api-documentation/guides__search__for__files.html).
-
 
 ## Example of a valid **config.xml**
 
@@ -57,18 +53,15 @@ You can learn more about filters in the [File API documentation](https://vr-api-
         <Credentials>
             <ClientId>K82ixRsw0oiwWerjm123FKdhjfpqel2q</ClientId>
             <ClientSecret>diUer712Lkfd9fDh</ClientSecret>
-            <TenantId>1122334</TenantId>
-            <Role>subscriber</Role>
         </Credentials>
     
         <Download>
+            <TenantId>1122334</TenantId>
+            <Role>subscriber</Role>
             <Path>C:\Visma\Integrations\Download</Path>
             <EnsureUniqueNames>true</EnsureUniqueNames>
-        </Download>
-
-        <List>
             <Filter>startsWith(FileName, 'employee_profile') and uploadDate gt 2022-02-08T11:02:00Z</Filter>
-        </List>
+        </Download>
     </Configuration>
 
 ## Authors

@@ -1,4 +1,6 @@
 # This example shows how to download all the files specified in a filter.
+# Authors: Visma - Transporters Team
+
 $ErrorActionPreference = "Stop"
 
 Write-Host "========================================================="
@@ -14,13 +16,12 @@ try {
 
     $clientId = $config.Credentials.ClientId
     $clientSecret = $config.Credentials.ClientSecret
-    $tenantId = $config.Credentials.TenantId
-    $role = $Config.Credentials.Role
-
+    
+    $tenantId = $config.Download.TenantId
+    $role = $Config.Download.Role
     $downloadPath = $config.Download.Path
     $ensureUniqueNames = [System.Convert]::ToBoolean($config.Download.EnsureUniqueNames)
-
-    $filter = $config.List.Filter
+    $filter = $config.Download.Filter
 }
 catch {
     [Helper]::EndProgramWithError($_, "Failure while retrieving the configuration. See the README.MD to check the format of the parameters.")

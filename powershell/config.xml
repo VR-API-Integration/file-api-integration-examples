@@ -2,16 +2,14 @@
     <Credentials>
         <ClientId>EnterYourClientId</ClientId>
         <ClientSecret>EnterYourClientSecret</ClientSecret>
-        <TenantId>EnterYourTenantId</TenantId>
-        <Role>subscriber</Role>
     </Credentials>
 
     <Download>
+        <TenantId>EnterYourTenantId</TenantId>
+        <Role>subscriber</Role>
         <Path>EnterTheFolderPathWhereYouWantToDownloadTheFiles (e.g. C:\Visma\File API\Download)</Path>
         <EnsureUniqueNames>true</EnsureUniqueNames>
-    </Download>
 
-    <List>
         <!-- Here you can find several examples for filtering the files.
         In order to use any of the filters, just uncomment the desired <Filter> line and comment the rest.
         You can also create your own filter. Check the File API documentation to see all available filters. -->
@@ -51,5 +49,5 @@
 
         <!-- Files with .txt extension -->
         <!-- <Filter>endsWith(FileName, '.txt')</Filter> -->
-    </List>
+    </Download>
 </Configuration>
