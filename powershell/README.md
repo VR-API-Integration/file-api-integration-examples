@@ -27,7 +27,7 @@ See **Understanding the configuration** section to understand the meaning of eac
 
 #### Parameters
 
-`-ConfigPath`
+`-ConfigPath`  
 ```
 Type:           String
 Mandatory:      False
@@ -42,7 +42,7 @@ Inside the **config.xml** file you will see these parameters:
 
 ### Attributes of the `Credentials` element
 
-`ClientId`
+`ClientId`  
 Client identifier of your application.  
 Also known as **Consumer Key**.
 ```
