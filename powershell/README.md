@@ -28,7 +28,8 @@ See **Understanding the configuration** section to understand the meaning of eac
 #### Parameters
 
 `-ConfigPath`
-> Configuration full path.  
+> Configuration full path.
+> 
 > **Mandatory:** False  
 > **Default value:** {DownloadFiles.ps1 folder}\config.xml 
 >
