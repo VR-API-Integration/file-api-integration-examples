@@ -29,14 +29,15 @@ The script will download all the files matching the configuration parameters.
 ## Understanding configuration parameters
 
 Inside the **config.xml** file you will see theses parameters:
-- **\<Configuration>\<ClientId>**: Client identifier of your application.  
+- **\<Credentials>\<ClientId>**: Client identifier of your application.  
 Also known as **Consumer Key**.
-- **\<Configuration>\<ClientSecret>**: Client secret of your application.  
+- **\<Credentials>\<ClientSecret>**: Client secret of your application.  
 Also known as **Secret Key**.
-- **\<Configuration>\<TenantId>**: Tenant of your application.
-- **\<Configuration>\<Role>**: Role of your application.  
+- **\<Credentials>\<TenantId>**: Tenant of your application.
+- **\<Credentials>\<Role>**: Role of your application.  
 __subscriber__ if you consume files (the most common scenario).  
 __publisher__ if you provide files.
+
 
 - **\<Download>\<Path>**: Path where the files will be downloaded.
 - **\<Download>\<EnsureUniqueNames>**: Indicates if you want to rename the files to be unique before downloading them.  
@@ -44,6 +45,7 @@ __false__ means that if there is already a file with the same name in the downlo
 __true__ means that if there is already a file with the same name in the download path, the file to be downloaded will be **renamed** so it doesn't collide with the existing one.  
 The new name will have this format: __original file name - \<timestamp>.original extension__.  
 E.g. original file: __TestFile.txt__ / renamed file: __TestFile - 20220304T1229027372Z.txt__.
+
 
 - **\<List>\<Filter>**: Indicates what kind of files will be retrieved from the list. These files will also be downloaded  
 If empty, all the available (not downloaded yet) files will be listed.  

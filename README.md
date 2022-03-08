@@ -2,7 +2,7 @@
 
 Collection of examples that show how to integrate the File API using different technologies like:
 - .NET Core
-- Curl scripts
+- Powershell
 
 ## Acknowledgements
 
