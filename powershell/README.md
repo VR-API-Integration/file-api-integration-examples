@@ -28,12 +28,12 @@ See **Understanding the configuration** section to understand the meaning of eac
 #### Parameters
 
 `-ConfigPath`
-> Path of the configuration.
+> Configuration full path.
 >
-> Mandatory: False  
-> Default value: {DownloadFiles.ps1 folder}\config.xml 
+> **Mandatory:** False  
+> **Default value:** {DownloadFiles.ps1 folder}\config.xml 
 >
-> Example: -ConfigPath "C:\Visma\File API\Download"
+> **Example:** -ConfigPath "C:\Visma\File API\Download"
 
 ## Understanding the configuration
 
