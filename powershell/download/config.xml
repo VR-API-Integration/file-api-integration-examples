@@ -5,8 +5,8 @@
     </Credentials>
 
     <Services>
-        <Files>https://api.raet.com/mft/v1.0</Files>
-        <AuthenticationToken>https://api.raet.com/authentication</AuthenticationToken>
+        <FileApiBaseUrl>https://api.raet.com/mft/v1.0</FileApiBaseUrl>
+        <AuthenticationTokenApiBaseUrl>https://api.raet.com/authentication</AuthenticationTokenApiBaseUrl>
     </Services>
 
     <Download>

@@ -69,14 +69,14 @@ Inside the **config.xml** file you will find these parameters:
 
 ### Attributes of the `Services` element
 
-**`Files`**
+**`FileApiBaseUrl`**
 > File API base URL. 
 > 
 > In the vast majority of scenarios, it should be set to **https://api.raet.com/mft/v1.0**
 
 <br/>
 
-**`AuthenticationToken`**
+**`AuthenticationTokenApiBaseUrl`**
 > Authorization token API base URL. 
 > 
 > In the vast majority of scenarios, it should be set to **https://api.raet.com/authentication**
@@ -134,8 +134,8 @@ Inside the **config.xml** file you will find these parameters:
     </Credentials>
 
     <Services>
-        <Files>https://api.raet.com/mft/v1.0</Files>
-        <AuthenticationToken>https://api.raet.com/authentication</AuthenticationToken>
+        <FileApiBaseUrl>https://api.raet.com/mft/v1.0</FileApiBaseUrl>
+        <AuthenticationTokenApiBaseUrl>https://api.raet.com/authentication</AuthenticationTokenApiBaseUrl>
     </Services>
 
     <Download>

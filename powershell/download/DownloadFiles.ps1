@@ -34,8 +34,8 @@ try {
     $clientId = $config.Credentials.ClientId
     $clientSecret = $config.Credentials.ClientSecret
 
-    $fileApiBaseUrl = $config.Services.Files
-    $authTokenApiBaseUrl = $config.Services.AuthenticationToken
+    $fileApiBaseUrl = $config.Services.FileApiBaseUrl
+    $authTokenApiBaseUrl = $config.Services.AuthenticationTokenApiBaseUrl
     
     $tenantId = $config.Download.TenantId
     $role = $Config.Download.Role
