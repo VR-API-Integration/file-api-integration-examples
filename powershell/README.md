@@ -60,28 +60,25 @@ Example: diUer712Lkfd9fDh
 
 ### Attributes of the `Download` element
 
-`ClientId`
-```
-Tenant you will use to download the files.
+> `TenantId`
+> 
+> Tenant you will use to download the files.
+> 
+> Example: 1122334
 
-Example: 1122334
-```
+> `Role`
+> 
+> Role of your application.
+> 
+> Values:  
+> &nbsp;&nbsp;**·Subscriber:** to download files provided to you (the most common scenario).  
+> &nbsp;&nbsp;**·Publisher:** to download files provided by you.
 
-`Role`
-```
-Role of your application.
-
-Values:
-> Subscriber: to download files provided to you (the most common scenario).
-> Publisher: to download files provided by you.
-```
-
-`Path`
-```
-Path where the files will be downloaded.
-
-Example: C:\Visma\Integrations\Download
-```
+> `Path`
+> 
+> Path where the files will be downloaded.
+> 
+> Example: C:\Visma\Integrations\Download
 
 > `EnsureUniqueNames`
 >
@@ -92,7 +89,7 @@ Example: C:\Visma\Integrations\Download
 > &nbsp;&nbsp;**· true:** the downloaded file will be renamed if there is any existing file with the same name.  
 > &nbsp;&nbsp;&nbsp;&nbsp;Format: {original file name}_{timestamp}.{original extension}  
 > &nbsp;&nbsp;&nbsp;&nbsp;Original: TestFile.txt  
-> &nbsp;&nbsp;&nbsp;&nbsp;Renamed : TestFile_20220304T1229027372Z.txt
+> &nbsp;&nbsp;&nbsp;&nbsp;Renamed: TestFile_20220304T1229027372Z.txt
 
 > `Filter`
 >
