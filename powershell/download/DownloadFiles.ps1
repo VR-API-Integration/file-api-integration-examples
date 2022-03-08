@@ -83,7 +83,7 @@ catch {
 [Helper]::EndProgram()
 
 # -------- END OF THE PROGRAM --------
-# Below there are classes to help the readability of the program
+# Below there are classes and models to help the readability of the program
 
 #region Helper_classes
 
@@ -102,7 +102,7 @@ class FileApiService {
         $this._waitTimeBetweenCallsMS = $waitTimeBetweenCallsMS
     }
 
-    [PSCustomObject] GetFilesInfo([string] $filter) {
+    [FileInfo[]] GetFilesInfo([string] $filter) {
         Write-Host "----"
         Write-Host "Retrieving list of files."
         if ($filter) {
@@ -117,11 +117,12 @@ class FileApiService {
             $response = $this._fileApiClient.ListFiles($this._role, $pageIndex, $pageSize, $filter)
 
             foreach ($fileData in $response.data) {
-                $filesInfo += @{
-                    Id   = $fileData.fileId
-                    Name = $fileData.fileName
-                    Size = $fileData.fileSize
-                }
+                $fileInfo = [FileInfo]::new()
+                $fileInfo.Id = $fileData.fileId
+                $fileInfo.Name = $fileData.fileName
+                $fileInfo.Size = $fileData.fileSize
+
+                $filesInfo += $fileInfo
             }
 
             $isLastPage = $pageSize * ($pageIndex + 1) -ge $response.count
@@ -135,7 +136,7 @@ class FileApiService {
         return $filesInfo
     }
 
-    [void] DownloadFiles([PSCustomObject[]] $filesInfo, [string] $path, [bool] $ensureUniqueNames) {
+    [void] DownloadFiles([FileInfo[]] $filesInfo, [string] $path, [bool] $ensureUniqueNames) {
         if (-not (Test-Path $path -PathType Container)) {
             Write-Host "----"
             Write-Host "Download path doesn't exist. Creating it."
@@ -202,7 +203,7 @@ class FileApiClient {
         return $response
     }
 
-    [PSCustomObject] DownloadFile([string] $role, [PSCustomObject] $fileInfo, [string] $downloadPath) {
+    [PSCustomObject] DownloadFile([string] $role, [FileInfo] $fileInfo, [string] $downloadPath) {
         $headers = $this._defaultHeaders
         $headers.Accept = "application/octet-stream"
 
@@ -275,11 +276,10 @@ class Helper {
         return $uniqueFileName
     }
 
-    static [PSCustomObject] GetFileNameInfo([string] $fileName) {
-        $fileNameInfo = @{
-            Name      = $fileName
-            Extension = ""
-        }
+    static [FileNameInfo] GetFileNameInfo([string] $fileName) {
+        $fileNameInfo = [FileNameInfo]::new()
+        $fileNameInfo.Name = $fileName
+        $fileNameInfo.Extension = ""
         
         $splitFileName = $fileName -split "\."
         if ($splitFileName.Length -gt 1) {
@@ -331,3 +331,18 @@ class Helper {
 }
 
 #endregion Helper_classes
+
+#region Models
+
+class FileInfo {
+    [string] $Id
+    [string] $Name
+    [long] $Size
+}
+
+class FileNameInfo {
+    [string] $Name
+    [string] $Extension
+}
+
+#endregion Models
