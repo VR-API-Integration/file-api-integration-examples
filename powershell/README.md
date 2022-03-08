@@ -43,20 +43,20 @@ Inside the **config.xml** file you will see these parameters:
 ### Attributes of the `Credentials` element
 
 `ClientId`
-```
-Client identifier of your application.  
-Also known as Consumer Key.
 
-Example: K82ixRsw0oiwWerjm123FKdhjfpqel2q
-```
+> Client identifier of your application.  
+> Also known as Consumer Key.
+> 
+> Example: K82ixRsw0oiwWerjm123FKdhjfpqel2q
+
+<br/>
 
 `ClientSecret`
-```
-Client secret of your application.  
-Also known as Secret Key.
 
-Example: diUer712Lkfd9fDh
-```
+> Client secret of your application.  
+> Also known as Secret Key.
+> 
+> Example: diUer712Lkfd9fDh
 
 ### Attributes of the `Download` element
 
@@ -70,7 +70,7 @@ Example: diUer712Lkfd9fDh
 `Role`
 > Role of your application.
 > 
-> It must be any of these values:  
+> Must be set to any of these values:  
 > **· Subscriber:** to download files provided to you (the most common scenario).  
 > **· Publisher:** to download files provided by you.
 
@@ -86,7 +86,7 @@ Example: diUer712Lkfd9fDh
 `EnsureUniqueNames`
 > Indicates if you want to rename the files to be unique before downloading them.
 > 
-> It must be any of these values:  
+> Must be set to any of these values:  
 > **· false:** the downloaded file will replace any existing file with the same name.  
 > **· true:** the downloaded file will be renamed if there is any existing file with the same name.  
 > &nbsp;&nbsp;Format: {original file name}_{timestamp}.{original extension}  
