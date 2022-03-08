@@ -65,12 +65,14 @@ Example: diUer712Lkfd9fDh
 > 
 > Example: 1122334
 
+
 `Role`
 > Role of your application.
 > 
 > Values:  
 > &nbsp;&nbsp;**·Subscriber:** to download files provided to you (the most common scenario).  
 > &nbsp;&nbsp;**·Publisher:** to download files provided by you.
+
 
 `Path`
 > Path where the files will be downloaded.
