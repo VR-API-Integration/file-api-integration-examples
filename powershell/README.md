@@ -26,9 +26,16 @@ See **Understanding configuration parameters** section to understand the meaning
 
 The script will download all the files matching the configuration parameters.
 
+#### Parameters
+
+| Name       |      Type     |  Mandatory |  Description              |
+|------------|:-------------:|-----------:|--------------------------:|
+| ConfigPath |  string       | False      | Path of the configuration |
+
 ---
 **NOTE**
-It works with almost all markdown flavours (the below blank line matters).
+
+If you want to use a different **config.xml** than the provided one, you can specify the path to that configuration 
 
 ---
 

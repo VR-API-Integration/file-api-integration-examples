@@ -3,6 +3,7 @@
 
 [CmdletBinding()]
 Param(
+    [Alias("ConfigPath")]
     [Parameter(Mandatory = $false, HelpMessage = 'Full path of the configuration (e.g. C:\Visma\File API\Download\config.xml). If not provided the default configuration will be used.')]
     [string] $configPath
 )
