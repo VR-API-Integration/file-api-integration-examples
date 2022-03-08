@@ -29,6 +29,8 @@ The script will download all the files matching the configuration parameters.
 ## Understanding configuration parameters
 
 Inside the **config.xml** file you will see theses parameters:
+
+`  
 - **\<Credentials>\<ClientId>**: Client identifier of your application.  
 Also known as **Consumer Key**.
 - **\<Credentials>\<ClientSecret>**: Client secret of your application.  
@@ -37,8 +39,7 @@ Also known as **Secret Key**.
 - **\<Credentials>\<Role>**: Role of your application.  
 __subscriber__ if you consume files (the most common scenario).  
 __publisher__ if you provide files.
-` `  
-` `  
+`  
 - **\<Download>\<Path>**: Path where the files will be downloaded.
 - **\<Download>\<EnsureUniqueNames>**: Indicates if you want to rename the files to be unique before downloading them.  
 __false__ means that if there is already a file with the same name in the download path, the file will be **replaced** by the new one.  
