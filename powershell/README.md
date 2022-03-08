@@ -21,7 +21,7 @@ Inside the **powershell** folder you can find these files:
 
 1. Place the files **config.xml** and **DownloadFiles.ps1** in the same folder. Do not rename **config.xml**.
 2. Open **config.xml** with any text editor (e.g. Notepad) and fill the parameters.  
-See **Understanding configuration parameters** section to understand the meaning of each parameter.
+See **Understanding the configuration** section to understand the meaning of each parameter.
 3. Run the **DownloadFiles.ps1** script.
 
 The script will download all the files matching the configuration parameters.
@@ -32,14 +32,7 @@ The script will download all the files matching the configuration parameters.
 |-----------:|--------------:|-----------:|--------------------------:|-----------------------------------------:|
 | ConfigPath |  string       | False      | Path of the configuration | -ConfigPath "C:\Visma\File API\Download" |
 
----
-**NOTE**
-
-If you want to use a different **config.xml** than the provided one, you can specify the path to that configuration 
-
----
-
-## Understanding configuration parameters
+## Understanding the configuration
 
 Inside the **config.xml** file you will see theses parameters:
 - **\<Credentials>\<ClientId>**: Client identifier of your application.  
