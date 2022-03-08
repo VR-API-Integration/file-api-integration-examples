@@ -29,6 +29,7 @@ The script will download all the files matching the configuration parameters.
 ---
 **NOTE**
 It works with almost all markdown flavours (the below blank line matters).
+
 ---
 
 ## Understanding configuration parameters
