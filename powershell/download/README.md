@@ -1,6 +1,6 @@
-# File API Powershell examples
+# File API Powershell download examples
 
-A collection of examples to integrate with the File API using **Powershell**.
+A collection of examples to download files with the File API using **Powershell**.
 
 ## Prerequisites
 
@@ -11,7 +11,7 @@ A collection of examples to integrate with the File API using **Powershell**.
 
 Download the **file-api-integration-examples** repository.
 
-Inside the **powershell** folder you can find these files:
+Inside the **powershell\download** folder you can find these files:
 - **DownloadFiles.ps1**: Script example to download specified files.
 - **config.xml**: Configuration of the **DownloadFiles.ps1** script.
 

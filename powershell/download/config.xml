@@ -4,6 +4,11 @@
         <ClientSecret>EnterYourClientSecret</ClientSecret>
     </Credentials>
 
+    <Services>
+        <Files>https://api.raet.com/mft/v1.0</Files>
+        <AuthenticationToken>https://api.raet.com/authentication</AuthenticationToken>
+    </Services>
+
     <Download>
         <TenantId>EnterYourTenantId</TenantId>
         <Role>subscriber</Role>
