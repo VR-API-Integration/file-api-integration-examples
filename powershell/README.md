@@ -28,11 +28,10 @@ See **Understanding the configuration** section to understand the meaning of eac
     | Name       | Type          | Mandatory  | Description               | Example                                  |
     |-----------:|--------------:|-----------:|--------------------------:|-----------------------------------------:|
     | ConfigPath |  string       | False      | Path of the configuration | -ConfigPath "C:\Visma\File API\Download" |
-    > Mandatory: The note content  
-    > Type: foo  
-    | Foo | Bar |  
-    | foo | bar |  
-    | quz | qux |
+    > Type:         string  
+    > Mandatory:    False  
+    > Description:  Path of the configuration  
+    > Example:      -ConfigPath "C:\Visma\File API\Download"
 
 The script will download all the files matching the configuration.
 
