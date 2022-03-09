@@ -19,7 +19,7 @@
         In order to use any of the filters, just uncomment the desired <Filter> line and comment the rest.
         You can also create your own filter. Check the File API documentation to see all available filters. -->
 
-        <!-- No filters -->
+        <!-- No filters (same as "status eq 'available'") -->
         <Filter></Filter>
 
         <!-- Files already downloaded. -->
