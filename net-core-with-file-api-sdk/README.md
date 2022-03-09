@@ -1,4 +1,4 @@
-# File API SDKs and Examples
+# File API SDKs examples
 
 The document is divided into two parts, the first part includes the documentation of File API SDKs and the second part is the Examples of File API SDKs usage. 
 
