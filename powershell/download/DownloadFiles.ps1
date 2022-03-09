@@ -4,8 +4,12 @@
 [CmdletBinding()]
 Param(
     [Alias("ConfigPath")]
-    [Parameter(Mandatory = $false, HelpMessage = 'Full path of the configuration (e.g. C:\Visma\File API\Ftaas.Examples\powershell\download\config.xml). If not provided the default configuration will be used.')]
-    [string] $configurationPath
+    [Parameter(Mandatory = $false, HelpMessage = 'Full path of the configuration (e.g. C:\Visma\File API\Ftaas.Examples\powershell\download\config.xml). Default value: set in the code.')]
+    [string] $_configPath,
+
+    [Alias("RenewCredentials")]
+    [Parameter(Mandatory = $false, HelpMessage = 'Boolean indicating if you want to renew your credentials (true) / or not (false). Default value: false.\nThis parameter is useful in case you changed your ClientId or Client secret.')]
+    [bool] $_renewCredentials
 )
 
 $ErrorActionPreference = "Stop"
@@ -20,19 +24,18 @@ try {
     Write-Host "----"
     Write-Host "Retrieving the configuration."
     
-    if (-not $configurationPath) {
-        $configurationPath = "$($PSScriptRoot)\config.xml"
+    if (-not $_configPath) {
+        $_configPath = "$($PSScriptRoot)\config.xml"
     }
 
-    if (-not (Test-Path $configurationPath -PathType Leaf)) {
-        throw "Configuration not found.`r`n| Path: $configurationPath"
+    if (-not (Test-Path $_configPath -PathType Leaf)) {
+        throw "Configuration not found.`r`n| Path: $_configPath"
     }
     
-    $configDocument = [xml](Get-Content $configurationPath)
+    $configDocument = [xml](Get-Content $_configPath)
     $config = $configDocument.Configuration
 
-    $clientId = $config.Credentials.ClientId
-    $clientSecret = $config.Credentials.ClientSecret
+    $credentialsStoragePath = $config.Credentials.StoragePath
 
     $fileApiBaseUrl = $config.Services.FileApiBaseUrl
     $authenticationTokenApiBaseUrl = $config.Services.AuthenticationTokenApiBaseUrl
@@ -44,8 +47,7 @@ try {
     $filter = $config.Download.Filter
 
     $missingConfiguration = @()
-    if ([string]::IsNullOrEmpty($clientId)) { $missingConfiguration += "Credentials.ClientId" }
-    if ([string]::IsNullOrEmpty($clientSecret)) { $missingConfiguration += "Credentials.ClientSecret" }
+    if ([string]::IsNullOrEmpty($credentialsStoragePath)) { $missingConfiguration += "Credentials.StoragePath" }
     if ([string]::IsNullOrEmpty($fileApiBaseUrl)) { $missingConfiguration += "Services.FileApiBaseUrl" }
     if ([string]::IsNullOrEmpty($authenticationTokenApiBaseUrl)) { $missingConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
     if ([string]::IsNullOrEmpty($tenantId)) { $missingConfiguration += "Download.TenantId" }
@@ -71,11 +73,21 @@ catch {
     [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.")
 }
 
+[CredentialsManager] $credentialsManager = [CredentialsManager]::new($credentialsStoragePath)
+[CredentialsService] $credentialsService = [CredentialsService]::new($credentialsManager)
+
+try {
+    $credentials = $credentialsService.Retrieve($_renewCredentials)
+}
+catch {
+    [Helper]::EndProgramWithError($_, "Failure retrieving the credentials.")
+}
+
 [AuthenticationApiClient] $authenticationApiClient = [AuthenticationApiClient]::new($authenticationTokenApiBaseUrl)
 [AuthenticationApiService] $authenticationApiService = [AuthenticationApiService]::new($authenticationApiClient)
 
 try {
-    $token = $authenticationApiService.NewToken($clientId, $clientSecret)
+    $token = $authenticationApiService.NewToken($credentials.ClientId, $credentials.ClientSecret)
 }
 catch {
     [Helper]::EndProgramWithError($_, "Failure retrieving the authentication token.")
@@ -109,13 +121,98 @@ catch {
 
 #region Helper_classes
 
+class CredentialsService {
+    hidden [CredentialsManager] $_credentialsManager
+
+    CredentialsService ([CredentialsManager] $credentialsManager) {
+        $this._credentialsManager = $credentialsManager
+    }
+
+    [Credentials] Retrieve([bool] $renewCredentials) {
+        if ($renewCredentials) {
+            $this._credentialsManager.CreateNew()
+            $credentials = $this._credentialsManager.Retrieve()
+    
+            return $credentials
+        }
+        
+        $credentials = $this._credentialsManager.Retrieve()
+        if ($null -eq $credentials) {
+            $credentials = $this._credentialsManager.CreateNew()
+        }
+    
+        return $credentials
+    }
+}
+
+class CredentialsManager {
+    hidden [string] $_storagePath
+    hidden [string] $_storageFileName
+
+    CredentialsManager([string] $storagePath) {
+        $this._storagePath = $storagePath
+        $this._storageFileName = "credentials.xml"
+    }
+
+    [void] CreateNew() {
+        $storageFullPath = "$($this._storagePath)\$($this._storageFileName)"
+
+        Write-Host "----"
+        Write-Host "Saving your credentials."
+        Write-Host "| Path: $($storageFullPath)"
+
+        if (-not (Test-Path -Path $this._storagePath -PathType Container)) {
+            Write-Host "----"
+            Write-Host "Storage credential path doesn't exist. Creating it."
+            Write-Host "| Path: $($this._storagePath)"
+            
+            New-Item -ItemType Directory -Force -Path $this._storagePath
+        }
+
+        Write-Host "Enter your credentials."
+        $clientId = Read-Host -Prompt '| Client ID'
+        $clientSecret = Read-Host -Prompt '| Client secret' -AsSecureString
+
+        [PSCredential]::new($clientId, $clientSecret) | Export-CliXml -Path $storageFullPath
+
+        Write-Host "----"
+        Write-Host "Credentials saved."
+    }
+
+    [Credentials] Retrieve() {
+        $storageFullPath = "$($this._storagePath)\$($this._storageFileName)"
+
+        Write-Host "----"
+        Write-Host "Retrieving your credentials."
+        Write-Host "| Path: $($storageFullPath)"
+
+        if (-not (Test-Path -Path $storageFullPath -PathType Leaf)) {
+            Write-Host "----"
+            Write-Host "Credentials not found."
+            Write-Host "| Path: $($storageFullPath)"
+            
+            return $null
+        }
+
+        $credentialsStorage = Import-CliXml -Path $storageFullPath
+
+        $credentials = [Credentials]::new()
+        $credentials.ClientId = $credentialsStorage.GetNetworkCredential().UserName
+        $credentials.ClientSecret = $credentialsStorage.GetNetworkCredential().Password
+
+        Write-Host "Credentials retrieved."
+
+        return $credentials
+    }
+}
+
 class FileApiService {
     hidden [FileApiClient] $_fileApiClient
     hidden [string] $_role
     hidden [string] $_waitTimeBetweenCallsMS
     hidden [long] $_downloadSizeLimit
 
-    FileApiService (
+    FileApiService(
         [FileApiClient] $fileApiClient,
         [string] $role,
         [int] $waitTimeBetweenCallsMS
@@ -380,6 +477,11 @@ class FileInfo {
 class FileNameInfo {
     [string] $Name
     [string] $Extension
+}
+
+class Credentials {
+    [string] $ClientId
+    [string] $ClientSecret
 }
 
 #endregion Models
