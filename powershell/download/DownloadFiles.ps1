@@ -49,8 +49,8 @@ catch {
     [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.")
 }
 
-$authenticationApiClient = [AuthenticationApiClient]::new($authTokenApiBaseUrl)
-$authenticationApiService = [AuthenticationApiService]::new($authenticationApiClient)
+[AuthenticationApiClient] $authenticationApiClient = [AuthenticationApiClient]::new($authTokenApiBaseUrl)
+[AuthenticationApiService] $authenticationApiService = [AuthenticationApiService]::new($authenticationApiClient)
 
 try {
     $token = $authenticationApiService.NewToken($clientId, $clientSecret)
@@ -59,8 +59,8 @@ catch {
     [Helper]::EndProgramWithError($_, "Failure retrieving the authentication token.")
 }
 
-$fileApiClient = [FileApiClient]::new($fileApiBaseUrl, $token, $tenantId)
-$fileApiService = [FileApiService]::new($fileApiClient, $role, 200)
+[FileApiClient] $fileApiClient = [FileApiClient]::new($fileApiBaseUrl, $token, $tenantId)
+[FileApiService] $fileApiService = [FileApiService]::new($fileApiClient, $role, 200)
 
 try {
     $filesInfo = $fileApiService.GetFilesInfo($filter)
@@ -91,6 +91,7 @@ class FileApiService {
     hidden [FileApiClient] $_fileApiClient
     hidden [string] $_role
     hidden [string] $_waitTimeBetweenCallsMS
+    hidden [long] $_downloadSizeLimit
 
     FileApiService (
         [FileApiClient] $fileApiClient,
@@ -100,6 +101,11 @@ class FileApiService {
         $this._fileApiClient = $fileApiClient
         $this._role = $role
         $this._waitTimeBetweenCallsMS = $waitTimeBetweenCallsMS
+
+        # This limit is set because the method Invoke-RestMethod doesn't allow
+        # the download of files bigger than 2 GiB.
+        # I set the limit a bit less than 2 GiB to give some margin.
+        $this._downloadSizeLimit = 2147000000
     }
 
     [FileInfo[]] GetFilesInfo([string] $filter) {
@@ -151,6 +157,15 @@ class FileApiService {
             Write-Host "Downloading file $($downloadedFilesCount + 1)/$($filesInfo.Count)."
             Write-Host "| ID: $($fileInfo.Id)"
             Write-Host "| Name: $($fileInfo.Name)"
+            Write-Host "| Size: $($fileInfo.Size)"
+
+            if ($fileInfo.Size -ge $this._downloadSizeLimit) {
+                Write-Host "---" -ForegroundColor "Red"
+                Write-Host "Cannot download files bigger or equal than $($this._downloadSizeLimit) bytes." -ForegroundColor "Red"
+                Write-Host "File will be skipped." -ForegroundColor "Red"
+
+                continue
+            }
 
             if (($ensureUniqueNames -eq $true) -and (Test-Path "$($path)\$($fileInfo.Name)" -PathType Leaf)) {
                 Write-Host "There is already a file with the same name in the download path."
