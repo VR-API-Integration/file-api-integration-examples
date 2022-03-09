@@ -4,7 +4,7 @@ A collection of examples to download files with the File API using **Powershell*
 
 ## Prerequisites
 
-- Powershell version 5.1 or above.
+- The script was prepared for Powershell version 5.1 or above. With lower versions it might not work properly.
 - Files to be downloaded cannot be bigger than 2 GB.
 
 ## Getting Started 
