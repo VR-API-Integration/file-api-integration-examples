@@ -338,3 +338,6 @@ ASALocalRun/
 
 # Coverlet coverage
 coverage.opencover.xml
+
+# Visual Studio Code workspace
+*.code-workspace
