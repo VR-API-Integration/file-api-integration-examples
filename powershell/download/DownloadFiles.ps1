@@ -35,13 +35,35 @@ try {
     $clientSecret = $config.Credentials.ClientSecret
 
     $fileApiBaseUrl = $config.Services.FileApiBaseUrl
-    $authTokenApiBaseUrl = $config.Services.AuthenticationTokenApiBaseUrl
+    $authenticationTokenApiBaseUrl = $config.Services.AuthenticationTokenApiBaseUrl
     
     $tenantId = $config.Download.TenantId
     $role = $Config.Download.Role
     $downloadPath = $config.Download.Path
-    $ensureUniqueNames = [System.Convert]::ToBoolean($config.Download.EnsureUniqueNames)
+    $ensureUniqueNames = $config.Download.EnsureUniqueNames
     $filter = $config.Download.Filter
+
+    $missingConfiguration = @()
+    if ([string]::IsNullOrEmpty($clientId)) { $missingConfiguration += "Credentials.ClientId" }
+    if ([string]::IsNullOrEmpty($clientSecret)) { $missingConfiguration += "Credentials.ClientSecret" }
+    if ([string]::IsNullOrEmpty($fileApiBaseUrl)) { $missingConfiguration += "Services.FileApiBaseUrl" }
+    if ([string]::IsNullOrEmpty($authenticationTokenApiBaseUrl)) { $missingConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
+    if ([string]::IsNullOrEmpty($tenantId)) { $missingConfiguration += "Download.TenantId" }
+    if ([string]::IsNullOrEmpty($role)) { $missingConfiguration += "Download.Role" }
+    if ([string]::IsNullOrEmpty($downloadPath)) { $missingConfiguration += "Download.Path" }
+    if ([string]::IsNullOrEmpty($ensureUniqueNames)) { $missingConfiguration += "Download.EnsureUniqueNames" }
+    if ($null -eq $filter) { $missingConfiguration += "Download.Filter" }
+
+    if ($missingConfiguration.Count -gt 0) {
+        throw "Missing parameters: $($missingConfiguration -Join ", ")"
+    }
+
+    $wrongConfiguration = @()    
+    if (-not [bool]::TryParse($ensureUniqueNames, [ref] $ensureUniqueNames)) { $wrongConfiguration += "Download.EnsureUniqueNames" }
+
+    if ($wrongConfiguration.Count -gt 0) {
+        throw "Wrong configured parameters: $($wrongConfiguration -Join ", ")"
+    }
 
     Write-Host "Configuration retrieved."
 }
@@ -49,7 +71,7 @@ catch {
     [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.")
 }
 
-[AuthenticationApiClient] $authenticationApiClient = [AuthenticationApiClient]::new($authTokenApiBaseUrl)
+[AuthenticationApiClient] $authenticationApiClient = [AuthenticationApiClient]::new($authenticationTokenApiBaseUrl)
 [AuthenticationApiService] $authenticationApiService = [AuthenticationApiService]::new($authenticationApiClient)
 
 try {
