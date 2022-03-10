@@ -31,10 +31,6 @@ Write-Host "(you can stop the script at any moment by pressing the buttons 'CTRL
 try {
     Write-Host "----"
     Write-Host "Retrieving the configuration."
-    
-    if (-not $_configPath) {
-        $_configPath = "$($PSScriptRoot)\config.xml"
-    }
 
     if (-not (Test-Path $_configPath -PathType Leaf)) {
         throw "Configuration not found.`r`n| Path: $_configPath"
