@@ -53,31 +53,23 @@ Inside the **config.xml** file you will find these parameters:
 
 ### Attributes of the `Credentials` element
 
-**`ClientId`**
-> Client identifier of your application.  
-> Also known as Consumer Key.
+**`StorageFilePath`**
+> XML file path where the credentials will be storaged.  
+> :warning: It's important that the file you put in the path has an .xml extension, otherwise the example will not work properly.
 > 
-> **Example:** K82ixRsw0oiwWerjm123FKdhjfpqel2q
-
-<br/>
-
-**`ClientSecret`**
-> Client secret of your application.  
-> Also known as Secret Key.
-> 
-> **Example:** diUer712Lkfd9fDh
+> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml
 
 ### Attributes of the `Services` element
 
 **`FileApiBaseUrl`**
-> File API base URL. 
+> File API base URL.
 > 
 > In the vast majority of scenarios, it should be set to **https://api.raet.com/mft/v1.0**
 
 <br/>
 
 **`AuthenticationTokenApiBaseUrl`**
-> Authorization token API base URL. 
+> Authorization token API base URL.
 > 
 > In the vast majority of scenarios, it should be set to **https://api.raet.com/authentication**
 
@@ -102,7 +94,7 @@ Inside the **config.xml** file you will find these parameters:
 **`Path`**
 > Path where the files will be downloaded.
 > 
-> **Example:** C:\Visma\Integrations\Download
+> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\download\output
 
 <br/>
 
@@ -129,8 +121,7 @@ Inside the **config.xml** file you will find these parameters:
 ```xml
 <Configuration>
     <Credentials>
-        <ClientId>K82ixRsw0oiwWerjm123FKdhjfpqel2q</ClientId>
-        <ClientSecret>diUer712Lkfd9fDh</ClientSecret>
+        <StorageFilePath>C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml</StorageFilePath>
     </Credentials>
 
     <Services>
