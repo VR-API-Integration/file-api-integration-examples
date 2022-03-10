@@ -29,6 +29,10 @@ Write-Host "(you can stop the script at any moment by pressing the buttons 'CTRL
 try {
     Write-Host "----"
     Write-Host "Retrieving the configuration."
+    
+    if (-not $_configPath) {
+        $_configPath = "$($PSScriptRoot)\config.xml"
+    }
 
     if (-not (Test-Path $_configPath -PathType Leaf)) {
         throw "Configuration not found.`r`n| Path: $_configPath"
@@ -79,7 +83,12 @@ catch {
 [CredentialsService] $credentialsService = [CredentialsService]::new($credentialsManager)
 
 try {
-    $credentials = $credentialsService.Retrieve($_renewCredentials)
+    if ($_renewCredentials) {
+        $credentials = $credentialsService.CreateNew()
+    }
+    else {
+        $credentials = $credentialsService.Retrieve()
+    }
 }
 catch {
     [Helper]::EndProgramWithError($_, "Failure retrieving the credentials.")
@@ -130,19 +139,20 @@ class CredentialsService {
         $this._credentialsManager = $credentialsManager
     }
 
-    [Credentials] Retrieve([bool] $renewCredentials) {
-        if ($renewCredentials) {
-            $this._credentialsManager.CreateNew()
-            $credentials = $this._credentialsManager.Retrieve()
-    
-            return $credentials
-        }
-        
+    [Credentials] Retrieve() {        
         $credentials = $this._credentialsManager.Retrieve()
         if ($null -eq $credentials) {
-            $credentials = $this._credentialsManager.CreateNew()
+            $credentials = $this.CreateNew()
+            return $credentials
         }
     
+        return $credentials
+    }
+
+    [Credentials] CreateNew() {
+        $this._credentialsManager.CreateNew()
+        $credentials = $this._credentialsManager.Retrieve()
+
         return $credentials
     }
 }
