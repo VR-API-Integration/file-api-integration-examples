@@ -28,54 +28,10 @@ Write-Host "(you can stop the script at any moment by pressing the buttons 'CTRL
 
 #region Configuration
 
+[ConfigurationManager] $configurationManager = [ConfigurationManager]::new()
+
 try {
-    Write-Host "----"
-    Write-Host "Retrieving the configuration."
-
-    if (-not (Test-Path $_configPath -PathType Leaf)) {
-        throw "Configuration not found.`r`n| Path: $_configPath"
-    }
-    
-    $configDocument = [xml](Get-Content $_configPath)
-    $config = $configDocument.Configuration
-
-    $credentialsStorageFilePath = $config.Credentials.StorageFilePath
-
-    $fileApiBaseUrl = $config.Services.FileApiBaseUrl
-    $authenticationTokenApiBaseUrl = $config.Services.AuthenticationTokenApiBaseUrl
-    
-    $tenantId = $config.Download.TenantId
-    $role = $Config.Download.Role
-    $downloadPath = $config.Download.Path
-    $ensureUniqueNames = $config.Download.EnsureUniqueNames
-    $filter = $config.Download.Filter
-
-    $missingConfiguration = @()
-    if ([string]::IsNullOrEmpty($credentialsStorageFilePath)) { $missingConfiguration += "Credentials.StorageFilePath" }
-    if ([string]::IsNullOrEmpty($fileApiBaseUrl)) { $missingConfiguration += "Services.FileApiBaseUrl" }
-    if ([string]::IsNullOrEmpty($authenticationTokenApiBaseUrl)) { $missingConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
-    if ([string]::IsNullOrEmpty($tenantId)) { $missingConfiguration += "Download.TenantId" }
-    if ([string]::IsNullOrEmpty($role)) { $missingConfiguration += "Download.Role" }
-    if ([string]::IsNullOrEmpty($downloadPath)) { $missingConfiguration += "Download.Path" }
-    if ([string]::IsNullOrEmpty($ensureUniqueNames)) { $missingConfiguration += "Download.EnsureUniqueNames" }
-    if ($null -eq $filter) { $missingConfiguration += "Download.Filter" }
-
-    if ($missingConfiguration.Count -gt 0) {
-        throw "Missing parameters: $($missingConfiguration -Join ", ")"
-    }
-
-    $wrongConfiguration = @()
-    if (-not [Validator]::IsPath($credentialsStorageFilePath)) { $wrongConfiguration += "Credentials.StorageFilePath" }
-    if (-not [Validator]::IsUri($fileApiBaseUrl)) { $wrongConfiguration += "Services.FileApiBaseUrl" }
-    if (-not [Validator]::IsUri($authenticationTokenApiBaseUrl)) { $wrongConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
-    if (-not [Validator]::IsPath($downloadPath)) { $wrongConfiguration += "Download.Path" }
-    if (-not [Validator]::IsBool($ensureUniqueNames)) { $wrongConfiguration += "Download.EnsureUniqueNames" }
-
-    if ($wrongConfiguration.Count -gt 0) {
-        throw "Wrong configured parameters: $($wrongConfiguration -Join ", ")"
-    }
-
-    Write-Host "Configuration retrieved."
+    $config = $configurationManager.Get($_configPath)
 }
 catch {
     [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.")
@@ -85,7 +41,7 @@ catch {
 
 #region Retrieve/Create credentials
 
-[CredentialsManager] $credentialsManager = [CredentialsManager]::new($credentialsStorageFilePath)
+[CredentialsManager] $credentialsManager = [CredentialsManager]::new($config.Credentials.StorageFilePath)
 [CredentialsService] $credentialsService = [CredentialsService]::new($credentialsManager)
 
 try {
@@ -104,7 +60,7 @@ catch {
 
 #region Retrieve authentication token
 
-[AuthenticationApiClient] $authenticationApiClient = [AuthenticationApiClient]::new($authenticationTokenApiBaseUrl)
+[AuthenticationApiClient] $authenticationApiClient = [AuthenticationApiClient]::new($config.Services.AuthenticationTokenApiBaseUrl)
 [AuthenticationApiService] $authenticationApiService = [AuthenticationApiService]::new($authenticationApiClient)
 
 try {
@@ -116,13 +72,13 @@ catch {
 
 #endregion Retrieve authentication token
 
-[FileApiClient] $fileApiClient = [FileApiClient]::new($fileApiBaseUrl, $token, $tenantId)
-[FileApiService] $fileApiService = [FileApiService]::new($fileApiClient, $role, 200)
+[FileApiClient] $fileApiClient = [FileApiClient]::new($config.Services.FileApiBaseUrl, $token, $config.Download.TenantId)
+[FileApiService] $fileApiService = [FileApiService]::new($fileApiClient, $config.Download.Role, 200)
 
 #region List files
 
 try {
-    $filesInfo = $fileApiService.GetFilesInfo($filter)
+    $filesInfo = $fileApiService.GetFilesInfo($config.Download.Filter)
 }
 catch {
     [Helper]::EndProgramWithError($_, "Failure retrieving the files.")
@@ -137,7 +93,7 @@ if ($filesInfo.Count -eq 0) {
 #region Download files
 
 try {
-    $fileApiService.DownloadFiles($filesInfo, $downloadPath, [bool]$ensureUniqueNames)
+    $fileApiService.DownloadFiles($filesInfo, $config.Download.Path, $config.Download.EnsureUniqueNames)
 }
 catch {
     [Helper]::EndProgramWithError($_, "Failure downloading the files.")
@@ -151,6 +107,70 @@ catch {
 # Below there are classes and models to help the readability of the program
 
 #region Helper classes
+
+class ConfigurationManager {
+    [Configuration] Get($configPath) {
+        Write-Host "----"
+        Write-Host "Retrieving the configuration."
+    
+        if (-not (Test-Path $configPath -PathType Leaf)) {
+            throw "Configuration not found.`r`n| Path: $configPath"
+        }
+        
+        $configDocument = [xml](Get-Content $configPath)
+        $config = $configDocument.Configuration
+    
+        $credentialsStorageFilePath = $config.Credentials.StorageFilePath
+    
+        $fileApiBaseUrl = $config.Services.FileApiBaseUrl
+        $authenticationTokenApiBaseUrl = $config.Services.AuthenticationTokenApiBaseUrl
+        
+        $tenantId = $config.Download.TenantId
+        $role = $Config.Download.Role
+        $downloadPath = $config.Download.Path
+        $ensureUniqueNames = $config.Download.EnsureUniqueNames
+        $filter = $config.Download.Filter
+    
+        $missingConfiguration = @()
+        if ([string]::IsNullOrEmpty($credentialsStorageFilePath)) { $missingConfiguration += "Credentials.StorageFilePath" }
+        if ([string]::IsNullOrEmpty($fileApiBaseUrl)) { $missingConfiguration += "Services.FileApiBaseUrl" }
+        if ([string]::IsNullOrEmpty($authenticationTokenApiBaseUrl)) { $missingConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
+        if ([string]::IsNullOrEmpty($tenantId)) { $missingConfiguration += "Download.TenantId" }
+        if ([string]::IsNullOrEmpty($role)) { $missingConfiguration += "Download.Role" }
+        if ([string]::IsNullOrEmpty($downloadPath)) { $missingConfiguration += "Download.Path" }
+        if ([string]::IsNullOrEmpty($ensureUniqueNames)) { $missingConfiguration += "Download.EnsureUniqueNames" }
+        if ($null -eq $filter) { $missingConfiguration += "Download.Filter" }
+    
+        if ($missingConfiguration.Count -gt 0) {
+            throw "Missing parameters: $($missingConfiguration -Join ", ")"
+        }
+    
+        $wrongConfiguration = @()
+        if (-not [Validator]::IsPath($credentialsStorageFilePath)) { $wrongConfiguration += "Credentials.StorageFilePath" }
+        if (-not [Validator]::IsUri($fileApiBaseUrl)) { $wrongConfiguration += "Services.FileApiBaseUrl" }
+        if (-not [Validator]::IsUri($authenticationTokenApiBaseUrl)) { $wrongConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
+        if (-not [Validator]::IsPath($downloadPath)) { $wrongConfiguration += "Download.Path" }
+        if (-not [Validator]::IsBool($ensureUniqueNames)) { $wrongConfiguration += "Download.EnsureUniqueNames" }
+    
+        if ($wrongConfiguration.Count -gt 0) {
+            throw "Wrong configured parameters: $($wrongConfiguration -Join ", ")"
+        }
+
+        $configuration = [Configuration]::new()
+        $configuration.Credentials.StorageFilePath = $credentialsStorageFilePath
+        $configuration.Services.FileApiBaseUrl = $fileApiBaseUrl
+        $configuration.Services.AuthenticationTokenApiBaseUrl = $authenticationTokenApiBaseUrl
+        $configuration.Download.TenantId = $tenantId
+        $configuration.Download.Role = $role
+        $configuration.Download.Path = $downloadPath
+        $configuration.Download.EnsureUniqueNames = [bool]$ensureUniqueNames
+        $configuration.Download.Filter = $filter
+    
+        Write-Host "Configuration retrieved."
+
+        return $configuration
+    }
+}
 
 class CredentialsService {
     hidden [CredentialsManager] $_credentialsManager
@@ -533,6 +553,29 @@ class Helper {
 #endregion Helper classes
 
 #region Models
+
+class Configuration {
+    [ConfigurationSectionCredentials] $Credentials = [ConfigurationSectionCredentials]::new()
+    [ConfigurationSectionServices] $Services = [ConfigurationSectionServices]::new()
+    [ConfigurationSectionDownload] $Download = [ConfigurationSectionDownload]::new()
+}
+
+class ConfigurationSectionCredentials {
+    [string] $StorageFilePath
+}
+
+class ConfigurationSectionServices {
+    [string] $FileApiBaseUrl
+    [string] $AuthenticationTokenApiBaseUrl
+}
+
+class ConfigurationSectionDownload {
+    [string] $TenantId
+    [string] $Role
+    [string] $Path
+    [bool] $EnsureUniqueNames
+    [string] $Filter
+}
 
 class FileInfo {
     [string] $Id
