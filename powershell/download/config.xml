@@ -1,7 +1,6 @@
 <Configuration>
     <Credentials>
-        <ClientId>EnterYourClientId</ClientId>
-        <ClientSecret>EnterYourClientSecret</ClientSecret>
+        <StorageFilePath>EnterTheFilePathWhereYouWantToStorageYourCredentials (e.g. C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml)</StorageFilePath>
     </Credentials>
 
     <Services>
