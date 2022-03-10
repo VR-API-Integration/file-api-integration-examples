@@ -35,6 +35,16 @@ See **Understanding the configuration** section to understand the meaning of eac
 >
 > **Example:** -ConfigPath "C:\Users\Foorby\config.xml"
 
+**`-RenewCredentials`**
+> Indicates if you want to renew the credentials storaged in the system (true) or keep using the storaged one (false).  
+> This parameter is useful in case you changed your client ID or client secret.  
+> In most of the cases you won't need this parameter set.
+> 
+> **Mandatory:** False  
+> **Default value:** $false
+>
+> **Example:** -RenewCredentials $true
+
 #### Example 1. Download files using the default configuration path
 
 ```powershell
@@ -45,6 +55,12 @@ See **Understanding the configuration** section to understand the meaning of eac
 
 ```powershell
 & "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1" -ConfigPath "C:\Users\Foorby\config.xml"
+```
+
+#### Example 3. Download files using new credentials
+
+```powershell
+& "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1" -RenewCredentials $true
 ```
 
 ## Understanding the configuration
