@@ -155,8 +155,8 @@ catch {
 class CredentialsService {
     hidden [CredentialsManager] $_credentialsManager
 
-    CredentialsService ([CredentialsManager] $credentialsManager) {
-        $this._credentialsManager = $credentialsManager
+    CredentialsService ([CredentialsManager] $manager) {
+        $this._credentialsManager = $manager
     }
 
     [Credentials] Retrieve() {        
