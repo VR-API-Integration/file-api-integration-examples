@@ -64,8 +64,12 @@ try {
         throw "Missing parameters: $($missingConfiguration -Join ", ")"
     }
 
-    $wrongConfiguration = @()    
-    if (-not [bool]::TryParse($ensureUniqueNames, [ref] $ensureUniqueNames)) { $wrongConfiguration += "Download.EnsureUniqueNames" }
+    $wrongConfiguration = @()
+    if (-not [Validator]::IsPath($credentialsStorageFilePath)) { $wrongConfiguration += "Credentials.StorageFilePath" }
+    if (-not [Validator]::IsUri($fileApiBaseUrl)) { $wrongConfiguration += "Services.FileApiBaseUrl" }
+    if (-not [Validator]::IsUri($authenticationTokenApiBaseUrl)) { $wrongConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
+    if (-not [Validator]::IsPath($downloadPath)) { $wrongConfiguration += "Download.Path" }
+    if (-not [Validator]::IsBool($ensureUniqueNames)) { $wrongConfiguration += "Download.EnsureUniqueNames" }
 
     if ($wrongConfiguration.Count -gt 0) {
         throw "Wrong configured parameters: $($wrongConfiguration -Join ", ")"
@@ -133,7 +137,7 @@ if ($filesInfo.Count -eq 0) {
 #region Download files
 
 try {
-    $fileApiService.DownloadFiles($filesInfo, $downloadPath, $ensureUniqueNames)
+    $fileApiService.DownloadFiles($filesInfo, $downloadPath, [bool]$ensureUniqueNames)
 }
 catch {
     [Helper]::EndProgramWithError($_, "Failure downloading the files.")
@@ -146,7 +150,7 @@ catch {
 # -------- END OF THE PROGRAM --------
 # Below there are classes and models to help the readability of the program
 
-#region Helper_classes
+#region Helper classes
 
 class CredentialsService {
     hidden [CredentialsManager] $_credentialsManager
@@ -423,6 +427,44 @@ class AuthenticationApiClient {
     }
 }
 
+class Validator {
+    static [bool] IsUri([string] $testParameter) {
+        try {
+            $uri = $testParameter -As [System.Uri]
+
+            if ($uri.AbsoluteUri) {
+                return $true
+            }
+            else {
+                return $false
+            }
+        }
+        catch {
+            return $false
+        }
+    }
+
+    static [bool] IsBool([string] $testParameter) {
+        try {
+            $result = [bool]::TryParse($testParameter, [ref] $null)
+            return $result
+        }
+        catch {
+            return $false
+        }
+    }
+
+    static [bool] IsPath([string] $testParameter) {
+        try {
+            $result = Test-Path $testParameter -IsValid
+            return $result
+        }
+        catch {
+            return $false
+        }
+    }
+}
+
 class Helper {
     static [string] ConverToUniqueFileName([string] $fileName) {
         $fileNameInfo = [Helper]::GetFileNameInfo($fileName)
@@ -449,7 +491,7 @@ class Helper {
     }
 
     static [void] EndProgram() {
-        [helper]::FinishProgram($false)
+        [Helper]::FinishProgram($false)
     }
 
     static [void] EndProgramWithError([System.Management.Automation.ErrorRecord] $errorRecord, [string] $genericErrorMessage) {
@@ -472,7 +514,7 @@ class Helper {
         Write-Host "| Error message: $($errorMessage)" -ForegroundColor "Red"
         Write-Host "| Error line in the script: $($errorRecord.InvocationInfo.ScriptLineNumber)" -ForegroundColor "Red"
 
-        [helper]::FinishProgram($true)
+        [Helper]::FinishProgram($true)
     }
 
     hidden static [void] FinishProgram([bool] $finishWithError) {
@@ -488,7 +530,7 @@ class Helper {
     }
 }
 
-#endregion Helper_classes
+#endregion Helper classes
 
 #region Models
 
