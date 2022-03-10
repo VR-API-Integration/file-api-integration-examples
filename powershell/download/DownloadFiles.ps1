@@ -72,8 +72,8 @@ catch {
 
 #endregion Retrieve authentication token
 
-[FileApiClient] $fileApiClient = [FileApiClient]::new($config.Services.FileApiBaseUrl, $token, $config.Download.TenantId)
-[FileApiService] $fileApiService = [FileApiService]::new($fileApiClient, $config.Download.Role, 200)
+[FileApiClient] $fileApiClient = [FileApiClient]::new($config.Services.FileApiBaseUrl, $token)
+[FileApiService] $fileApiService = [FileApiService]::new($fileApiClient, $config.Download.TenantId, $config.Download.Role, 200)
 
 #region List files
 
@@ -256,16 +256,19 @@ class CredentialsManager {
 
 class FileApiService {
     hidden [FileApiClient] $_fileApiClient
+    hidden [string] $_tenantId
     hidden [string] $_role
     hidden [string] $_waitTimeBetweenCallsMS
     hidden [long] $_downloadSizeLimit
 
     FileApiService(
         [FileApiClient] $fileApiClient,
+        [string] $tenantId,
         [string] $role,
         [int] $waitTimeBetweenCallsMS
     ) {
         $this._fileApiClient = $fileApiClient
+        $this._tenantId = $tenantId
         $this._role = $role
         $this._waitTimeBetweenCallsMS = $waitTimeBetweenCallsMS
 
@@ -279,6 +282,7 @@ class FileApiService {
         Write-Host "----"
         Write-Host "Retrieving list of files."
         if ($filter) {
+            Write-Host "| Tenant: $($this._tenantId)"
             Write-Host "| Filter: $($filter)"
         }
 
@@ -287,7 +291,7 @@ class FileApiService {
         $isLastPage = $false
         $filesInfo = @()
         do {
-            $response = $this._fileApiClient.ListFiles($this._role, $pageIndex, $pageSize, $filter)
+            $response = $this._fileApiClient.ListFiles($this._tenantId, $this._role, $pageIndex, $pageSize, $filter)
 
             foreach ($fileData in $response.data) {
                 $fileInfo = [FileInfo]::new()
@@ -364,18 +368,17 @@ class FileApiClient {
 
     FileApiClient (
         [string] $baseUrl,
-        [string] $token,
-        [string] $tenantId
+        [string] $token
     ) {
         $this.BaseUrl = $baseUrl
         $this._defaultHeaders = @{
-            "x-raet-tenant-id" = $tenantId;
             "Authorization"    = "Bearer $($token)";
         }
     }
 
-    [PSCustomObject] ListFiles([string] $role, [int] $pageIndex, [int] $pageSize, [string] $filter) {
+    [PSCustomObject] ListFiles([string] $tenantId, [string] $role, [int] $pageIndex, [int] $pageSize, [string] $filter) {
         $headers = $this._defaultHeaders
+        $headers["x-raet-tenant-id"] = $tenantId
 
         $response = Invoke-RestMethod `
             -Method "Get" `
