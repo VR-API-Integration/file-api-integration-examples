@@ -26,6 +26,8 @@ Write-Host "========================================================="
 
 Write-Host "(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')"
 
+#region Configuration
+
 try {
     Write-Host "----"
     Write-Host "Retrieving the configuration."
@@ -79,6 +81,10 @@ catch {
     [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.")
 }
 
+#endregion Configuration
+
+#region Retrieve/Create credentials
+
 [CredentialsManager] $credentialsManager = [CredentialsManager]::new($credentialsStorageFullPath)
 [CredentialsService] $credentialsService = [CredentialsService]::new($credentialsManager)
 
@@ -94,6 +100,10 @@ catch {
     [Helper]::EndProgramWithError($_, "Failure retrieving the credentials.")
 }
 
+#endregion Retrieve/Create credentials
+
+#region Retrieve authentication token
+
 [AuthenticationApiClient] $authenticationApiClient = [AuthenticationApiClient]::new($authenticationTokenApiBaseUrl)
 [AuthenticationApiService] $authenticationApiService = [AuthenticationApiService]::new($authenticationApiClient)
 
@@ -104,8 +114,12 @@ catch {
     [Helper]::EndProgramWithError($_, "Failure retrieving the authentication token.")
 }
 
+#endregion Retrieve authentication token
+
 [FileApiClient] $fileApiClient = [FileApiClient]::new($fileApiBaseUrl, $token, $tenantId)
 [FileApiService] $fileApiService = [FileApiService]::new($fileApiClient, $role, 200)
+
+#region List files
 
 try {
     $filesInfo = $fileApiService.GetFilesInfo($filter)
@@ -118,12 +132,18 @@ if ($filesInfo.Count -eq 0) {
     [Helper]::EndProgram()
 }
 
+#endregion List files
+
+#region Download files
+
 try {
     $fileApiService.DownloadFiles($filesInfo, $downloadPath, $ensureUniqueNames)
 }
 catch {
     [Helper]::EndProgramWithError($_, "Failure downloading the files.")
 }
+
+#endregion Download files
 
 [Helper]::EndProgram()
 
