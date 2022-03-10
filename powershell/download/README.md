@@ -82,14 +82,14 @@ Inside the **config.xml** file you will find these parameters:
 **`FileApiBaseUrl`**
 > File API base URL.
 > 
-> In the vast majority of scenarios, it should be set to **https://api.raet.com/mft/v1.0**
+> It should be set to **https://api.raet.com/mft/v1.0**
 
 <br/>
 
 **`AuthenticationTokenApiBaseUrl`**
 > Authorization token API base URL.
 > 
-> In the vast majority of scenarios, it should be set to **https://api.raet.com/authentication**
+> It should be set to **https://api.raet.com/authentication**
 
 ### Attributes of the `Download` element
 
@@ -105,7 +105,7 @@ Inside the **config.xml** file you will find these parameters:
 > 
 > Must be set to any of these values:  
 > **· Subscriber:** to download files provided to you (the most common scenario).  
-> **· Publisher:** to download files provided by you.
+> **· Publisher:** to download files uploaded by you.
 
 <br/>
 
