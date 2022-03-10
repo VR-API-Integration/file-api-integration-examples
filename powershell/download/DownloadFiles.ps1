@@ -41,7 +41,7 @@ try {
     $configDocument = [xml](Get-Content $_configPath)
     $config = $configDocument.Configuration
 
-    $credentialsStoragePath = $config.Credentials.StoragePath
+    $credentialsStorageFullPath = $config.Credentials.StorageFullPath
 
     $fileApiBaseUrl = $config.Services.FileApiBaseUrl
     $authenticationTokenApiBaseUrl = $config.Services.AuthenticationTokenApiBaseUrl
@@ -53,7 +53,7 @@ try {
     $filter = $config.Download.Filter
 
     $missingConfiguration = @()
-    if ([string]::IsNullOrEmpty($credentialsStoragePath)) { $missingConfiguration += "Credentials.StoragePath" }
+    if ([string]::IsNullOrEmpty($credentialsStorageFullPath)) { $missingConfiguration += "Credentials.StorageFullPath" }
     if ([string]::IsNullOrEmpty($fileApiBaseUrl)) { $missingConfiguration += "Services.FileApiBaseUrl" }
     if ([string]::IsNullOrEmpty($authenticationTokenApiBaseUrl)) { $missingConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
     if ([string]::IsNullOrEmpty($tenantId)) { $missingConfiguration += "Download.TenantId" }
@@ -79,7 +79,7 @@ catch {
     [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.")
 }
 
-[CredentialsManager] $credentialsManager = [CredentialsManager]::new($credentialsStoragePath)
+[CredentialsManager] $credentialsManager = [CredentialsManager]::new($credentialsStorageFullPath)
 [CredentialsService] $credentialsService = [CredentialsService]::new($credentialsManager)
 
 try {
@@ -158,55 +158,51 @@ class CredentialsService {
 }
 
 class CredentialsManager {
-    hidden [string] $_storagePath
-    hidden [string] $_storageFileName
+    hidden [string] $_storageFullPath
 
-    CredentialsManager([string] $storagePath) {
-        $this._storagePath = $storagePath
-        $this._storageFileName = "credentials.xml"
+    CredentialsManager([string] $storageFullPath) {
+        $this._storageFullPath = $storageFullPath
     }
 
     [void] CreateNew() {
-        $storageFullPath = "$($this._storagePath)\$($this._storageFileName)"
-
+        $storagePath = Split-Path $this._storageFullPath
+        
         Write-Host "----"
         Write-Host "Saving your credentials."
-        Write-Host "| Path: $($storageFullPath)"
+        Write-Host "| Path: $($this._storageFullPath)"
 
-        if (-not (Test-Path -Path $this._storagePath -PathType Container)) {
+        if (-not (Test-Path -Path $storagePath -PathType Container)) {
             Write-Host "----"
             Write-Host "Storage credential path doesn't exist. Creating it."
-            Write-Host "| Path: $($this._storagePath)"
+            Write-Host "| Path: $($storagePath)"
             
-            New-Item -ItemType Directory -Force -Path $this._storagePath
+            New-Item -ItemType Directory -Force -Path $storagePath
         }
 
         Write-Host "Enter your credentials."
         $clientId = Read-Host -Prompt '| Client ID'
         $clientSecret = Read-Host -Prompt '| Client secret' -AsSecureString
 
-        [PSCredential]::new($clientId, $clientSecret) | Export-CliXml -Path $storageFullPath
+        [PSCredential]::new($clientId, $clientSecret) | Export-CliXml -Path $this._storageFullPath
 
         Write-Host "----"
         Write-Host "Credentials saved."
     }
 
     [Credentials] Retrieve() {
-        $storageFullPath = "$($this._storagePath)\$($this._storageFileName)"
-
         Write-Host "----"
         Write-Host "Retrieving your credentials."
-        Write-Host "| Path: $($storageFullPath)"
+        Write-Host "| Path: $($this._storageFullPath)"
 
-        if (-not (Test-Path -Path $storageFullPath -PathType Leaf)) {
+        if (-not (Test-Path -Path $this._storageFullPath -PathType Leaf)) {
             Write-Host "----"
             Write-Host "Credentials not found."
-            Write-Host "| Path: $($storageFullPath)"
+            Write-Host "| Path: $($this._storageFullPath)"
             
             return $null
         }
 
-        $credentialsStorage = Import-CliXml -Path $storageFullPath
+        $credentialsStorage = Import-CliXml -Path $this._storageFullPath
 
         $credentials = [Credentials]::new()
         $credentials.ClientId = $credentialsStorage.GetNetworkCredential().UserName
