@@ -4,12 +4,18 @@
 [CmdletBinding()]
 Param(
     [Alias("ConfigPath")]
-    [Parameter(Mandatory = $false, HelpMessage = 'Full path of the configuration (e.g. C:\Visma\File API\Ftaas.Examples\powershell\download\config.xml). Default value: set in the code.')]
-    [string] $_configPath,
+    [Parameter(
+        Mandatory = $false,
+        HelpMessage = 'Full path of the configuration (e.g. C:\Visma\File API\Ftaas.Examples\powershell\download\config.xml). Default value: set in the code.'
+    )]
+    [string] $_configPath = "$($PSScriptRoot)\config.xml",
 
     [Alias("RenewCredentials")]
-    [Parameter(Mandatory = $false, HelpMessage = 'Boolean indicating if you want to renew your credentials (true) / or not (false). Default value: false.\nThis parameter is useful in case you changed your ClientId or Client secret.')]
-    [bool] $_renewCredentials
+    [Parameter(
+        Mandatory = $false,
+        HelpMessage = 'Boolean indicating if you want to renew your credentials (true) / or not (false). Default value: false.\nThis parameter is useful in case you changed your ClientId or Client secret.'
+    )]
+    [bool] $_renewCredentials = $false
 )
 
 $ErrorActionPreference = "Stop"
@@ -23,10 +29,6 @@ Write-Host "(you can stop the script at any moment by pressing the buttons 'CTRL
 try {
     Write-Host "----"
     Write-Host "Retrieving the configuration."
-    
-    if (-not $_configPath) {
-        $_configPath = "$($PSScriptRoot)\config.xml"
-    }
 
     if (-not (Test-Path $_configPath -PathType Leaf)) {
         throw "Configuration not found.`r`n| Path: $_configPath"
