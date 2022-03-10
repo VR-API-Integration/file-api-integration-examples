@@ -130,7 +130,7 @@ Inside the **config.xml** file you will find these parameters:
 
 **`Filter`**
 > If empty, all the available (not downloaded yet) files will be listed.  
-> You can learn more about filters in the [File API documentation](https://vr-api-integration.github.io/file-api-documentation/guides__search__for__files.html).
+> You can learn more about filters in the [File API documentation](https://vr-api-integration.github.io/file-api-documentation/guides_search_for_files.html).
 >
 > **Example:** startsWith(FileName, 'employee_profile') and uploadDate gt 2022-02-08T11:02:00Z
 
