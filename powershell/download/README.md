@@ -25,13 +25,13 @@ The script will download all the files matching the configuration.
 See **Understanding the configuration** section to understand the meaning of each parameter.
 2. Run the **DownloadFiles.ps1** script with the desired parameters.
 
----
+<!-- ---
 **NOTE**
 
 The first time you execute the script, it will ask for your credentials and will save them securely in your computer, in the path specified in the configuration.  
 The next executions will use the saved credentials unless you manually specify the opposite (see **Parameters** section).
 
----
+--- -->
 
 > **_NOTE:_** The first time you execute the script, it will ask for your credentials and will save them securely in your computer, in the path specified in the configuration.  
 > The next executions will use the saved credentials unless you manually specify the opposite (see **Parameters** section).
