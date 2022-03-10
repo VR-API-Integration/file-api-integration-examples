@@ -41,7 +41,7 @@ catch {
 
 #region Retrieve/Create credentials
 
-[CredentialsManager] $credentialsManager = [CredentialsManager]::new($config.Credentials.StorageFilePath)
+[CredentialsManager] $credentialsManager = [CredentialsManager]::new($config.Credentials.Path)
 [CredentialsService] $credentialsService = [CredentialsService]::new($credentialsManager)
 
 try {
@@ -120,7 +120,7 @@ class ConfigurationManager {
         $configDocument = [xml](Get-Content $configPath)
         $config = $configDocument.Configuration
     
-        $credentialsStorageFilePath = $config.Credentials.StorageFilePath
+        $credentialsPath = $config.Credentials.Path
     
         $fileApiBaseUrl = $config.Services.FileApiBaseUrl
         $authenticationTokenApiBaseUrl = $config.Services.AuthenticationTokenApiBaseUrl
@@ -132,7 +132,7 @@ class ConfigurationManager {
         $filter = $config.Download.Filter
     
         $missingConfiguration = @()
-        if ([string]::IsNullOrEmpty($credentialsStorageFilePath)) { $missingConfiguration += "Credentials.StorageFilePath" }
+        if ([string]::IsNullOrEmpty($credentialsPath)) { $missingConfiguration += "Credentials.Path" }
         if ([string]::IsNullOrEmpty($fileApiBaseUrl)) { $missingConfiguration += "Services.FileApiBaseUrl" }
         if ([string]::IsNullOrEmpty($authenticationTokenApiBaseUrl)) { $missingConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
         if ([string]::IsNullOrEmpty($tenantId)) { $missingConfiguration += "Download.TenantId" }
@@ -146,7 +146,7 @@ class ConfigurationManager {
         }
     
         $wrongConfiguration = @()
-        if (-not [Validator]::IsPath($credentialsStorageFilePath)) { $wrongConfiguration += "Credentials.StorageFilePath" }
+        if (-not [Validator]::IsPath($credentialsPath)) { $wrongConfiguration += "Credentials.Path" }
         if (-not [Validator]::IsUri($fileApiBaseUrl)) { $wrongConfiguration += "Services.FileApiBaseUrl" }
         if (-not [Validator]::IsUri($authenticationTokenApiBaseUrl)) { $wrongConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
         if (-not [Validator]::IsPath($downloadPath)) { $wrongConfiguration += "Download.Path" }
@@ -157,7 +157,7 @@ class ConfigurationManager {
         }
 
         $configuration = [Configuration]::new()
-        $configuration.Credentials.StorageFilePath = $credentialsStorageFilePath
+        $configuration.Credentials.Path = $credentialsPath
         $configuration.Services.FileApiBaseUrl = $fileApiBaseUrl
         $configuration.Services.AuthenticationTokenApiBaseUrl = $authenticationTokenApiBaseUrl
         $configuration.Download.TenantId = $tenantId
@@ -198,18 +198,18 @@ class CredentialsService {
 }
 
 class CredentialsManager {
-    hidden [string] $_storageFilePath
+    hidden [string] $_credentialsPath
 
-    CredentialsManager([string] $storageFilePath) {
-        $this._storageFilePath = $storageFilePath
+    CredentialsManager([string] $storagePath) {
+        $this._credentialsPath = $storagePath
     }
 
     [void] CreateNew() {
-        $storagePath = Split-Path $this._storageFilePath
+        $storagePath = Split-Path $this._credentialsPath
         
         Write-Host "----"
         Write-Host "Saving your credentials."
-        Write-Host "| Path: $($this._storageFilePath)"
+        Write-Host "| Path: $($this._credentialsPath)"
 
         if (-not (Test-Path -Path $storagePath -PathType Container)) {
             Write-Host "----"
@@ -223,7 +223,7 @@ class CredentialsManager {
         $clientId = Read-Host -Prompt '| Client ID'
         $clientSecret = Read-Host -Prompt '| Client secret' -AsSecureString
 
-        [PSCredential]::new($clientId, $clientSecret) | Export-CliXml -Path $this._storageFilePath
+        [PSCredential]::new($clientId, $clientSecret) | Export-CliXml -Path $this._credentialsPath
 
         Write-Host "----"
         Write-Host "Credentials saved."
@@ -232,17 +232,17 @@ class CredentialsManager {
     [Credentials] Retrieve() {
         Write-Host "----"
         Write-Host "Retrieving your credentials."
-        Write-Host "| Path: $($this._storageFilePath)"
+        Write-Host "| Path: $($this._credentialsPath)"
 
-        if (-not (Test-Path -Path $this._storageFilePath -PathType Leaf)) {
+        if (-not (Test-Path -Path $this._credentialsPath -PathType Leaf)) {
             Write-Host "----"
             Write-Host "Credentials not found."
-            Write-Host "| Path: $($this._storageFilePath)"
+            Write-Host "| Path: $($this._credentialsPath)"
             
             return $null
         }
 
-        $credentialsStorage = Import-CliXml -Path $this._storageFilePath
+        $credentialsStorage = Import-CliXml -Path $this._credentialsPath
 
         $credentials = [Credentials]::new()
         $credentials.ClientId = $credentialsStorage.GetNetworkCredential().UserName
@@ -565,7 +565,7 @@ class Configuration {
 }
 
 class ConfigurationSectionCredentials {
-    [string] $StorageFilePath
+    [string] $Path
 }
 
 class ConfigurationSectionServices {

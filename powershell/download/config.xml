@@ -1,6 +1,6 @@
 <Configuration>
     <Credentials>
-        <StorageFilePath>EnterTheFilePathWhereYouWantToStorageYourCredentials (e.g. C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml)</StorageFilePath>
+        <Path>EnterTheFilePathWhereYouWantToStorageYourCredentials (e.g. C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml)</Path>
     </Credentials>
 
     <Services>

@@ -71,7 +71,7 @@ Inside the **config.xml** file you will find these parameters:
 
 ### Attributes of the `Credentials` element
 
-**`StorageFilePath`**
+**`Path`**
 > XML file path where the credentials will be storaged.  
 > :warning: It's important that the file you put in the path has an .xml extension, otherwise the example will not work properly.
 > 
@@ -139,7 +139,7 @@ Inside the **config.xml** file you will find these parameters:
 ```xml
 <Configuration>
     <Credentials>
-        <StorageFilePath>C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml</StorageFilePath>
+        <Path>C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml</Path>
     </Credentials>
 
     <Services>
