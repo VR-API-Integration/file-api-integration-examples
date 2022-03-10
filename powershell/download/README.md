@@ -36,7 +36,7 @@ See **Understanding the configuration** section to understand the meaning of eac
 > **Example:** -ConfigPath "C:\Users\Foorby\config.xml"
 
 **`-RenewCredentials`**
-> Indicates if you want to renew the credentials storaged in the system (true) or keep using the storaged one (false).  
+> Indicates if you want to renew the credentials saved in the system (true) or keep using the saved one (false).  
 > This parameter is useful in case you changed your client ID or client secret.  
 > In most of the cases you won't need this parameter set.
 > 
