@@ -13,7 +13,7 @@ Param(
     [Alias("RenewCredentials")]
     [Parameter(
         Mandatory = $false,
-        HelpMessage = 'Boolean indicating if you want to renew your credentials (true) / or not (false). Default value: false.\nThis parameter is useful in case you changed your ClientId or Client secret.'
+        HelpMessage = 'Boolean. $true if you want to renew your credentials. $false otherwise'
     )]
     [bool] $_renewCredentials = $false
 )
@@ -346,7 +346,7 @@ class FileApiService {
                 Write-Host "| New name: $($fileInfo.Name)"
             }
 
-            $this._fileApiClient.DownloadFile($this._role, $fileInfo, $path)
+            $this._fileApiClient.DownloadFile($this._tenantId, $this._role, $fileInfo, $path)
             $downloadedFilesCount++
         
             Write-Host "The file was downloaded."
@@ -388,8 +388,9 @@ class FileApiClient {
         return $response
     }
 
-    [PSCustomObject] DownloadFile([string] $role, [FileInfo] $fileInfo, [string] $downloadPath) {
+    [PSCustomObject] DownloadFile([string] $tenantId, [string] $role, [FileInfo] $fileInfo, [string] $downloadPath) {
         $headers = $this._defaultHeaders
+        $headers["x-raet-tenant-id"] = $tenantId
         $headers.Accept = "application/octet-stream"
 
         $response = Invoke-RestMethod `
