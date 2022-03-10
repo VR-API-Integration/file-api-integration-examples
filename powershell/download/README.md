@@ -33,8 +33,7 @@ The next executions will use the saved credentials unless you manually specify t
 
 --- -->
 
-> **_NOTE:_**  
-> The first time you execute the script, it will ask for your credentials and will save them securely in your computer, in the path specified in the configuration.  
+> **_NOTE:_** The first time you execute the script, it will ask for your credentials and will save them securely in your computer, in the path specified in the configuration.  
 > The next executions will use the saved credentials unless you manually specify the opposite (see **Parameters** section).
 #### Parameters
 
