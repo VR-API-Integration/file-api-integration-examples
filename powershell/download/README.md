@@ -162,7 +162,7 @@ Inside the **config.xml** file you will find these parameters:
 
 #### Example 1. Download files for the first time
 
-![Download files example](./media/Example_DownloadFiles.gif)
+![Download files for the first time](./media/Example_DownloadFilesFirstTime.gif)
 
 ## Authors
 
