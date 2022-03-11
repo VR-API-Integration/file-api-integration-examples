@@ -1,5 +1,3 @@
-![Download files example](./media/Example_DownloadFiles.gif)
-
 # File API PowerShell download examples
 
 A collection of examples to download files with the File API using **PowerShell**.
@@ -29,6 +27,7 @@ See **Understanding the configuration** section to understand the meaning of eac
 
 The first time you execute the script, it will ask for your credentials and will save them securely in your computer in the path specified in the configuration.  
 The next executions will use the saved credentials unless you manually specify the opposite (see **Parameters** section).
+
 #### Parameters
 
 **`-ConfigPath`**
@@ -158,6 +157,12 @@ Inside the **config.xml** file you will find these parameters:
     </Download>
 </Configuration>
 ```
+
+## Visual examples
+
+#### Example 1. Download files for the first time
+
+![Download files example](./media/Example_DownloadFiles.gif)
 
 ## Authors
 
