@@ -1,6 +1,4 @@
-![foo](.\media\Example_DownloadFiles.gif)
-![bar](./media/Example_DownloadFiles.gif)
-![qux](Example_DownloadFiles.gif)
+![Download files example](./media/Example_DownloadFiles.gif)
 
 # File API PowerShell download examples
 
