@@ -41,8 +41,8 @@ catch {
 
 #region Retrieve/Create credentials
 
-[CredentialsManager] $credentialsManager = [CredentialsManager]::new($config.Credentials.Path)
-[CredentialsService] $credentialsService = [CredentialsService]::new($credentialsManager)
+$credentialsManager = [CredentialsManager]::new($config.Credentials.Path)
+$credentialsService = [CredentialsService]::new($credentialsManager)
 
 try {
     if ($_renewCredentials) {
@@ -60,8 +60,8 @@ catch {
 
 #region Retrieve authentication token
 
-[AuthenticationApiClient] $authenticationApiClient = [AuthenticationApiClient]::new($config.Services.AuthenticationTokenApiBaseUrl)
-[AuthenticationApiService] $authenticationApiService = [AuthenticationApiService]::new($authenticationApiClient)
+$authenticationApiClient = [AuthenticationApiClient]::new($config.Services.AuthenticationTokenApiBaseUrl)
+$authenticationApiService = [AuthenticationApiService]::new($authenticationApiClient)
 
 try {
     $token = $authenticationApiService.NewToken($credentials.ClientId, $credentials.ClientSecret)
@@ -72,8 +72,8 @@ catch {
 
 #endregion Retrieve authentication token
 
-[FileApiClient] $fileApiClient = [FileApiClient]::new($config.Services.FileApiBaseUrl, $token)
-[FileApiService] $fileApiService = [FileApiService]::new($fileApiClient, $config.Download.TenantId, $config.Download.Role, 200)
+$fileApiClient = [FileApiClient]::new($config.Services.FileApiBaseUrl, $token)
+$fileApiService = [FileApiService]::new($fileApiClient, $config.Download.TenantId, $config.Download.Role, 200)
 
 #region List files
 
