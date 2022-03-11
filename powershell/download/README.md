@@ -1,10 +1,10 @@
-# File API Powershell download examples
+# File API PowerShell download examples
 
-A collection of examples to download files with the File API using **Powershell**.
+A collection of examples to download files with the File API using **PowerShell**.
 
 ## Prerequisites
 
-- The script was prepared for Powershell version 5.1 or above. With lower versions it might not work properly.
+- The script was prepared for PowerShell version 5.1 or above. With lower versions it might not work properly.
 - Files to be downloaded cannot be bigger than 2 GB.
 
 ## Getting Started 
@@ -25,6 +25,9 @@ The script will download all the files matching the configuration.
 See **Understanding the configuration** section to understand the meaning of each parameter.
 2. Run the **DownloadFiles.ps1** script with the desired parameters.
 
+The first time you execute the script, it will ask for your credentials and will save them securely in your computer in the path specified in the configuration.  
+The next executions will use the saved credentials unless you manually specify the opposite (see **Parameters** section).
+
 #### Parameters
 
 **`-ConfigPath`**
@@ -34,6 +37,16 @@ See **Understanding the configuration** section to understand the meaning of eac
 > **Default value:** {DownloadFiles.ps1 folder}\config.xml 
 >
 > **Example:** -ConfigPath "C:\Users\Foorby\config.xml"
+
+**`-RenewCredentials`**
+> Indicates if you want to renew the credentials saved in the system (true) or keep using the saved one (false).  
+> This parameter is useful in case you changed your client ID or client secret.  
+> In most of the cases you won't need this parameter set.
+> 
+> **Mandatory:** False  
+> **Default value:** $false
+>
+> **Example:** -RenewCredentials $true
 
 #### Example 1. Download files using the default configuration path
 
@@ -47,39 +60,37 @@ See **Understanding the configuration** section to understand the meaning of eac
 & "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1" -ConfigPath "C:\Users\Foorby\config.xml"
 ```
 
+#### Example 3. Download files using new credentials
+
+```powershell
+& "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1" -RenewCredentials $true
+```
+
 ## Understanding the configuration
 
 Inside the **config.xml** file you will find these parameters:
 
 ### Attributes of the `Credentials` element
 
-**`ClientId`**
-> Client identifier of your application.  
-> Also known as Consumer Key.
+**`Path`**
+> XML file path where the credentials will be storaged.  
+> :warning: It's important that the file you put in the path has an .xml extension, otherwise the example will not work properly.
 > 
-> **Example:** K82ixRsw0oiwWerjm123FKdhjfpqel2q
-
-<br/>
-
-**`ClientSecret`**
-> Client secret of your application.  
-> Also known as Secret Key.
-> 
-> **Example:** diUer712Lkfd9fDh
+> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml
 
 ### Attributes of the `Services` element
 
 **`FileApiBaseUrl`**
-> File API base URL. 
+> File API base URL.
 > 
-> In the vast majority of scenarios, it should be set to **https://api.raet.com/mft/v1.0**
+> It should be set to **https://api.raet.com/mft/v1.0**
 
 <br/>
 
 **`AuthenticationTokenApiBaseUrl`**
-> Authorization token API base URL. 
+> Authorization token API base URL.
 > 
-> In the vast majority of scenarios, it should be set to **https://api.raet.com/authentication**
+> It should be set to **https://api.raet.com/authentication**
 
 ### Attributes of the `Download` element
 
@@ -95,14 +106,14 @@ Inside the **config.xml** file you will find these parameters:
 > 
 > Must be set to any of these values:  
 > **· Subscriber:** to download files provided to you (the most common scenario).  
-> **· Publisher:** to download files provided by you.
+> **· Publisher:** to download files uploaded by you.
 
 <br/>
 
 **`Path`**
 > Path where the files will be downloaded.
 > 
-> **Example:** C:\Visma\Integrations\Download
+> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\download\output
 
 <br/>
 
@@ -120,7 +131,7 @@ Inside the **config.xml** file you will find these parameters:
 
 **`Filter`**
 > If empty, all the available (not downloaded yet) files will be listed.  
-> You can learn more about filters in the [File API documentation](https://vr-api-integration.github.io/file-api-documentation/guides__search__for__files.html).
+> You can learn more about filters in the [File API documentation](https://vr-api-integration.github.io/file-api-documentation/guides_search_for_files.html).
 >
 > **Example:** startsWith(FileName, 'employee_profile') and uploadDate gt 2022-02-08T11:02:00Z
 
@@ -129,8 +140,7 @@ Inside the **config.xml** file you will find these parameters:
 ```xml
 <Configuration>
     <Credentials>
-        <ClientId>K82ixRsw0oiwWerjm123FKdhjfpqel2q</ClientId>
-        <ClientSecret>diUer712Lkfd9fDh</ClientSecret>
+        <Path>C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml</Path>
     </Credentials>
 
     <Services>
@@ -147,6 +157,12 @@ Inside the **config.xml** file you will find these parameters:
     </Download>
 </Configuration>
 ```
+
+## Visual examples
+
+#### Example 1. Download files for the first time
+
+![Download files for the first time](./media/Example_DownloadFilesFirstTime.gif)
 
 ## Authors
 
