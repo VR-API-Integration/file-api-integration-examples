@@ -1,3 +1,5 @@
+![foo](.\media\Example_DownloadFiles.gif)
+
 # File API PowerShell download examples
 
 A collection of examples to download files with the File API using **PowerShell**.
