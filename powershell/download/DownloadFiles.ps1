@@ -163,7 +163,7 @@ class ConfigurationManager {
         $configuration.Download.TenantId = $tenantId
         $configuration.Download.Role = $role
         $configuration.Download.Path = $downloadPath
-        $configuration.Download.EnsureUniqueNames = [bool]$ensureUniqueNames
+        $configuration.Download.EnsureUniqueNames = [System.Convert]::ToBoolean($ensureUniqueNames)
         $configuration.Download.Filter = $filter
     
         Write-Host "Configuration retrieved."
@@ -559,9 +559,9 @@ class Helper {
 #region Models
 
 class Configuration {
-    [ConfigurationSectionCredentials] $Credentials = [ConfigurationSectionCredentials]::new()
-    [ConfigurationSectionServices] $Services = [ConfigurationSectionServices]::new()
-    [ConfigurationSectionDownload] $Download = [ConfigurationSectionDownload]::new()
+    $Credentials = [ConfigurationSectionCredentials]::new()
+    $Services = [ConfigurationSectionServices]::new()
+    $Download = [ConfigurationSectionDownload]::new()
 }
 
 class ConfigurationSectionCredentials {
