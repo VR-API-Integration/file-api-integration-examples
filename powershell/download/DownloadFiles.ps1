@@ -8,7 +8,7 @@ Param(
         Mandatory = $false,
         HelpMessage = 'Full path of the configuration (e.g. C:\Visma\File API\Ftaas.Examples\powershell\download\config.xml). Default value: set in the code.'
     )]
-    [string] $_configPath = "$($PSScriptRoot)\config.xml",
+    [string] $_configPath,
 
     [Alias("RenewCredentials")]
     [Parameter(
@@ -19,6 +19,11 @@ Param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# The default value of this parameter is set here because $PSScriptRoot is empty if used directly in Param() through PowerShell ISE.
+if (-not $_configPath) {
+    $_configPath = "$($PSScriptRoot)\config.xml"
+}
 
 Write-Host "========================================================="
 Write-Host "File API example: Download files specified in a filter."
