@@ -5,11 +5,11 @@ A collection of examples to upload files with the File API using **PowerShell**.
 ## Prerequisites
 
 - The script was prepared for PowerShell version 5.1 or above. With lower versions it might not work properly.
-- Files to be uploaded cannot be bigger than 100 megabytes.
+- Files to be uploaded cannot be bigger than 100 MB.
 
 ## Getting Started
 
-Upload the **file-api-integration-examples** repository.
+Download the **file-api-integration-examples** repository.
 
 Inside the **powershell\upload** folder you can find these files:
 
@@ -110,7 +110,7 @@ Inside the **config.xml** file you will find these parameters:
 <br/>
 
 **`Path`**
-> The full path with the filename of the file to upload.
+> Full path of the file to upload.
 >
 > **Example:** C:\Visma\File API\Ftaas.Examples\powershell\upload\file to upload.zip
 
