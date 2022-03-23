@@ -265,9 +265,9 @@ class FileApiService {
         try {
             $folderPath = $(Split-Path -Path $contentFilePath)
             $contentFilename = $(Split-Path -Path $contentFilePath -Leaf)
-            $createdFilePath = "$($folderPath)\$([Helper]::ConverToUniqueFileName("multipart.bin"))"
+            $createdFilePath = "$($folderPath)\$([Helper]::ConverToUniqueFilename("multipart.bin"))"
 
-            $headerFilename = [Helper]::ConverToUniqueFileName("header.txt")
+            $headerFilename = [Helper]::ConverToUniqueFilename("header.txt")
             $headerFilePath = "$($folderPath)\$($headerFilename)"
             $headerContent = "--$($this._boundary)`r`n" # Windows line breaks are required.
             $headerContent += "Content-Type: application/json; charset=UTF-8`r`n"
@@ -275,7 +275,7 @@ class FileApiService {
             $headerContent += "{`r`n`"name`":`"$($contentFilename)`",`r`n`"businesstypeid`":`"$($this._businessTypeId)`"`r`n}`r`n"
             $headerContent += "--$($this._boundary)`r`n`r`n"
 
-            $footerFilename = [Helper]::ConverToUniqueFileName("footer.txt")
+            $footerFilename = [Helper]::ConverToUniqueFilename("footer.txt")
             $footerFilePath = "$($folderPath)\$($footerFilename)"
             $footerContent = "`r`n--$($this._boundary)--"
 
@@ -286,8 +286,12 @@ class FileApiService {
             return $createdFilePath
         }
         finally {
-            Remove-Item -Path $headerFilePath
-            Remove-Item -Path $footerFilePath
+            if (Test-Path $headerFilePath) {
+                Remove-Item -Force -Path $headerFilePath
+            }
+            if (Test-Path $footerFilePath) {
+                Remove-Item -Force -Path $footerFilePath
+            }
         }
     }
 
@@ -333,7 +337,9 @@ class FileApiClient {
         }
 
         finally {
-            Remove-Item -Path $multipartContentFilePath
+            if (Test-Path $multipartContentFilePath) {
+                Remove-Item -Force -Path $multipartContentFilePath
+            }
         }
     }
 }
@@ -425,28 +431,28 @@ class Validator {
 }
 
 class Helper {
-    static [string] ConverToUniqueFileName([string] $fileName) {
-        $fileNameInfo = [Helper]::GetFileNameInfo($fileName)
-        $fileNameWithoutExtension = $fileNameInfo.Name
-        $fileExtension = $fileNameInfo.Extension
+    static [string] ConverToUniqueFilename([string] $filename) {
+        $filenameInfo = [Helper]::GetFilenameInfo($filename)
+        $filenameWithoutExtension = $filenameInfo.Name
+        $fileExtension = $filenameInfo.Extension
         $timestamp = Get-Date -Format FileDateTimeUniversal
     
-        $uniqueFileName = "$($fileNameWithoutExtension)_$($timestamp)$($fileExtension)"
-        return $uniqueFileName
+        $uniqueFilename = "$($filenameWithoutExtension)_$($timestamp)$($fileExtension)"
+        return $uniqueFilename
     }
 
-    static [FileNameInfo] GetFileNameInfo([string] $fileName) {
-        $fileNameInfo = [FileNameInfo]::new()
-        $fileNameInfo.Name = $fileName
-        $fileNameInfo.Extension = ""
+    static [FilenameInfo] GetFilenameInfo([string] $filename) {
+        $filenameInfo = [FilenameInfo]::new()
+        $filenameInfo.Name = $filename
+        $filenameInfo.Extension = ""
         
-        $splitFileName = $fileName -split "\."
-        if ($splitFileName.Length -gt 1) {
-            $fileNameInfo.Name = $splitFileName[0..($splitFileName.Length - 2)] -Join "."
-            $fileNameInfo.Extension = ".$($splitFileName[-1])"
+        $splitFilename = $filename -split "\."
+        if ($splitFilename.Length -gt 1) {
+            $filenameInfo.Name = $splitFilename[0..($splitFilename.Length - 2)] -Join "."
+            $filenameInfo.Extension = ".$($splitFilename[-1])"
         }
     
-        return $fileNameInfo
+        return $filenameInfo
     }
 
     static [void] EndProgram() {
@@ -520,7 +526,7 @@ class FileInfo {
     [long] $Size
 }
 
-class FileNameInfo {
+class FilenameInfo {
     [string] $Name
     [string] $Extension
 }
