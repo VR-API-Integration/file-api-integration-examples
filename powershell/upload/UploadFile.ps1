@@ -1,4 +1,4 @@
-# This example shows how to download all the files specified in a filter.
+# This example shows how to upload a file.
 # Authors: Visma - Transporters Team
 
 [CmdletBinding()]
@@ -6,7 +6,7 @@ Param(
     [Alias("ConfigPath")]
     [Parameter(
         Mandatory = $false,
-        HelpMessage = 'Full path of the configuration (e.g. C:\Visma\File API\Ftaas.Examples\powershell\download\config.xml). Default value: set in the code.'
+        HelpMessage = 'Full filePath of the configuration (e.g. C:\Visma\File API\Ftaas.Examples\powershell\upload\config.xml). Default value: set in the code.'
     )]
     [string] $_configPath,
 
@@ -26,7 +26,7 @@ if (-not $_configPath) {
 }
 
 Write-Host "========================================================="
-Write-Host "File API example: Download files specified in a filter."
+Write-Host "File API example: Upload a file."
 Write-Host "========================================================="
 
 Write-Host "(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')"
@@ -78,33 +78,19 @@ catch {
 #endregion Retrieve authentication token
 
 $fileApiClient = [FileApiClient]::new($config.Services.FileApiBaseUrl, $token)
-$fileApiService = [FileApiService]::new($fileApiClient, $config.Download.TenantId, $config.Download.Role, 200)
+$fileApiService = [FileApiService]::new($fileApiClient, $config.Upload.TenantId, $config.Upload.BusinessTypeId)
 
-#region List files
-
-try {
-    $filesInfo = $fileApiService.GetFilesInfo($config.Download.Filter)
-}
-catch {
-    [Helper]::EndProgramWithError($_, "Failure retrieving the files.")
-}
-
-if ($filesInfo.Count -eq 0) {
-    [Helper]::EndProgram()
-}
-
-#endregion List files
-
-#region Download files
+#region Upload file
 
 try {
-    $fileApiService.DownloadFiles($filesInfo, $config.Download.Path, $config.Download.EnsureUniqueNames)
+    $createdFilePath = $fileApiService.CreateFileToUpload($config.Upload.Path) 
+    $fileApiService.UploadFile($createdFilePath, $(Split-Path -Path $config.Upload.Path -Leaf))
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure downloading the files.")
+    [Helper]::EndProgramWithError($_, "Failure uploading the file.")
 }
 
-#endregion Download files
+#endregion Upload file
 
 [Helper]::EndProgram()
 
@@ -130,21 +116,17 @@ class ConfigurationManager {
         $fileApiBaseUrl = $config.Services.FileApiBaseUrl
         $authenticationTokenApiBaseUrl = $config.Services.AuthenticationTokenApiBaseUrl
         
-        $tenantId = $config.Download.TenantId
-        $role = $Config.Download.Role
-        $downloadPath = $config.Download.Path
-        $ensureUniqueNames = $config.Download.EnsureUniqueNames
-        $filter = $config.Download.Filter
+        $tenantId = $config.Upload.TenantId
+        $businessTypeId = $config.Upload.BusinessTypeId
+        $contentFilePath = $config.Upload.Path
     
         $missingConfiguration = @()
         if ([string]::IsNullOrEmpty($credentialsPath)) { $missingConfiguration += "Credentials.Path" }
         if ([string]::IsNullOrEmpty($fileApiBaseUrl)) { $missingConfiguration += "Services.FileApiBaseUrl" }
         if ([string]::IsNullOrEmpty($authenticationTokenApiBaseUrl)) { $missingConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
-        if ([string]::IsNullOrEmpty($tenantId)) { $missingConfiguration += "Download.TenantId" }
-        if ([string]::IsNullOrEmpty($role)) { $missingConfiguration += "Download.Role" }
-        if ([string]::IsNullOrEmpty($downloadPath)) { $missingConfiguration += "Download.Path" }
-        if ([string]::IsNullOrEmpty($ensureUniqueNames)) { $missingConfiguration += "Download.EnsureUniqueNames" }
-        if ($null -eq $filter) { $missingConfiguration += "Download.Filter" }
+        if ([string]::IsNullOrEmpty($tenantId)) { $missingConfiguration += "Upload.TenantId" }
+        if ([string]::IsNullOrEmpty($businessTypeId)) { $missingConfiguration += "Upload.BusinessTypeId" }
+        if ([string]::IsNullOrEmpty($contentFilePath)) { $missingConfiguration += "Upload.Path" }
     
         if ($missingConfiguration.Count -gt 0) {
             throw "Missing parameters: $($missingConfiguration -Join ", ")"
@@ -154,9 +136,8 @@ class ConfigurationManager {
         if (-not [Validator]::IsPath($credentialsPath)) { $wrongConfiguration += "Credentials.Path" }
         if (-not [Validator]::IsUri($fileApiBaseUrl)) { $wrongConfiguration += "Services.FileApiBaseUrl" }
         if (-not [Validator]::IsUri($authenticationTokenApiBaseUrl)) { $wrongConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
-        if (-not [Validator]::IsPath($downloadPath)) { $wrongConfiguration += "Download.Path" }
-        if (-not [Validator]::IsBool($ensureUniqueNames)) { $wrongConfiguration += "Download.EnsureUniqueNames" }
-    
+        if (-not [Validator]::IsPath($contentFilePath)) { $wrongConfiguration += "Upload.Path" }
+
         if ($wrongConfiguration.Count -gt 0) {
             throw "Wrong configured parameters: $($wrongConfiguration -Join ", ")"
         }
@@ -165,12 +146,10 @@ class ConfigurationManager {
         $configuration.Credentials.Path = $credentialsPath
         $configuration.Services.FileApiBaseUrl = $fileApiBaseUrl
         $configuration.Services.AuthenticationTokenApiBaseUrl = $authenticationTokenApiBaseUrl
-        $configuration.Download.TenantId = $tenantId
-        $configuration.Download.Role = $role
-        $configuration.Download.Path = $downloadPath
-        $configuration.Download.EnsureUniqueNames = [System.Convert]::ToBoolean($ensureUniqueNames)
-        $configuration.Download.Filter = $filter
-    
+        $configuration.Upload.TenantId = $tenantId
+        $configuration.Upload.BusinessTypeId = $businessTypeId
+        $configuration.Upload.Path = $contentFilePath
+
         Write-Host "Configuration retrieved."
 
         return $configuration
@@ -218,7 +197,7 @@ class CredentialsManager {
 
         if (-not (Test-Path -Path $storagePath -PathType Container)) {
             Write-Host "----"
-            Write-Host "Storage credential path doesn't exist. Creating it."
+            Write-Host "Storage credential filePath doesn't exist. Creating it."
             Write-Host "| Path: $($storagePath)"
             
             New-Item -ItemType Directory -Force -Path $storagePath
@@ -262,107 +241,74 @@ class CredentialsManager {
 class FileApiService {
     hidden [FileApiClient] $_fileApiClient
     hidden [string] $_tenantId
-    hidden [string] $_role
-    hidden [string] $_waitTimeBetweenCallsMS
-    hidden [long] $_downloadSizeLimit
+    hidden [long] $_uploadSizeLimit
+    hidden [string] $_boundary
+    hidden [string] $_businessTypeId
 
     FileApiService(
         [FileApiClient] $fileApiClient,
         [string] $tenantId,
-        [string] $role,
-        [int] $waitTimeBetweenCallsMS
+        [string] $businessTypeId
     ) {
         $this._fileApiClient = $fileApiClient
         $this._tenantId = $tenantId
-        $this._role = $role
-        $this._waitTimeBetweenCallsMS = $waitTimeBetweenCallsMS
+        $this._boundary = "file_info"
+        $this._businessTypeId = $businessTypeId
 
-        # This limit is set because the method Invoke-RestMethod doesn't allow
-        # the download of files bigger than 2 GiB.
-        # I set the limit a bit less than 2 GiB to give some margin.
-        $this._downloadSizeLimit = 2147000000
+        # API supports files up to 100 megabytes
+        $this._uploadSizeLimit = 100 * 1024 * 1024
     }
 
-    [FileInfo[]] GetFilesInfo([string] $filter) {
+    [string] CreateFileToUpload([string] $contentFilePath) {
         Write-Host "----"
-        Write-Host "Retrieving list of files."
-        if ($filter) {
-            Write-Host "| Tenant: $($this._tenantId)"
-            Write-Host "| Filter: $($filter)"
+        Write-Host "Creating a bundle with the file $($contentFilePath) to upload."
+        $headerFilePath = ""
+        $footerFilePath = ""
+        try {
+            $folderPath = $(Split-Path -Path $contentFilePath)
+            $contentFilename = $(Split-Path -Path $contentFilePath -Leaf)
+            $createdFilePath = "$($folderPath)\$([Helper]::ConverToUniqueFilename("multipart.bin"))"
+
+            $headerFilename = [Helper]::ConverToUniqueFilename("header.txt")
+            $headerFilePath = "$($folderPath)\$($headerFilename)"
+            $headerContent = "--$($this._boundary)`r`n" # Windows line breaks are required.
+            $headerContent += "Content-Type: application/json; charset=UTF-8`r`n"
+            $headerContent += "`r`n"
+            $headerContent += "{`r`n`"name`":`"$($contentFilename)`",`r`n`"businesstypeid`":`"$($this._businessTypeId)`"`r`n}`r`n"
+            $headerContent += "--$($this._boundary)`r`n`r`n"
+
+            $footerFilename = [Helper]::ConverToUniqueFilename("footer.txt")
+            $footerFilePath = "$($folderPath)\$($footerFilename)"
+            $footerContent = "`r`n--$($this._boundary)--"
+
+            New-Item -Path $folderPath -Name $headerFilename -Value $headerContent
+            New-Item -Path $folderPath -Name $footerFilename -Value $footerContent
+
+            cmd /c copy /b $headerFilePath + $contentFilePath + $footerFilePath $createdFilePath
+            Write-Host "File created."
+            return $createdFilePath
         }
-
-        $pageIndex = 0
-        $pageSize = 20
-        $isLastPage = $false
-        $filesInfo = @()
-        do {
-            $response = $this._fileApiClient.ListFiles($this._tenantId, $this._role, $pageIndex, $pageSize, $filter)
-
-            foreach ($fileData in $response.data) {
-                $fileInfo = [FileInfo]::new()
-                $fileInfo.Id = $fileData.fileId
-                $fileInfo.Name = $fileData.fileName
-                $fileInfo.Size = $fileData.fileSize
-
-                $filesInfo += $fileInfo
+        finally {
+            if (Test-Path $headerFilePath) {
+                Remove-Item -Force -Path $headerFilePath
             }
-
-            $isLastPage = $pageSize * ($pageIndex + 1) -ge $response.count
-            $pageIndex++
-
-            Start-Sleep -Milliseconds $this._waitTimeBetweenCallsMS
-        } while (-not $isLastPage)
-
-        Write-Host "$($filesInfo.Count) files retrieved."
-
-        return $filesInfo
+            if (Test-Path $footerFilePath) {
+                Remove-Item -Force -Path $footerFilePath
+            }
+        }
     }
 
-    [void] DownloadFiles([FileInfo[]] $filesInfo, [string] $path, [bool] $ensureUniqueNames) {
-        if (-not (Test-Path $path -PathType Container)) {
-            Write-Host "----"
-            Write-Host "Download path doesn't exist. Creating it."
-            Write-Host "| Path: $($path)"
-            
-            New-Item -ItemType Directory -Force -Path $path
+    [void] UploadFile([string] $filePath, $originalFilename) {
+        if ((Get-Item $filePath).Length -gt $this._uploadSizeLimit) {
+            throw "Cannot upload files bigger $($this._uploadSizeLimit) bytes."
         }
-
-        $downloadedFilesCount = 0
-        foreach ($fileInfo in $filesInfo) {
-            Write-Host "----"
-            Write-Host "Downloading file $($downloadedFilesCount + 1)/$($filesInfo.Count)."
-            Write-Host "| ID: $($fileInfo.Id)"
-            Write-Host "| Name: $($fileInfo.Name)"
-            Write-Host "| Size: $($fileInfo.Size)"
-
-            if ($fileInfo.Size -ge $this._downloadSizeLimit) {
-                Write-Host "----" -ForegroundColor "Red"
-                Write-Host "Cannot download files bigger or equal than $($this._downloadSizeLimit) bytes." -ForegroundColor "Red"
-                Write-Host "File will be skipped." -ForegroundColor "Red"
-
-                continue
-            }
-
-            if (($ensureUniqueNames -eq $true) -and (Test-Path "$($path)\$($fileInfo.Name)" -PathType Leaf)) {
-                Write-Host "There is already a file with the same name in the download path."
-
-                $fileInfo.Name = [Helper]::ConverToUniqueFileName($fileInfo.Name)
-
-                Write-Host "| New name: $($fileInfo.Name)"
-            }
-
-            $this._fileApiClient.DownloadFile($this._tenantId, $this._role, $fileInfo, $path)
-            $downloadedFilesCount++
+        Write-Host "----"
+        Write-Host "Uploading the file."
+        Write-Host "| File: $($originalFilename)"
+        Write-Host "| Business type: $($this._businessTypeId)"
+        $this._fileApiClient.UploadFile($this._tenantId, $filePath, $this._boundary)
         
-            Write-Host "The file was downloaded."
-
-            Start-Sleep -Milliseconds $this._waitTimeBetweenCallsMS
-        }
-
-        Write-Host "----"
-        Write-Host "All files were downloaded."
-        Write-Host "| Amount: $($downloadedFilesCount)"
-        Write-Host "| Path: $($path)"
+        Write-Host "File uploaded."
     }
 }
 
@@ -377,34 +323,29 @@ class FileApiClient {
     ) {
         $this.BaseUrl = $baseUrl
         $this._defaultHeaders = @{
-            "Authorization"    = "Bearer $($token)";
+            "Authorization" = "Bearer $($token)";
         }
     }
 
-    [PSCustomObject] ListFiles([string] $tenantId, [string] $role, [int] $pageIndex, [int] $pageSize, [string] $filter) {
+    [PSCustomObject] UploadFile([string] $tenantId, [string] $multipartContentFilePath, [string] $boundary) {
         $headers = $this._defaultHeaders
         $headers["x-raet-tenant-id"] = $tenantId
+        $headers["Content-Type"] = "multipart/related;boundary=$($boundary)"
+        try {
+            $response = Invoke-RestMethod `
+                -Method "Post" `
+                -Uri "$($this.BaseUrl)/files?uploadType=multipart" `
+                -Headers $headers `
+                -InFile "$($multipartContentFilePath)"
 
-        $response = Invoke-RestMethod `
-            -Method "Get" `
-            -Uri "$($this.BaseUrl)/files?role=$($role)&pageIndex=$($pageIndex)&pageSize=$($pageSize)&`$filter=$($filter)&`$orderBy=uploadDate asc" `
-            -Headers $headers
+            return $response
+        }
 
-        return $response
-    }
-
-    [PSCustomObject] DownloadFile([string] $tenantId, [string] $role, [FileInfo] $fileInfo, [string] $downloadPath) {
-        $headers = $this._defaultHeaders
-        $headers["x-raet-tenant-id"] = $tenantId
-        $headers.Accept = "application/octet-stream"
-
-        $response = Invoke-RestMethod `
-            -Method "Get" `
-            -Uri "$($this.BaseUrl)/files/$($fileInfo.Id)?role=$($role)" `
-            -Headers $headers `
-            -OutFile "$($downloadPath)\$($fileInfo.Name)"
-
-        return $response
+        finally {
+            if (Test-Path $multipartContentFilePath) {
+                Remove-Item -Force -Path $multipartContentFilePath
+            }
+        }
     }
 }
 
@@ -495,28 +436,28 @@ class Validator {
 }
 
 class Helper {
-    static [string] ConverToUniqueFileName([string] $fileName) {
-        $fileNameInfo = [Helper]::GetFileNameInfo($fileName)
-        $fileNameWithoutExtension = $fileNameInfo.Name
-        $fileExtension = $fileNameInfo.Extension
+    static [string] ConverToUniqueFilename([string] $filename) {
+        $filenameInfo = [Helper]::GetFilenameInfo($filename)
+        $filenameWithoutExtension = $filenameInfo.Name
+        $fileExtension = $filenameInfo.Extension
         $timestamp = Get-Date -Format FileDateTimeUniversal
     
-        $uniqueFileName = "$($fileNameWithoutExtension)_$($timestamp)$($fileExtension)"
-        return $uniqueFileName
+        $uniqueFilename = "$($filenameWithoutExtension)_$($timestamp)$($fileExtension)"
+        return $uniqueFilename
     }
 
-    static [FileNameInfo] GetFileNameInfo([string] $fileName) {
-        $fileNameInfo = [FileNameInfo]::new()
-        $fileNameInfo.Name = $fileName
-        $fileNameInfo.Extension = ""
+    static [FilenameInfo] GetFilenameInfo([string] $filename) {
+        $filenameInfo = [FilenameInfo]::new()
+        $filenameInfo.Name = $filename
+        $filenameInfo.Extension = ""
         
-        $splitFileName = $fileName -split "\."
-        if ($splitFileName.Length -gt 1) {
-            $fileNameInfo.Name = $splitFileName[0..($splitFileName.Length - 2)] -Join "."
-            $fileNameInfo.Extension = ".$($splitFileName[-1])"
+        $splitFilename = $filename -split "\."
+        if ($splitFilename.Length -gt 1) {
+            $filenameInfo.Name = $splitFilename[0..($splitFilename.Length - 2)] -Join "."
+            $filenameInfo.Extension = ".$($splitFilename[-1])"
         }
     
-        return $fileNameInfo
+        return $filenameInfo
     }
 
     static [void] EndProgram() {
@@ -566,7 +507,7 @@ class Helper {
 class Configuration {
     $Credentials = [ConfigurationSectionCredentials]::new()
     $Services = [ConfigurationSectionServices]::new()
-    $Download = [ConfigurationSectionDownload]::new()
+    $Upload = [ConfigurationSectionUpload]::new()
 }
 
 class ConfigurationSectionCredentials {
@@ -578,12 +519,10 @@ class ConfigurationSectionServices {
     [string] $AuthenticationTokenApiBaseUrl
 }
 
-class ConfigurationSectionDownload {
+class ConfigurationSectionUpload {
     [string] $TenantId
-    [string] $Role
+    [string] $BusinessTypeId
     [string] $Path
-    [bool] $EnsureUniqueNames
-    [string] $Filter
 }
 
 class FileInfo {
@@ -592,7 +531,7 @@ class FileInfo {
     [long] $Size
 }
 
-class FileNameInfo {
+class FilenameInfo {
     [string] $Name
     [string] $Extension
 }
