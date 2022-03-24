@@ -84,7 +84,7 @@ $fileApiService = [FileApiService]::new($fileApiClient, $config.Upload.TenantId,
 
 try {
     $createdFilePath = $fileApiService.CreateFileToUpload($config.Upload.Path) 
-    $fileApiService.UploadFile($createdFilePath)
+    $fileApiService.UploadFile($createdFilePath, $(Split-Path -Path $config.Upload.Path -Leaf))
 }
 catch {
     [Helper]::EndProgramWithError($_, "Failure uploading the file.")
@@ -298,12 +298,14 @@ class FileApiService {
         }
     }
 
-    [void] UploadFile([string] $filePath) {
+    [void] UploadFile([string] $filePath, $originalFilename) {
         if ((Get-Item $filePath).Length -gt $this._uploadSizeLimit) {
             throw "Cannot upload files bigger $($this._uploadSizeLimit) bytes."
         }
         Write-Host "----"
         Write-Host "Uploading the file."
+        Write-Host "| File: $($originalFilename)"
+        Write-Host "| Business type: $($this._businessTypeId)"
         $this._fileApiClient.UploadFile($this._tenantId, $filePath, $this._boundary)
         
         Write-Host "File uploaded."
