@@ -260,6 +260,8 @@ class FileApiService {
     }
 
     [string] CreateFileToUpload([string] $contentFilePath) {
+        Write-Host "---"
+        Write-Host "Creating a bundle with the file $($contentFilePath) to upload."
         $headerFilePath = ""
         $footerFilePath = ""
         try {
@@ -283,6 +285,7 @@ class FileApiService {
             New-Item -Path $folderPath -Name $footerFilename -Value $footerContent
 
             cmd /c copy /b $headerFilePath + $contentFilePath + $footerFilePath $createdFilePath
+            Write-Host "File created."
             return $createdFilePath
         }
         finally {
@@ -301,9 +304,11 @@ class FileApiService {
             Write-Host "Cannot upload files bigger $($this._uploadSizeLimit) bytes." -ForegroundColor "Red"
             return
         }
+        Write-Host "---"
+        Write-Host "Uploading the file."
         $this._fileApiClient.UploadFile($this._tenantId, $filePath, $this._boundary)
         
-        Write-Host "The file was uploaded."
+        Write-Host "File uploaded."
     }
 }
 
