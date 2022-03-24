@@ -105,7 +105,7 @@ class ConfigurationManager {
         Write-Host "Retrieving the configuration."
     
         if (-not (Test-Path $configPath -PathType Leaf)) {
-            throw "Configuration not found.`r`n| Path: $configPath"
+            throw "Configuration not found.`r`n| Path: $($configPath)"
         }
         
         $configDocument = [xml](Get-Content $configPath)
@@ -260,7 +260,7 @@ class FileApiService {
     }
 
     [string] CreateFileToUpload([string] $contentFilePath) {
-        Write-Host "---"
+        Write-Host "----"
         Write-Host "Creating a bundle with the file $($contentFilePath) to upload."
         $headerFilePath = ""
         $footerFilePath = ""
@@ -300,11 +300,9 @@ class FileApiService {
 
     [void] UploadFile([string] $filePath) {
         if ((Get-Item $filePath).Length -gt $this._uploadSizeLimit) {
-            Write-Host "---" -ForegroundColor "Red"
-            Write-Host "Cannot upload files bigger $($this._uploadSizeLimit) bytes." -ForegroundColor "Red"
-            return
+            throw "Cannot upload files bigger $($this._uploadSizeLimit) bytes."
         }
-        Write-Host "---"
+        Write-Host "----"
         Write-Host "Uploading the file."
         $this._fileApiClient.UploadFile($this._tenantId, $filePath, $this._boundary)
         

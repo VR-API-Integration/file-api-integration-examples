@@ -119,7 +119,7 @@ class ConfigurationManager {
         Write-Host "Retrieving the configuration."
     
         if (-not (Test-Path $configPath -PathType Leaf)) {
-            throw "Configuration not found.`r`n| Path: $configPath"
+            throw "Configuration not found.`r`n| Path: $($configPath)"
         }
         
         $configDocument = [xml](Get-Content $configPath)
@@ -336,7 +336,7 @@ class FileApiService {
             Write-Host "| Size: $($fileInfo.Size)"
 
             if ($fileInfo.Size -ge $this._downloadSizeLimit) {
-                Write-Host "---" -ForegroundColor "Red"
+                Write-Host "----" -ForegroundColor "Red"
                 Write-Host "Cannot download files bigger or equal than $($this._downloadSizeLimit) bytes." -ForegroundColor "Red"
                 Write-Host "File will be skipped." -ForegroundColor "Red"
 
