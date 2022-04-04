@@ -85,6 +85,10 @@ $fileApiService = [FileApiService]::new($fileApiClient, $config.Upload.TenantId,
 try {
     $createdFilePath = $fileApiService.CreateFileToUpload($config.Upload.Path) 
     $fileApiService.UploadFile($createdFilePath, $(Split-Path -Path $config.Upload.Path -Leaf))
+    $archivedFile =  [Helper]::ArchiveFile($config.Upload, $config.Upload.Path)
+    if(-not [string]::IsNullOrEmpty($archivedFile)){
+        Write-Host "File archived ($($archivedFile))."
+    }
 }
 catch {
     [Helper]::EndProgramWithError($_, "Failure uploading the file.")
@@ -119,6 +123,7 @@ class ConfigurationManager {
         $tenantId = $config.Upload.TenantId
         $businessTypeId = $config.Upload.BusinessTypeId
         $contentFilePath = $config.Upload.Path
+        $archivePath = $config.Upload.ArchivePath
     
         $missingConfiguration = @()
         if ([string]::IsNullOrEmpty($credentialsPath)) { $missingConfiguration += "Credentials.Path" }
@@ -137,6 +142,7 @@ class ConfigurationManager {
         if (-not [Validator]::IsUri($fileApiBaseUrl)) { $wrongConfiguration += "Services.FileApiBaseUrl" }
         if (-not [Validator]::IsUri($authenticationTokenApiBaseUrl)) { $wrongConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
         if (-not [Validator]::IsPath($contentFilePath)) { $wrongConfiguration += "Upload.Path" }
+        if (-not [string]::IsNullOrEmpty($archivePath) -and -not [Validator]::IsPath($archivePath)) { $wrongConfiguration += "Upload.ArchivePath" }
 
         if ($wrongConfiguration.Count -gt 0) {
             throw "Wrong configured parameters: $($wrongConfiguration -Join ", ")"
@@ -149,6 +155,7 @@ class ConfigurationManager {
         $configuration.Upload.TenantId = $tenantId
         $configuration.Upload.BusinessTypeId = $businessTypeId
         $configuration.Upload.Path = $contentFilePath
+        $configuration.Upload.ArchivePath = $archivePath
 
         Write-Host "Configuration retrieved."
 
@@ -267,9 +274,9 @@ class FileApiService {
         try {
             $folderPath = $(Split-Path -Path $contentFilePath)
             $contentFilename = $(Split-Path -Path $contentFilePath -Leaf)
-            $createdFilePath = "$($folderPath)\$([Helper]::ConverToUniqueFilename("multipart.bin"))"
+            $createdFilePath = "$($folderPath)\$([Helper]::ConvertToUniqueFilename("multipart.bin"))"
 
-            $headerFilename = [Helper]::ConverToUniqueFilename("header.txt")
+            $headerFilename = [Helper]::ConvertToUniqueFilename("header.txt")
             $headerFilePath = "$($folderPath)\$($headerFilename)"
             $headerContent = "--$($this._boundary)`r`n" # Windows line breaks are required.
             $headerContent += "Content-Type: application/json; charset=UTF-8`r`n"
@@ -277,7 +284,7 @@ class FileApiService {
             $headerContent += "{`r`n`"name`":`"$($contentFilename)`",`r`n`"businesstypeid`":`"$($this._businessTypeId)`"`r`n}`r`n"
             $headerContent += "--$($this._boundary)`r`n`r`n"
 
-            $footerFilename = [Helper]::ConverToUniqueFilename("footer.txt")
+            $footerFilename = [Helper]::ConvertToUniqueFilename("footer.txt")
             $footerFilePath = "$($folderPath)\$($footerFilename)"
             $footerContent = "`r`n--$($this._boundary)--"
 
@@ -436,27 +443,62 @@ class Validator {
 }
 
 class Helper {
-    static [string] ConverToUniqueFilename([string] $filename) {
+    static [string] ArchiveFile([ConfigurationSectionUpload] $config, [string] $filename) {
+        if([string]::IsNullOrEmpty($config.ArchivePath)) {
+           return ""
+        }
         $filenameInfo = [Helper]::GetFilenameInfo($filename)
+        $uniqueArchiveFilename = [Helper]::ConvertToUniqueFilename($filenameInfo.FullName)
+        $archivePath = Join-Path $($config.ArchivePath) $($uniqueArchiveFilename)
+        try {
+            Move-Item $filename -Destination $archivePath
+        }
+        catch {
+            return ""
+        }
+        return $archivePath
+    }
+
+    static [string] ConvertToUniqueFilename([string] $filename) {
+        $filenameInfo = [Helper]::GetFilenameInfo($filename)
+        $filePath = $filenameInfo.Path
         $filenameWithoutExtension = $filenameInfo.Name
         $fileExtension = $filenameInfo.Extension
-        $timestamp = Get-Date -Format FileDateTimeUniversal
-    
-        $uniqueFilename = "$($filenameWithoutExtension)_$($timestamp)$($fileExtension)"
+        $timestamp = Get-Date -Format "yyyyMMdd_HHmmss_fff"
+        if([string]::IsNullOrEmpty($filepath)){
+            $uniqueFilename = "$($filenameWithoutExtension)_$($timestamp)$($fileExtension)"
+        }
+        else {
+            $uniqueFilename = "$($filePath)\\$($filenameWithoutExtension)_$($timestamp)$($fileExtension)"
+        }
         return $uniqueFilename
     }
 
     static [FilenameInfo] GetFilenameInfo([string] $filename) {
         $filenameInfo = [FilenameInfo]::new()
-        $filenameInfo.Name = $filename
+        $filenameInfo.FullPath = $filename
+        $filenameInfo.FullName = ""
+        $filenameInfo.Name = ""
         $filenameInfo.Extension = ""
+        $filenameInfo.Path = ""
         
-        $splitFilename = $filename -split "\."
-        if ($splitFilename.Length -gt 1) {
-            $filenameInfo.Name = $splitFilename[0..($splitFilename.Length - 2)] -Join "."
+        $splitPath = $filename -split "\\"
+        if ($splitPath.Length -gt 1) {
+            $filenameInfo.Path = $splitPath[0..($splitPath.Length - 2)] -Join "\"
+            $filenameInfo.FullName = $splitPath[$splitPath.Length - 1]
+            $filenameInfo.Name = $filenameInfo.FullName
+        }
+        else { 
+            $filenameInfo.Name = $filename
+            $filenameInfo.FullName = $filename
+        }
+
+        $splitFilename = $filenameInfo.FullName -split "\."
+        if($splitFilename.Length -gt 1) {
+            $filenameInfo.Name = $splitFilename[0]
             $filenameInfo.Extension = ".$($splitFilename[-1])"
         }
-    
+
         return $filenameInfo
     }
 
@@ -523,6 +565,7 @@ class ConfigurationSectionUpload {
     [string] $TenantId
     [string] $BusinessTypeId
     [string] $Path
+    [string] $ArchivePath
 }
 
 class FileInfo {
@@ -534,6 +577,9 @@ class FileInfo {
 class FilenameInfo {
     [string] $Name
     [string] $Extension
+    [string] $FullName
+    [string] $Path
+    [string] $FullPath
 }
 
 class Credentials {
