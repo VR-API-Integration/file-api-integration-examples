@@ -80,21 +80,29 @@ catch {
 $fileApiClient = [FileApiClient]::new($config.Services.FileApiBaseUrl, $token)
 $fileApiService = [FileApiService]::new($fileApiClient, $config.Upload.TenantId, $config.Upload.BusinessTypeId)
 
+#region Upload Directory contents
+
+Get-ChildItem $config.Upload.Path | ForEach-Object -Process {
+
 #region Upload file
 
-try {
-    $createdFilePath = $fileApiService.CreateFileToUpload($config.Upload.Path) 
-    $fileApiService.UploadFile($createdFilePath, $(Split-Path -Path $config.Upload.Path -Leaf))
-    $archivedFile =  [Helper]::ArchiveFile($config.Upload, $config.Upload.Path)
-    if(-not [string]::IsNullOrEmpty($archivedFile)){
-        Write-Host "File archived ($($archivedFile))."
+    try {
+        $createdFilePath = $fileApiService.CreateFileToUpload($_.FullName) 
+        $fileApiService.UploadFile($createdFilePath, $(Split-Path -Path $_.FullName -Leaf))
+        $archivedFile =  [Helper]::ArchiveFile($config.Upload, $_.FullName)
+        if(-not [string]::IsNullOrEmpty($archivedFile)){
+            Write-Host "File archived ($($archivedFile))."
+        }
     }
-}
-catch {
-    [Helper]::EndProgramWithError($_, "Failure uploading the file.")
-}
+    catch {
+        [Helper]::EndProgramWithError($_, "Failure uploading the file.")
+    }
 
 #endregion Upload file
+
+}
+
+#endregion Upload Directory contents
 
 [Helper]::EndProgram()
 
