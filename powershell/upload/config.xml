@@ -12,6 +12,7 @@
         <TenantId>EnterYourTenantId</TenantId>
         <BusinessTypeId>EnterYourBusinessTypeId</BusinessTypeId>
         <Path>EnterTheDirectoryToUpload (e.g.: C:\Visma\File API\Ftaas.Examples\powershell\upload\file)</Path>
+        <Filter>EnterFilemaskToUseForUpload (e.g.: *.xml)</Filter>
         <ArchivePath>EnterTheDirectoryForArchivedFiles (e.g.: C:\Visma\File API\Ftaas.Examples\powershell\archive)</ArchivePath>
     </Upload>
 </Configuration>

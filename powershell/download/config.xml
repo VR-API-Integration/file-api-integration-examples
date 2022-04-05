@@ -1,6 +1,6 @@
 <Configuration>
     <Credentials>
-        <Path>EnterTheFilePathWhereYouWantToStorageYourCredentials (e.g. C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml)</Path>
+        <Path>EnterTheFilePathWhereYouWantToStoreYourCredentials (e.g. C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml)</Path>
     </Credentials>
 
     <Services>
@@ -11,7 +11,7 @@
     <Download>
         <TenantId>EnterYourTenantId</TenantId>
         <Role>subscriber</Role>
-        <Path>EnterTheFolderPathWhereYouWantToDownloadTheFiles (e.g. C:\Visma\File API\Ftaas.Examples\powershell\download\output)</Path>
+        <Path>EnterTheFolderPathWhereYouWantToDownloadTheFilesTo (e.g. C:\Visma\File API\Ftaas.Examples\powershell\download\output)</Path>
         <EnsureUniqueNames>true</EnsureUniqueNames>
 
         <!-- Here you can find several examples for filtering the files.
@@ -42,13 +42,13 @@
         <!-- Files of the file type 7100 or 7101. -->
         <!-- <Filter>businessType eq 7100 or businessType eq 7101</Filter> -->
 
-        <!-- Files whith names that start with 'employee_profile'. -->
+        <!-- Files with names that start with 'employee_profile'. -->
         <!-- <Filter>startsWith(FileName, 'employee_profile')</Filter> -->
 
-        <!-- Files whith names that don't start with 'employee_profile'.  -->
+        <!-- Files with names that don't start with 'employee_profile'.  -->
         <!-- <Filter>startsWith(FileName, 'employee_profile') eq false</Filter> -->
 
-        <!-- Files whith names that contains the word 'profile'. -->
+        <!-- Files with names that contain the word 'profile'. -->
         <!-- <Filter>contains(FileName, 'profile')</Filter> -->
 
         <!-- Files with .txt extension -->

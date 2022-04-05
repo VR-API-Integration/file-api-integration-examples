@@ -82,14 +82,12 @@ $fileApiService = [FileApiService]::new($fileApiClient, $config.Upload.TenantId,
 
 #region Upload Directory contents
 
-Get-ChildItem $config.Upload.Path | ForEach-Object -Process {
-
-#region Upload file
+Get-ChildItem -Path $config.Upload.Path -Filter $config.Upload.Filter | ForEach-Object -Process {
 
     try {
         $createdFilePath = $fileApiService.CreateFileToUpload($_.FullName) 
         $fileApiService.UploadFile($createdFilePath, $(Split-Path -Path $_.FullName -Leaf))
-        $archivedFile =  [Helper]::ArchiveFile($config.Upload, $_.FullName)
+        $archivedFile =  [Helper]::ArchiveFile($config.Upload.ArchivePath, $_.FullName)
         if(-not [string]::IsNullOrEmpty($archivedFile)){
             Write-Host "File archived ($($archivedFile))."
         }
@@ -97,9 +95,6 @@ Get-ChildItem $config.Upload.Path | ForEach-Object -Process {
     catch {
         [Helper]::EndProgramWithError($_, "Failure uploading the file.")
     }
-
-#endregion Upload file
-
 }
 
 #endregion Upload Directory contents
@@ -130,7 +125,9 @@ class ConfigurationManager {
         
         $tenantId = $config.Upload.TenantId
         $businessTypeId = $config.Upload.BusinessTypeId
-        $contentFilePath = $config.Upload.Path
+        $contentDirectoryPath = $config.Upload.Path
+        $contentFilter = $config.Upload.Filter
+
         $archivePath = $config.Upload.ArchivePath
     
         $missingConfiguration = @()
@@ -139,7 +136,8 @@ class ConfigurationManager {
         if ([string]::IsNullOrEmpty($authenticationTokenApiBaseUrl)) { $missingConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
         if ([string]::IsNullOrEmpty($tenantId)) { $missingConfiguration += "Upload.TenantId" }
         if ([string]::IsNullOrEmpty($businessTypeId)) { $missingConfiguration += "Upload.BusinessTypeId" }
-        if ([string]::IsNullOrEmpty($contentFilePath)) { $missingConfiguration += "Upload.Path" }
+        if ([string]::IsNullOrEmpty($contentDirectoryPath)) { $missingConfiguration += "Upload.Path" }
+        if ([string]::IsNullOrEmpty($contentFilter)) { $missingConfiguration += "Upload.Filter" }
     
         if ($missingConfiguration.Count -gt 0) {
             throw "Missing parameters: $($missingConfiguration -Join ", ")"
@@ -149,7 +147,7 @@ class ConfigurationManager {
         if (-not [Validator]::IsPath($credentialsPath)) { $wrongConfiguration += "Credentials.Path" }
         if (-not [Validator]::IsUri($fileApiBaseUrl)) { $wrongConfiguration += "Services.FileApiBaseUrl" }
         if (-not [Validator]::IsUri($authenticationTokenApiBaseUrl)) { $wrongConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
-        if (-not [Validator]::IsPath($contentFilePath)) { $wrongConfiguration += "Upload.Path" }
+        if (-not [Validator]::IsPath($contentDirectoryPath)) { $wrongConfiguration += "Upload.Path" }
         if (-not [string]::IsNullOrEmpty($archivePath) -and -not [Validator]::IsPath($archivePath)) { $wrongConfiguration += "Upload.ArchivePath" }
 
         if ($wrongConfiguration.Count -gt 0) {
@@ -162,7 +160,8 @@ class ConfigurationManager {
         $configuration.Services.AuthenticationTokenApiBaseUrl = $authenticationTokenApiBaseUrl
         $configuration.Upload.TenantId = $tenantId
         $configuration.Upload.BusinessTypeId = $businessTypeId
-        $configuration.Upload.Path = $contentFilePath
+        $configuration.Upload.Path = $contentDirectoryPath
+        $configuration.Upload.Filter = $contentFilter
         $configuration.Upload.ArchivePath = $archivePath
 
         Write-Host "Configuration retrieved."
@@ -274,14 +273,14 @@ class FileApiService {
         $this._uploadSizeLimit = 100 * 1024 * 1024
     }
 
-    [string] CreateFileToUpload([string] $contentFilePath) {
+    [string] CreateFileToUpload([string] $filename) {
         Write-Host "----"
-        Write-Host "Creating a bundle with the file $($contentFilePath) to upload."
+        Write-Host "Creating a bundle with the file $($filename) to upload."
         $headerFilePath = ""
         $footerFilePath = ""
         try {
-            $folderPath = $(Split-Path -Path $contentFilePath)
-            $contentFilename = $(Split-Path -Path $contentFilePath -Leaf)
+            $folderPath = $(Split-Path -Path $filename)
+            $contentFilename = $(Split-Path -Path $filename -Leaf)
             $createdFilePath = "$($folderPath)\$([Helper]::ConvertToUniqueFilename("multipart.bin"))"
 
             $headerFilename = [Helper]::ConvertToUniqueFilename("header.txt")
@@ -299,7 +298,7 @@ class FileApiService {
             New-Item -Path $folderPath -Name $headerFilename -Value $headerContent
             New-Item -Path $folderPath -Name $footerFilename -Value $footerContent
 
-            cmd /c copy /b $headerFilePath + $contentFilePath + $footerFilePath $createdFilePath
+            cmd /c copy /b $headerFilePath + $filename + $footerFilePath $createdFilePath
             Write-Host "File created."
             return $createdFilePath
         }
@@ -342,7 +341,7 @@ class FileApiClient {
         }
     }
 
-    [PSCustomObject] UploadFile([string] $tenantId, [string] $multipartContentFilePath, [string] $boundary) {
+    [PSCustomObject] UploadFile([string] $tenantId, [string] $multipartcontentFilePath, [string] $boundary) {
         $headers = $this._defaultHeaders
         $headers["x-raet-tenant-id"] = $tenantId
         $headers["Content-Type"] = "multipart/related;boundary=$($boundary)"
@@ -351,14 +350,14 @@ class FileApiClient {
                 -Method "Post" `
                 -Uri "$($this.BaseUrl)/files?uploadType=multipart" `
                 -Headers $headers `
-                -InFile "$($multipartContentFilePath)"
+                -InFile "$($multipartcontentFilePath)"
 
             return $response
         }
 
         finally {
-            if (Test-Path $multipartContentFilePath) {
-                Remove-Item -Force -Path $multipartContentFilePath
+            if (Test-Path $multipartcontentFilePath) {
+                Remove-Item -Force -Path $multipartcontentFilePath
             }
         }
     }
@@ -451,13 +450,13 @@ class Validator {
 }
 
 class Helper {
-    static [string] ArchiveFile([ConfigurationSectionUpload] $config, [string] $filename) {
-        if([string]::IsNullOrEmpty($config.ArchivePath)) {
+    static [string] ArchiveFile([string] $archivePath, [string] $filename) {
+        if([string]::IsNullOrEmpty($archivePath)) {
            return ""
         }
         $filenameInfo = [Helper]::GetFilenameInfo($filename)
         $uniqueArchiveFilename = [Helper]::ConvertToUniqueFilename($filenameInfo.FullName)
-        $archivePath = Join-Path $($config.ArchivePath) $($uniqueArchiveFilename)
+        $archivePath = Join-Path $($archivePath) $($uniqueArchiveFilename)
         try {
             Move-Item $filename -Destination $archivePath
         }
@@ -573,6 +572,7 @@ class ConfigurationSectionUpload {
     [string] $TenantId
     [string] $BusinessTypeId
     [string] $Path
+    [string] $Filter
     [string] $ArchivePath
 }
 
