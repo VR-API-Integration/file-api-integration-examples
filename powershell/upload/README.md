@@ -74,7 +74,7 @@ Inside the **config.xml** file you will find these parameters:
 ### Attributes of the `Credentials` element
 
 **`Path`**
-> XML file path where the credentials will be storaged.  
+> XML file path where the credentials will be stored.  
 > :warning: It's important that the file you put in the path has an .xml extension, otherwise the example will not work properly.
 >
 > **Example:** C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml
@@ -110,9 +110,23 @@ Inside the **config.xml** file you will find these parameters:
 <br/>
 
 **`Path`**
-> Full path of the file to upload.
+> Full path of the directory that contains the files to upload
 >
-> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\upload\file to upload.zip
+> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\upload
+
+<br/>
+
+**`Filter`**
+> The filemask that will select the files to upload
+>
+> **Example:** data*.xml
+
+<br/>
+
+**`ArchivePath`**
+> Full path of the directory where sussessfully uploaded files will be archived to.
+>
+> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\archive
 
 <br/>
 
@@ -132,7 +146,9 @@ Inside the **config.xml** file you will find these parameters:
     <Upload>
         <TenantId>1122334</TenantId>
         <BusinessTypeId>9890988</BusinessTypeId>
-        <Path>C:\Visma\File API\Ftaas.Examples\powershell\upload\file to upload.zip</Path>
+        <Path>C:\Visma\File API\Ftaas.Examples\powershell\upload</Path>
+        <Filter>data*.xml</Filter>
+        <ArchivePath>C:\Visma\File API\Ftaas.Examples\powershell\archive</ArchivePath>
     </Upload>
 </Configuration>
 ```

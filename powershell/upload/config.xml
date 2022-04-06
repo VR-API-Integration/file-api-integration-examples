@@ -1,6 +1,6 @@
 <Configuration>
     <Credentials>
-        <Path>EnterTheFilePathWhereYouWantToStorageYourCredentials (e.g. C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml)</Path>
+        <Path>EnterTheFilePathWhereYouWantToStoreYourCredentials (e.g. C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml)</Path>
     </Credentials>
 
     <Services>
@@ -11,6 +11,8 @@
     <Upload>
         <TenantId>EnterYourTenantId</TenantId>
         <BusinessTypeId>EnterYourBusinessTypeId</BusinessTypeId>
-        <Path>EnterTheFullPathOfTheFileToUpload (e.g: C:\Visma\File API\Ftaas.Examples\powershell\upload\file\02_content_text_file.zip)</Path>
+        <Path>EnterTheDirectoryToUpload (e.g.: C:\Visma\File API\Ftaas.Examples\powershell\upload\file)</Path>
+        <Filter>EnterFilemaskToUseForUpload (e.g.: *.xml)</Filter>
+        <ArchivePath>EnterTheDirectoryForArchivedFiles (e.g.: C:\Visma\File API\Ftaas.Examples\powershell\archive)</ArchivePath>
     </Upload>
 </Configuration>
