@@ -84,17 +84,23 @@ $fileApiService = [FileApiService]::new($fileApiClient, $config.Upload.TenantId,
 
 Get-ChildItem -Path $config.Upload.Path -Filter $config.Upload.Filter | ForEach-Object -Process {
 
+    $filenameToUpload = $_.FullName
+
     try {
-        $createdFilePath = $fileApiService.CreateFileToUpload($_.FullName) 
+        $createdFilePath = $fileApiService.CreateFileToUpload($filenameToUpload) 
         $fileApiService.UploadFile($createdFilePath, $(Split-Path -Path $_.FullName -Leaf))
-        $archivedFile =  [Helper]::ArchiveFile($config.Upload.ArchivePath, $_.FullName)
-        if(-not [string]::IsNullOrEmpty($archivedFile)){
-            Write-Host "File archived ($($archivedFile))."
-        }
     }
     catch {
-        [Helper]::EndProgramWithError($_, "Failure uploading the file.")
+        [Helper]::EndProgramWithError($_, "Failure uploading file $($filenameToUpload).")
     }
+
+    try {
+        $archivedFile =  [Helper]::ArchiveFile($config.Upload.ArchivePath, $_.FullName)
+    }
+    catch {
+        [Helper]::EndProgramWithError($_, "Failure archiving file to $($archivedFile).")
+    }
+
 }
 
 #endregion Upload Directory contents
@@ -138,6 +144,7 @@ class ConfigurationManager {
         if ([string]::IsNullOrEmpty($businessTypeId)) { $missingConfiguration += "Upload.BusinessTypeId" }
         if ([string]::IsNullOrEmpty($contentDirectoryPath)) { $missingConfiguration += "Upload.Path" }
         if ([string]::IsNullOrEmpty($contentFilter)) { $missingConfiguration += "Upload.Filter" }
+        if ([string]::IsNullOrEmpty($archivePath)) { $missingConfiguration += "Upload.ArchivePath" }
     
         if ($missingConfiguration.Count -gt 0) {
             throw "Missing parameters: $($missingConfiguration -Join ", ")"
@@ -148,7 +155,7 @@ class ConfigurationManager {
         if (-not [Validator]::IsUri($fileApiBaseUrl)) { $wrongConfiguration += "Services.FileApiBaseUrl" }
         if (-not [Validator]::IsUri($authenticationTokenApiBaseUrl)) { $wrongConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
         if (-not [Validator]::IsPath($contentDirectoryPath)) { $wrongConfiguration += "Upload.Path" }
-        if (-not [string]::IsNullOrEmpty($archivePath) -and -not [Validator]::IsPath($archivePath)) { $wrongConfiguration += "Upload.ArchivePath" }
+        if (-not [Validator]::IsPath($archivePath)) { $wrongConfiguration += "Upload.ArchivePath" }
 
         if ($wrongConfiguration.Count -gt 0) {
             throw "Wrong configured parameters: $($wrongConfiguration -Join ", ")"
@@ -451,17 +458,16 @@ class Validator {
 
 class Helper {
     static [string] ArchiveFile([string] $archivePath, [string] $filename) {
-        if([string]::IsNullOrEmpty($archivePath)) {
-           return ""
-        }
         $filenameInfo = [Helper]::GetFilenameInfo($filename)
         $uniqueArchiveFilename = [Helper]::ConvertToUniqueFilename($filenameInfo.FullName)
         $archivePath = Join-Path $($archivePath) $($uniqueArchiveFilename)
-        try {
+        try { 
             Move-Item $filename -Destination $archivePath
+            Write-Host "File archived to ($($archivePath))."
         }
         catch {
-            return ""
+            Write-Host "File NOT archived."
+            throw $_
         }
         return $archivePath
     }
