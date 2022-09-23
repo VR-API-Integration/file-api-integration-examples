@@ -1,6 +1,7 @@
 # Changelog 
 Date | Version Changes 
 --- | --- 
+2022-09-23| v1.19.0         Add count to concurrentQueue  ConcurrentQueue didn't have any way to retrieve the capacity, now the elements and unprocessed elements count can be retrieved.
 2022-03-07| v1.18.0         Add copyright to the packages  Add Copyright © 2021 Visma to all projects - vrftr-3995
 2022-01-18| v1.17.0         Internal updates  RaetMangedDefault pool is deprecated. We migrated it to CentralManagedCIWin.  - vrftr-3908
 2022-01-11| v1.16.0         Internal updates
