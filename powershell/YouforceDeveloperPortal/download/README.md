@@ -51,19 +51,19 @@ The next executions will use the saved credentials unless you manually specify t
 #### Example 1. Download files using the default configuration path
 
 ```powershell
-& "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1"
+& "C:\Visma\File API\Ftaas.Examples\powershell\YouforceDeveloperPortal\download\DownloadFiles.ps1"
 ```
 
 #### Example 2. Download files specifying the configuration path
 
 ```powershell
-& "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1" -ConfigPath "C:\Users\Foorby\config.xml"
+& "C:\Visma\File API\Ftaas.Examples\powershell\YouforceDeveloperPortal\download\DownloadFiles.ps1" -ConfigPath "C:\Users\Foorby\config.xml"
 ```
 
 #### Example 3. Download files using new credentials
 
 ```powershell
-& "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1" -RenewCredentials $true
+& "C:\Visma\File API\Ftaas.Examples\powershell\YouforceDeveloperPortal\download\DownloadFiles.ps1" -RenewCredentials $true
 ```
 
 ## Understanding the configuration
@@ -76,14 +76,14 @@ Inside the **config.xml** file you will find these parameters:
 > XML file path where the credentials will be storaged.  
 > :warning: It's important that the file you put in the path has an .xml extension, otherwise the example will not work properly.
 > 
-> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml
+> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\YouforceDeveloperPortal\credentials\credentials_integration.xml
 
 ### Attributes of the `Services` element
 
 **`FileApiBaseUrl`**
 > File API base URL.
 > 
-> It should be set to **https://api.raet.com/mft/v1.0**
+> It should be set to **https://fileapi.youforce.com/v1.0**
 
 <br/>
 
@@ -140,18 +140,18 @@ Inside the **config.xml** file you will find these parameters:
 ```xml
 <Configuration>
     <Credentials>
-        <Path>C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml</Path>
+        <Path>C:\Visma\File API\Ftaas.Examples\powershell\YouforceDeveloperPortal\credentials\credentials_integration1.xml</Path>
     </Credentials>
 
     <Services>
-        <FileApiBaseUrl>https://api.raet.com/mft/v1.0</FileApiBaseUrl>
+        <FileApiBaseUrl>https://fileapi.youforce.com/v1.0</FileApiBaseUrl>
         <AuthenticationTokenApiBaseUrl>https://api.raet.com/authentication</AuthenticationTokenApiBaseUrl>
     </Services>
 
     <Download>
         <TenantId>1122334</TenantId>
         <Role>subscriber</Role>
-        <Path>C:\Visma\File API\Ftaas.Examples\powershell\download\output</Path>
+        <Path>C:\Visma\File API\Ftaas.Examples\powershell\YouforceDeveloperPortal\download\output</Path>
         <EnsureUniqueNames>true</EnsureUniqueNames>
         <Filter>startsWith(FileName, 'employee_profile') and uploadDate gt 2022-02-08T11:02:00Z</Filter>
     </Download>

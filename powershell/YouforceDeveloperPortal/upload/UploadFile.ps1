@@ -6,7 +6,7 @@ Param(
     [Alias("ConfigPath")]
     [Parameter(
         Mandatory = $false,
-        HelpMessage = 'Full filePath of the configuration (e.g. C:\Visma\File API\Ftaas.Examples\powershell\upload\config.xml). Default value: set in the code.'
+        HelpMessage = 'Full filePath of the configuration (e.g. C:\Visma\File API\Ftaas.Examples\powershell\YouforceDeveloperPortal\upload\config.xml). Default value: set in the code.'
     )]
     [string] $_configPath,
 
