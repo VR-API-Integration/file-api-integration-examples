@@ -157,12 +157,6 @@ Inside the **config.xml** file you will find these parameters:
 </Configuration>
 ```
 
-## Visual examples
-
-### Example 1. Upload files for the first time
-
-![Upload file for the first time](./media/Example_upload.mp4)
-
 ## Authors
 
 **Visma - Transporters Team**

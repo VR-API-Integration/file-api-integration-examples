@@ -158,12 +158,6 @@ Inside the **config.xml** file you will find these parameters:
 </Configuration>
 ```
 
-## Visual examples
-
-#### Example 1. Download files for the first time
-
-![Download files for the first time](./media/Example_DownloadFilesFirstTime.gif)
-
 ## Authors
 
 **Visma - Transporters Team**
