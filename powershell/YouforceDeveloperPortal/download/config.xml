@@ -1,0 +1,57 @@
+<Configuration>
+    <Credentials>
+        <Path>EnterTheFilePathWhereYouWantToStoreYourCredentials (e.g. C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration.xml)</Path>
+    </Credentials>
+
+    <Services>
+        <FileApiBaseUrl>https://fileapi.youforce.com/v1.0</FileApiBaseUrl>
+        <AuthenticationTokenApiBaseUrl>https://api.raet.com/authentication</AuthenticationTokenApiBaseUrl>
+    </Services>
+
+    <Download>
+        <TenantId>EnterYourTenantId</TenantId>
+        <Role>subscriber</Role>
+        <Path>EnterTheFolderPathWhereYouWantToDownloadTheFilesTo (e.g. C:\Visma\File API\Ftaas.Examples\powershell\YouforceDeveloperPortal\download\output)</Path>
+        <EnsureUniqueNames>true</EnsureUniqueNames>
+
+        <!-- Here you can find several examples for filtering the files.
+        In order to use any of the filters, just uncomment the desired <Filter> line and comment the rest.
+        You can also create your own filter. Check the File API documentation to see all available filters. -->
+
+        <!-- No filters (same as "status eq 'available'") -->
+        <Filter></Filter>
+
+        <!-- Files already downloaded. -->
+        <!-- <Filter>status eq 'downloaded'</Filter> -->
+
+        <!-- Files already downloaded that have the file type 7100. -->
+        <!-- <Filter>status eq 'downloaded' and businessType eq 7100</Filter> -->
+
+        <!-- Files downloaded and not downloaded (all) that have the file type 7100 or 7101. -->
+        <!-- <Filter>status eq 'all' and (businessType eq 7100 or businessType eq 7101)</Filter> -->
+
+        <!-- Files uploaded after the day 2022-02-15 at 16:42:30. -->
+        <!-- <Filter>uploadDate gt 2022-02-15T16:42:30.000Z</Filter> -->
+
+        <!-- Files uploaded after the day 2022-02-15 at 16:42:30 and before the day 2022-06-10 at 00:00:00. -->
+        <!-- <Filter>uploadDate gt 2022-02-15T16:42:30.000Z and uploadDate lt 2022-06-10T00:00:00.000Z</Filter> -->
+
+        <!-- Files of the file type 7100. -->
+        <!-- <Filter>businessType eq 7100</Filter> -->
+
+        <!-- Files of the file type 7100 or 7101. -->
+        <!-- <Filter>businessType eq 7100 or businessType eq 7101</Filter> -->
+
+        <!-- Files with names that start with 'employee_profile'. -->
+        <!-- <Filter>startsWith(FileName, 'employee_profile')</Filter> -->
+
+        <!-- Files with names that don't start with 'employee_profile'.  -->
+        <!-- <Filter>startsWith(FileName, 'employee_profile') eq false</Filter> -->
+
+        <!-- Files with names that contain the word 'profile'. -->
+        <!-- <Filter>contains(FileName, 'profile')</Filter> -->
+
+        <!-- Files with .txt extension -->
+        <!-- <Filter>endsWith(FileName, '.txt')</Filter> -->
+    </Download>
+</Configuration>

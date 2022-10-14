@@ -11,7 +11,7 @@ A collection of examples to upload files with the File API using **PowerShell**.
 
 Download the **file-api-integration-examples** repository.
 
-Inside the **powershell\upload** folder you can find these files:
+Inside the **powershell\VismaDeveloperPortal\upload** folder you can find these files:
 
 - **UploadFile.ps1**: Script example to upload specified files.
 - **config.xml**: Configuration of the **UploadFile.ps1** script.
@@ -52,19 +52,19 @@ The next executions will use the saved credentials unless you manually specify t
 #### Example 1. Upload files using the default configuration path
 
 ```powershell
-& "C:\Visma\File API\Ftaas.Examples\powershell\upload\UploadFile.ps1"
+& "C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\upload\UploadFile.ps1"
 ```
 
 #### Example 2. Upload files specifying the configuration path
 
 ```powershell
-& "C:\Visma\File API\Ftaas.Examples\powershell\upload\UploadFile.ps1" -ConfigPath "C:\Users\Foorby\config.xml"
+& "C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\upload\UploadFile.ps1" -ConfigPath "C:\Users\Foorby\config.xml"
 ```
 
 #### Example 3. Upload files using new credentials
 
 ```powershell
-& "C:\Visma\File API\Ftaas.Examples\powershell\upload\UploadFile.ps1" -RenewCredentials $true
+& "C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\upload\UploadFile.ps1" -RenewCredentials $true
 ```
 
 ## Understanding the configuration
@@ -77,30 +77,31 @@ Inside the **config.xml** file you will find these parameters:
 > XML file path where the credentials will be stored.  
 > :warning: It's important that the file you put in the path has an .xml extension, otherwise the example will not work properly.
 >
-> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml
+> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\credentials\credentials_integration.xml
 
 ### Attributes of the `Services` element
 
 **`FileApiBaseUrl`**
 > File API base URL.
 >
-> It should be set to **<https://api.raet.com/mft/v1.0>**
+> It should be set to **<https://fileapi.youforce.com/v1.0>**
 
 <br />
 
+
 **`AuthenticationTokenApiBaseUrl`**
-> Authorization token API base URL.
+> Authentication token API base URL.
 >
-> It should be set to **<https://api.raet.com/authentication>**
+> It should be set to **<https://connect.visma.com/connect>**
+
+### Attributes of the `Authentication` element
+
+**`VismaConnectTenantId`**
+> The Visma developer portal tenant id.
+
+<br />
 
 ### Attributes of the `Upload` element
-
-**`TenantId`**
-> Tenant you will use to upload the files.
->
-> **Example:** 1122334
-
-<br/>
 
 **`BusinessTypeId`**
 > The business type id of the file to upload.
@@ -112,7 +113,7 @@ Inside the **config.xml** file you will find these parameters:
 **`Path`**
 > Full path of the directory that contains the files to upload
 >
-> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\upload
+> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\upload
 
 <br/>
 
@@ -126,7 +127,7 @@ Inside the **config.xml** file you will find these parameters:
 **`ArchivePath`**
 > Full path of the directory where sussessfully uploaded files will be archived to.
 >
-> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\archive
+> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\archive
 
 <br/>
 
@@ -135,29 +136,26 @@ Inside the **config.xml** file you will find these parameters:
 ```xml
 <Configuration>
     <Credentials>
-        <Path>C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml</Path>
+        <Path>C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\credentials\credentials_integration1.xml</Path>
     </Credentials>
 
     <Services>
-        <FileApiBaseUrl>https://api.raet.com/mft/v1.0</FileApiBaseUrl>
-        <AuthenticationTokenApiBaseUrl>https://api.raet.com/authentication</AuthenticationTokenApiBaseUrl>
+        <FileApiBaseUrl>https://fileapi.youforce.com/v1.0</FileApiBaseUrl>
+        <AuthenticationTokenApiBaseUrl>https://connect.visma.com/connect</AuthenticationTokenApiBaseUrl>
     </Services>
 
+    <Authentication>
+        <VismaConnectTenantId>11111111-1111-1111-1111-111111111111</VismaConnectTenantId>
+    </Authentication>
+
     <Upload>
-        <TenantId>1122334</TenantId>
         <BusinessTypeId>9890988</BusinessTypeId>
-        <Path>C:\Visma\File API\Ftaas.Examples\powershell\upload</Path>
+        <Path>C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\upload</Path>
         <Filter>data*.xml</Filter>
-        <ArchivePath>C:\Visma\File API\Ftaas.Examples\powershell\archive</ArchivePath>
+        <ArchivePath>C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\archive</ArchivePath>
     </Upload>
 </Configuration>
 ```
-
-## Visual examples
-
-### Example 1. Download files for the first time
-
-![Upload file for the first time](./media/Example_upload.mp4)
 
 ## Authors
 

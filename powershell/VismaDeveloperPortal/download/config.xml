@@ -1,17 +1,20 @@
 <Configuration>
     <Credentials>
-        <Path>EnterTheFilePathWhereYouWantToStoreYourCredentials (e.g. C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml)</Path>
+        <Path>EnterTheFilePathWhereYouWantToStoreYourCredentials (e.g. C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration.xml)</Path>
     </Credentials>
 
     <Services>
-        <FileApiBaseUrl>https://api.raet.com/mft/v1.0</FileApiBaseUrl>
+        <FileApiBaseUrl>https://fileapi.youforce.com/v1.0</FileApiBaseUrl>
         <AuthenticationTokenApiBaseUrl>https://api.raet.com/authentication</AuthenticationTokenApiBaseUrl>
     </Services>
 
+    <Authentication>
+        <VismaConnectTenantId>EnterYourVismaConnectTenantId</VismaConnectTenantId>
+    </Authentication>
+
     <Download>
-        <TenantId>EnterYourTenantId</TenantId>
         <Role>subscriber</Role>
-        <Path>EnterTheFolderPathWhereYouWantToDownloadTheFilesTo (e.g. C:\Visma\File API\Ftaas.Examples\powershell\download\output)</Path>
+        <Path>EnterTheFolderPathWhereYouWantToDownloadTheFilesTo (e.g. C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\output)</Path>
         <EnsureUniqueNames>true</EnsureUniqueNames>
 
         <!-- Here you can find several examples for filtering the files.
