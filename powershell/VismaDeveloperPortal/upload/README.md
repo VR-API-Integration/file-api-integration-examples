@@ -11,7 +11,7 @@ A collection of examples to upload files with the File API using **PowerShell**.
 
 Download the **file-api-integration-examples** repository.
 
-Inside the **powershell\upload** folder you can find these files:
+Inside the **powershell\VismaDeveloperPortal\upload** folder you can find these files:
 
 - **UploadFile.ps1**: Script example to upload specified files.
 - **config.xml**: Configuration of the **UploadFile.ps1** script.
@@ -90,7 +90,7 @@ Inside the **config.xml** file you will find these parameters:
 
 
 **`AuthenticationTokenApiBaseUrl`**
-> Authorization token API base URL.
+> Authentication token API base URL.
 >
 > It should be set to **<https://connect.visma.com/connect>**
 
@@ -159,7 +159,7 @@ Inside the **config.xml** file you will find these parameters:
 
 ## Visual examples
 
-### Example 1. Download files for the first time
+### Example 1. Upload files for the first time
 
 ![Upload file for the first time](./media/Example_upload.mp4)
 
