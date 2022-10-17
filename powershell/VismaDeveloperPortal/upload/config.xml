@@ -5,7 +5,7 @@
 
     <Services>
         <FileApiBaseUrl>https://fileapi.youforce.com/v1.0</FileApiBaseUrl>
-        <AuthenticationTokenApiBaseUrl>https://api.raet.com/authentication</AuthenticationTokenApiBaseUrl>
+        <AuthenticationTokenApiBaseUrl>https://connect.visma.com/connect</AuthenticationTokenApiBaseUrl>
     </Services>
 
     <Authentication>
