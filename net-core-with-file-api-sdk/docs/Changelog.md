@@ -1,6 +1,7 @@
 # Changelog 
 Date | Version Changes 
 --- | --- 
+2023-02-02| v1.21.0         vrftr-3340 Add subscriber delete documentation  Add documentation to the examples
 2023-02-02| v1.20.0         vrftr-3340 Add delete method to SDK  vrftr-3340 Add delete method to SDK. This allows a subscriber to set a file status to 'delete'.
 2022-09-23| v1.19.0         Add count to concurrentQueue  ConcurrentQueue didn't have any way to retrieve the capacity, now the elements and unprocessed elements count can be retrieved.
 2022-03-07| v1.18.0         Add copyright to the packages  Add Copyright © 2021 Visma to all projects - vrftr-3995

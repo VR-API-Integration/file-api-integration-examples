@@ -66,6 +66,15 @@ _NOTE: If the file size is greater than the maximum chunk size configured, it wi
 `tenantId`: (optional) tenantId.\
 `cancellationToken`: (optional) the CancellationToken that the upload task will observe.
 
+### Delete ###
+
+`DeleteFileAsync` sets the status of the requested subscriber file to 'deleted'.
+
+#### Task DeleteFileAsync(string fileId, string tenantId, CancellationToken cancellationToken) ####
+`fileId`: GUID of the file to delete.\
+`tenantId`: (optional) tenantId.\
+`cancellationToken`: (optional) the CancellationToken that the delete task will observe.
+
 ### Download ###
 
 `DownloadFileAsync` downloads the requested file on the specified path.
@@ -151,19 +160,28 @@ Integrate with File API with stream sources.
 
 _NOTE: If the file size is greater than the maximum chunk size configured, it will be uploaded by chunks._
 
-#### Task<FileUploadInfo> UploadFileAsync(FileUploadRequest request, Stream fileStream, string tenantId, CancellationToken cancellationToken) ####
+#### Task<FileUploadInfo> UploadFileAsync(FileUploadRequest request, Stream stream, string tenantId, CancellationToken cancellationToken) ####
 `request`: composed by fileName and bussinessTypeId.\
-`fileStream`: stream containing the bytes of the file.\
+`stream`: stream containing the bytes of the file.\
 `tenantId`: (optional) tenantId.\
 `cancellationToken`: (optional) the CancellationToken that the upload task will observe.
 
+### Delete ###
+
+`DeleteFileAsync` sets the status of the requested subscriber file to 'deleted'.
+
+#### Task DeleteFileAsync(string fileId, string tenantId, CancellationToken cancellationToken) ####
+`fileId`: GUID of the file to delete.\
+`tenantId`: (optional) tenantId.\
+`cancellationToken`: (optional) the CancellationToken that the delete task will observe.
+
 ### Download ###
 
-`DownloadFileAsync` downloads the requested file on the specified path.
+`DownloadFileAsync` reads the requested file content to a stream.
 
-#### Task DownloadFileAsync(string fileId, Stream fileStream, string tenantId, CancellationToken cancellationToken) ####
+#### Task DownloadFileAsync(string fileId, Stream stream, string tenantId, CancellationToken cancellationToken) ####
 `fileId`: GUID of the file to download.\
-`fileStream`: stream where the bytes of the file will be stored.\
+`stream`: stream where the bytes of the file will be stored.\
 `tenantId`: (optional) tenantId.\
 `cancellationToken`: (optional) the CancellationToken that the download task will observe.
 
