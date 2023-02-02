@@ -22,14 +22,12 @@ namespace FileAPI.MFT.FileSystem.NetCore22.Examples
 
             #region Custom parameters
 
+            var fileId = "FileId"; // File to delete.
             var tenantId = "MyTenantId"; // Only necessary for multi-tenant token.
 
             #endregion
 
             _output.WriteTittle("Executing Streaming.SDK example: Set subscriber file to 'deleted'");
-
-            // Configure the file id.
-            var fileId = "FileId";
 
             // Delete the file.
             var deleteResult = await FileSystem.DeleteFileAsync(fileId: fileId, tenantId: tenantId);
@@ -37,7 +35,7 @@ namespace FileAPI.MFT.FileSystem.NetCore22.Examples
             Assert.True(deleteResult);
 
             // Print the result.
-            _output.WriteLine($"File could be deleted:{deleteResult}");
+            _output.WriteLine($"File could be deleted: {deleteResult}");
         }
     }
 }
