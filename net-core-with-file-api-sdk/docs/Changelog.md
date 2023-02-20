@@ -1,9 +1,10 @@
 # Changelog 
 Date | Version Changes 
 --- | --- 
-2023-02-03| v1.22.0         vrftr-5869 Add delete fields to list  Add deleted and deletedDate fields to list response.
-2023-02-02| v1.21.0         vrftr-3340 Add subscriber delete documentation  Add documentation to the examples
-2023-02-02| v1.20.0         vrftr-3340 Add delete method to SDK  vrftr-3340 Add delete method to SDK. This allows a subscriber to set a file status to 'delete'.
+2023-02-20| v2.0.0          vrftr-6037 Rename Delete method.  Previous DeleteAsync method has been renamed to SetFileToDeletedAsync to avoid misunderstandings, as it doesn't delete files, it marks the file as 'deleted' for a subscriber.
+2023-02-03| v1.22.0         Add deleted and deletedDate fields to list response.
+2023-02-02| v1.21.0         Add subscriber delete documentation to the examples.
+2023-02-02| v1.20.0         Breaking changes: IService includes a new method. Add delete method to SDK. This allows a subscriber to mark a file as deleted, won't delete the file.
 2022-09-23| v1.19.0         Add count to concurrentQueue  ConcurrentQueue didn't have any way to retrieve the capacity, now the elements and unprocessed elements count can be retrieved.
 2022-03-07| v1.18.0         Add copyright to the packages  Add Copyright © 2021 Visma to all projects - vrftr-3995
 2022-01-18| v1.17.0         Internal updates  RaetMangedDefault pool is deprecated. We migrated it to CentralManagedCIWin.  - vrftr-3908

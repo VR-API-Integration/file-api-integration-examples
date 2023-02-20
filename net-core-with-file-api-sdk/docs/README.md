@@ -78,9 +78,9 @@ _NOTE: If the file size is greater than the maximum chunk size configured, it wi
 
 ### Delete ###
 
-`DeleteFileAsync` sets a subscriber file to 'deleted'.
+`SetFileToDeletedAsync` sets a subscriber file to 'deleted'.
 
-#### Task DeleteFileAsync(string fileId, string tenantId, CancellationToken cancellationToken) ####
+#### Task SetFileToDeletedAsync(string fileId, string tenantId, CancellationToken cancellationToken) ####
 `fileId`: GUID of the file to delete.\
 `tenantId`: (optional) tenantId.\
 `cancellationToken`: (optional) the CancellationToken that the delete task will observe.
@@ -189,9 +189,9 @@ _NOTE: If the file size is greater than the maximum chunk size configured, it wi
 
 ### Delete ###
 
-`DeleteFileAsync` sets a subscriber file to 'deleted'.
+`SetFileToDeletedAsync` sets a subscriber file to 'deleted'.
 
-#### Task DeleteFileAsync(string fileId, string tenantId, CancellationToken cancellationToken) ####
+#### Task SetFileToDeletedAsync(string fileId, string tenantId, CancellationToken cancellationToken) ####
 `fileId`: GUID of the file to delete.\
 `tenantId`: (optional) tenantId.\
 `cancellationToken`: (optional) the CancellationToken that the delete task will observe.
