@@ -131,6 +131,13 @@ Inside the **config.xml** file you will find these parameters:
 
 <br/>
 
+**`ChunkSize`**
+> Size of chunks (MB) used to send large files (default: 4 MB is most efficient).
+>
+> **Example:** 4
+
+<br/>
+
 ## Example of a valid configuration
 
 ```xml
@@ -153,6 +160,7 @@ Inside the **config.xml** file you will find these parameters:
         <Path>C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\upload</Path>
         <Filter>data*.xml</Filter>
         <ArchivePath>C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\archive</ArchivePath>
+        <Chunksize>4</ChunkSize>
     </Upload>
 </Configuration>
 ```

@@ -1,4 +1,4 @@
-# This example shows how to upload a file.
+# This example shows how to upload a file. 
 # Authors: Visma - Transporters Team
 
 [CmdletBinding()]
@@ -26,7 +26,8 @@ if (-not $_configPath) {
 }
 
 Write-Host "========================================================="
-Write-Host "File API example: Upload a file."
+Write-Host "File API example: Upload files from a directory."
+Write-Host "                  Supports files > 100Mb"
 Write-Host "========================================================="
 
 Write-Host "(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')"
@@ -78,7 +79,7 @@ catch {
 #endregion Retrieve authentication token
 
 $fileApiClient = [FileApiClient]::new($config.Services.FileApiBaseUrl, $token)
-$fileApiService = [FileApiService]::new($fileApiClient, $config.Upload.BusinessTypeId)
+$fileApiService = [FileApiService]::new($fileApiClient, $config.Upload.BusinessTypeId, $config.Upload.ChunkSize)
 
 #region Upload Directory contents
 
@@ -87,8 +88,7 @@ Get-ChildItem -Path $config.Upload.Path -Filter $config.Upload.Filter | ForEach-
     $filenameToUpload = $_.FullName
 
     try {
-        $createdFilePath = $fileApiService.CreateFileToUpload($filenameToUpload) 
-        $fileApiService.UploadFile($createdFilePath, $(Split-Path -Path $_.FullName -Leaf))
+        $fileApiService.UploadFile($filenameToUpload)
     }
     catch {
         [Helper]::EndProgramWithError($_, "Failure uploading file $($filenameToUpload).")
@@ -100,8 +100,9 @@ Get-ChildItem -Path $config.Upload.Path -Filter $config.Upload.Filter | ForEach-
     catch {
         [Helper]::EndProgramWithError($_, "Failure archiving file to $($archivedFile).")
     }
-
 }
+
+
 
 #endregion Upload Directory contents
 
@@ -133,6 +134,8 @@ class ConfigurationManager {
         $businessTypeId = $config.Upload.BusinessTypeId
         $contentDirectoryPath = $config.Upload.Path
         $contentFilter = $config.Upload.Filter
+        $chunkSize = [long] $config.Upload.ChunkSize 
+        $chunkSizeLimit = [long] 100
 
         $archivePath = $config.Upload.ArchivePath
     
@@ -145,7 +148,8 @@ class ConfigurationManager {
         if ([string]::IsNullOrEmpty($contentDirectoryPath)) { $missingConfiguration += "Upload.Path" }
         if ([string]::IsNullOrEmpty($contentFilter)) { $missingConfiguration += "Upload.Filter" }
         if ([string]::IsNullOrEmpty($archivePath)) { $missingConfiguration += "Upload.ArchivePath" }
-    
+        if ([string]::IsNullOrEmpty($chunkSize)) { $missingConfiguration += "Upload.ChunkSize" }
+   
         if ($missingConfiguration.Count -gt 0) {
             throw "Missing parameters: $($missingConfiguration -Join ", ")"
         }
@@ -156,6 +160,9 @@ class ConfigurationManager {
         if (-not [Validator]::IsUri($authenticationTokenApiBaseUrl)) { $wrongConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
         if (-not [Validator]::IsPath($contentDirectoryPath)) { $wrongConfiguration += "Upload.Path" }
         if (-not [Validator]::IsPath($archivePath)) { $wrongConfiguration += "Upload.ArchivePath" }
+        if($chunkSize -gt $chunkSizeLimit) { $wrongConfiguration += "Chunk size ($($chunkSize)) cannot be bigger than $($chunkSizeLimit) bytes."}
+        if($chunkSize -lt 1){$wrongConfiguration += "Chunk size ($($chunkSize)) cannot be smaller than 1 (Mbyte)."}
+
 
         if ($wrongConfiguration.Count -gt 0) {
             throw "Wrong configured parameters: $($wrongConfiguration -Join ", ")"
@@ -170,6 +177,7 @@ class ConfigurationManager {
         $configuration.Upload.Path = $contentDirectoryPath
         $configuration.Upload.Filter = $contentFilter
         $configuration.Upload.ArchivePath = $archivePath
+        $configuration.Upload.ChunkSize = $chunkSize * 1024 * 1024 #convert to bytes
 
         Write-Host "Configuration retrieved."
 
@@ -267,29 +275,74 @@ class CredentialsManager {
 
 class FileApiService {
     hidden [FileApiClient] $_fileApiClient
-    hidden [long] $_uploadSizeLimit
+    hidden [long] $_fileSize
+    hidden [long] $_fileBytesRead
     hidden [string] $_boundary
     hidden [string] $_businessTypeId
+    hidden [long] $_chunkSize
+    hidden [int] $_uploadDelay
 
     FileApiService(
         [FileApiClient] $fileApiClient,
-        [string] $businessTypeId
+        [string] $businessTypeId,
+        [long] $chunkSize
     ) {
         $this._fileApiClient = $fileApiClient
         $this._boundary = "file_info"
         $this._businessTypeId = $businessTypeId
-
-        # API supports files up to 100 megabytes
-        $this._uploadSizeLimit = 100 * 1024 * 1024
+        $this._chunkSize = $chunkSize
+        $this._uploadDelay = 0
     }
 
-    [string] CreateFileToUpload([string] $filename) {
+    [void] UploadFile($filenameToUpload){
         Write-Host "----"
-        Write-Host "Creating a bundle with the file $($filename) to upload."
+        Write-Host "Uploading the file."
+        Write-Host "| File: $($(Split-Path -Path $filenameToUpload -Leaf))"
+        Write-Host "| Business type: $($this._businessTypeId)"
+
+        $result = $this.UploadFirstRequest($filenameToUpload)
+        $fileToken = $result.FileToken
+        $chunkNumber = 1
+        While( -not $result.Eof ) {
+            Write-Host "Uploading Chunk #$($chunkNumber + 1)."
+            $result = $this.UploadChunkRequest($fileToken, $filenameToUpload, $chunkNumber)
+            $chunkNumber += 1
+        }
+        Write-Host "File $($(Split-Path -Path $filenameToUpload -Leaf)) uploaded."
+    }
+
+    [PSCustomObject] UploadFirstRequest([string] $filenameToUpload){
+        $this._fileSize = (Get-Item $filenameToUpload).Length
+        $this._fileBytesRead = 0
+        $filenameOnly = Split-Path -Path $filenameToUpload -Leaf
+        $chunkNumber = 0
+        $result = $this.CreateChunk($filenameToUpload, $this._chunkSize, $chunkNumber)
+        $FirstRequestData = $this.CreateFirstRequestToUpload($filenameOnly, $result.ChunkPath)
+        $response = $this.UploadFile($FirstRequestData, $filenameOnly, "multipart/related;boundary=$($this._boundary)", "", $chunkNumber, $result.Eof)
+        $fileToken =   $response.uploadToken
+        
+        return [PSCustomObject]@{
+            FileToken = $fileToken
+            Eof = $result.Eof
+            }
+    }
+
+    [PSCustomObject] UploadChunkRequest([string] $fileToken, [string] $filenameToUpload, [long] $chunkNumber){
+        $result = $this.CreateChunk($filenameToUpload, $this._chunkSize, $chunkNumber)
+        $response = $this.UploadFile($result.ChunkPath, $(Split-Path -Path $filenameToUpload -Leaf), "application/octet-stream", $fileToken, $chunkNumber, $result.Eof)
+
+        return [PSCustomObject]@{
+            Eof = $result.Eof
+            }
+    }
+
+    [string] CreateFirstRequestToUpload([string] $filename, [string] $chunkPath) {
+        Write-Host "----"
+        Write-Host "Creating first request with the file $($filename) to upload."
         $headerFilePath = ""
         $footerFilePath = ""
         try {
-            $folderPath = $(Split-Path -Path $filename)
+            $folderPath = $(Split-Path -Path $chunkPath)
             $contentFilename = $(Split-Path -Path $filename -Leaf)
             $createdFilePath = "$($folderPath)\$([Helper]::ConvertToUniqueFilename("multipart.bin"))"
 
@@ -308,7 +361,7 @@ class FileApiService {
             New-Item -Path $folderPath -Name $headerFilename -Value $headerContent
             New-Item -Path $folderPath -Name $footerFilename -Value $footerContent
 
-            cmd /c copy /b $headerFilePath + $filename + $footerFilePath $createdFilePath
+            cmd /c copy /b $headerFilePath + $chunkPath + $footerFilePath $createdFilePath
             Write-Host "File created."
             return $createdFilePath
         }
@@ -319,21 +372,67 @@ class FileApiService {
             if (Test-Path $footerFilePath) {
                 Remove-Item -Force -Path $footerFilePath
             }
+            if (Test-Path $chunkPath) {
+                Remove-Item -Force -Path $chunkPath
+            }
         }
     }
 
-    [void] UploadFile([string] $filePath, $originalFilename) {
-        if ((Get-Item $filePath).Length -gt $this._uploadSizeLimit) {
-            throw "Cannot upload files bigger $($this._uploadSizeLimit) bytes."
+    [PSCustomObject] CreateChunk([string] $contentFilePath, [long] $chunkSize, [long] $chunkNumber){
+        $folderPath = $(Split-Path -Path $contentFilePath)
+        $contentFilename = $(Split-Path -Path $contentFilePath -Leaf)
+        $createdChunkPath = "$($folderPath)\$([Helper]::ConvertToUniqueFilename("Chunk_$($chunkNumber).bin"))"
+        [byte[]]$bytes = new-object Byte[] $chunkSize
+        $fileStream = New-Object System.IO.FileStream($contentFilePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read)
+        $binaryReader = New-Object System.IO.BinaryReader( $fileStream)
+        $pos = $binaryReader.BaseStream.Seek($chunkNumber * $chunkSize, [System.IO.SeekOrigin]::Begin)
+        $bytes = $binaryReader.ReadBytes($chunkSize) 
+       
+        $this._fileBytesRead += $bytes.Length
+        [bool] $streamEof = 0
+        if(($bytes.Length -lt $chunkSize) -or ($this._fileBytesRead -ge $this._fileSize)) {
+            $streamEof = 1
         }
-        Write-Host "----"
-        Write-Host "Uploading the file."
-        Write-Host "| File: $($originalFilename)"
-        Write-Host "| Business type: $($this._businessTypeId)"
-        $this._fileApiClient.UploadFile($filePath, $this._boundary)
-        
-        Write-Host "File uploaded."
+
+        $binaryReader.Dispose()  
+
+        Set-Content -Path $createdChunkPath -Value $bytes -Encoding Byte
+
+        return [PSCustomObject]@{
+            ChunkPath = $createdChunkPath
+            Eof = $streamEof
+            }
     }
+
+    [PSCustomObject] UploadFile([string] $filePath, [string] $originalFilename, [string] $contentType, [string] $token, [long] $chunkNumber, [bool] $close) {
+    
+        while(1 -eq 1) {
+            try{
+                Start-Sleep -Milliseconds $this._uploadDelay
+
+                $result = $this._fileApiClient.UploadFile($filePath, $contentType, $token, $chunkNumber, $close )
+
+                if (-not [string]::IsNullOrEmpty($filePath) -and (Test-Path $filePath)) {
+                    Remove-Item -Force -Path $filePath
+                }
+
+                return $result
+            }
+            catch{
+                if( $_.Exception.Message.Contains("(429)")){
+                    $this._uploadDelay += 100
+                    Write-Host "Spike arrest detected: Setting uploadDelay to $($this._uploadDelay) msec."
+                    Write-Host "Waiting 60 seconds for spike arrest to clear"
+                    Start-Sleep -Seconds 60
+                }
+                else {
+                    throw "$($_)"
+                }
+            }
+        }
+
+        throw "UploadFile aborted: should never come here"
+   }
 }
 
 class FileApiClient {
@@ -351,24 +450,43 @@ class FileApiClient {
         }
     }
 
-    [PSCustomObject] UploadFile([string] $multipartcontentFilePath, [string] $boundary) {
+    [PSCustomObject] UploadFile([string] $bodyPath, [string] $contentType, [string] $token, [long] $chunkNumber, [bool] $close) {
         $headers = $this._defaultHeaders
-        $headers["Content-Type"] = "multipart/related;boundary=$($boundary)"
-        try {
+        if(-not [string]::IsNullOrEmpty($contentType)){
+            $headers["Content-Type"] = $contentType
+        }
+        $uri = "$($this.BaseUrl)/files"
+        if(($chunkNumber -eq 0) -and $close) {
+            $uri += "?uploadType=multipart"
+        }
+        else {
+            $uri += "?uploadType=resumable"
+        }
+        if(-not [string]::IsNullOrEmpty($token)){
+            $uri += "&uploadToken=$($token)"
+        }
+        if($chunkNumber -ne 0){
+         $uri += "&position=$($chunkNumber)"
+        }
+        if($close -and ($chunkNumber -gt 0)) {
+            $uri += "&close=true"
+        }
+        if($chunkNumber -eq 0){
             $response = Invoke-RestMethod `
                 -Method "Post" `
-                -Uri "$($this.BaseUrl)/files?uploadType=multipart" `
+                -Uri     $uri `
                 -Headers $headers `
-                -InFile "$($multipartcontentFilePath)"
-
-            return $response
-        }
-
-        finally {
-            if (Test-Path $multipartcontentFilePath) {
-                Remove-Item -Force -Path $multipartcontentFilePath
+                -InFile "$($bodyPath)"
             }
-        }
+            else {
+            $response = Invoke-RestMethod `
+                -Method "Put" `
+                -Uri     $uri `
+                -Headers $headers `
+                -InFile "$($bodyPath)"
+            }
+
+        return $response
     }
 }
 
@@ -583,6 +701,7 @@ class ConfigurationSectionUpload {
     [string] $Path
     [string] $Filter
     [string] $ArchivePath
+    [long]   $ChunkSize
 }
 
 class FileInfo {
