@@ -5,7 +5,8 @@ A collection of examples to upload files with the File API using **PowerShell**.
 ## Prerequisites
 
 - The script was prepared for PowerShell version 5.1 or above. With lower versions it might not work properly.
-- Files to be uploaded cannot be bigger than 100 MB.
+- Files to be uploaded cannot be bigger than 10 GB.
+- Chunksize is limited to 100 MB (4 MB is suggested as most efficient
 
 ## Getting Started
 
