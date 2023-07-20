@@ -17,5 +17,6 @@
         <Path>EnterTheDirectoryToUpload (e.g.: C:\Visma\File API\Ftaas.Examples\powershell\upload\VismaDeveloperPortal\file)</Path>
         <Filter>EnterFilemaskToUseForUpload (e.g.: *.xml)</Filter>
         <ArchivePath>EnterTheDirectoryForArchivedFiles (e.g.: C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\archive)</ArchivePath>
+	    <ChunkSize>4</ChunkSize>
     </Upload>
 </Configuration>
