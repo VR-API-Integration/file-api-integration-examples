@@ -13,7 +13,7 @@ Param(
     [Alias("RenewCredentials")]
     [Parameter(
         Mandatory = $false,
-        HelpMessage = 'Boolean. $true if you want to renew your credentials. $false otherwise'
+        HelpMessage = 'Boolean. $true if you want to renew your credentials. $false otherwise.'
     )]
     [bool] $_renewCredentials = $false
 )
@@ -129,7 +129,11 @@ class ConfigurationManager {
     
         $fileApiBaseUrl = $config.Services.FileApiBaseUrl
         $authenticationTokenApiBaseUrl = $config.Services.AuthenticationTokenApiBaseUrl
+        
         $vismaConnectTenantId = $config.Authentication.VismaConnectTenantId
+
+        $enableLogs = $config.Logs.Enabled
+        $logsPath = $config.Logs.Path
 
         $role = $Config.Download.Role
         $downloadPath = $config.Download.Path
@@ -141,6 +145,8 @@ class ConfigurationManager {
         if ([string]::IsNullOrEmpty($fileApiBaseUrl)) { $missingConfiguration += "Services.FileApiBaseUrl" }
         if ([string]::IsNullOrEmpty($authenticationTokenApiBaseUrl)) { $missingConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
         if ([string]::IsNullOrEmpty($vismaConnectTenantId)) { $missingConfiguration += "Authentication.VismaConnectTenantId" }
+        if ([string]::IsNullOrEmpty($enableLogs)) { $missingConfiguration += "Logs.Enabled" }
+        if ([string]::IsNullOrEmpty($logsPath)) { $missingConfiguration += "Logs.Path" }
         if ([string]::IsNullOrEmpty($role)) { $missingConfiguration += "Download.Role" }
         if ([string]::IsNullOrEmpty($downloadPath)) { $missingConfiguration += "Download.Path" }
         if ([string]::IsNullOrEmpty($ensureUniqueNames)) { $missingConfiguration += "Download.EnsureUniqueNames" }
@@ -154,8 +160,10 @@ class ConfigurationManager {
         if (-not [Validator]::IsPath($credentialsPath)) { $wrongConfiguration += "Credentials.Path" }
         if (-not [Validator]::IsUri($fileApiBaseUrl)) { $wrongConfiguration += "Services.FileApiBaseUrl" }
         if (-not [Validator]::IsUri($authenticationTokenApiBaseUrl)) { $wrongConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
-        if (-not [Validator]::IsPath($downloadPath)) { $wrongConfiguration += "Download.Path" }
+        if (-not [Validator]::IsBool($enableLogs)) { $wrongConfiguration += "Logs.Enabled" }
+        if (-not [Validator]::IsPath($logsPath)) { $wrongConfiguration += "Logs.Path" }
         if (-not [Validator]::IsBool($ensureUniqueNames)) { $wrongConfiguration += "Download.EnsureUniqueNames" }
+        if (-not [Validator]::IsPath($downloadPath)) { $wrongConfiguration += "Download.Path" }
     
         if ($wrongConfiguration.Count -gt 0) {
             throw "Wrong configured parameters: $($wrongConfiguration -Join ", ")"
@@ -578,6 +586,11 @@ class ConfigurationSectionCredentials {
 class ConfigurationSectionServices {
     [string] $FileApiBaseUrl
     [string] $AuthenticationTokenApiBaseUrl
+}
+
+class ConfigurationSectionLogs {
+    [string] $Enabled
+    [string] $Path
 }
 
 class ConfigurationSectionDownload {

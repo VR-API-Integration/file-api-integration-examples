@@ -12,6 +12,11 @@
         <VismaConnectTenantId>EnterYourVismaConnectTenantId</VismaConnectTenantId>
     </Authentication>
 
+    <Logs>
+        <Enabled>true</Enabled>
+        <Path>EnterTheFolderPathWhereYouWantToStoreTheLogs (e.g. C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\logs)</Path>
+    </Logs>
+
     <Download>
         <Role>subscriber</Role>
         <Path>EnterTheFolderPathWhereYouWantToDownloadTheFilesTo (e.g. C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\output)</Path>
