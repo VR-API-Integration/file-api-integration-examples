@@ -387,7 +387,7 @@ class FileApiClient {
     ) {
         $this.BaseUrl = $baseUrl
         $this._defaultHeaders = @{
-            "Authorization"    = "Bearer $($token)";
+            "Authorization" = "Bearer $($token)";
         }
     }
 
@@ -503,6 +503,37 @@ class Validator {
     }
 }
 
+class Logger {
+    hidden [bool] $_storeLogs
+    hidden [string] $_logsPath
+
+    Logger ([bool] $storeLogs, [string] $logsPath) {
+        $this._storeLogs = $storeLogs
+        $this._logsPath = $logsPath
+        
+        if (-not (Test-Path -Path $this._logsPath -PathType Container)) {
+            New-Item -ItemType Directory -Force -Path $this._logsPath
+        }
+    }
+
+    [void] LogInformation([string] $text) {
+        $this.Log("[Information] $($text)");
+    }
+
+    [void] LogError([string] $text) {
+        $this.Log("[Error] $($text)");
+    }
+
+    hidden [void] Log([string] $text) {
+        $text = "$([Helper]::GetTimeStamp()) $($text)"
+
+        Write-Host $text
+        if ($this._storeLogs) {
+            $text | Out-File $this._logsPath -Append -Force
+        }
+    }
+}
+
 class Helper {
     static [string] ConverToUniqueFileName([string] $fileName) {
         $fileNameInfo = [Helper]::GetFileNameInfo($fileName)
@@ -526,6 +557,10 @@ class Helper {
         }
     
         return $fileNameInfo
+    }
+
+    static [string] GetTimeStamp() {
+        return (Get-Date).ToUniversalTime().ToString("yy/MM/dd HH:mm:ss")
     }
 
     static [void] EndProgram() {
