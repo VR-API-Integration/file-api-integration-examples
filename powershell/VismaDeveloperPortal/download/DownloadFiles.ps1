@@ -245,7 +245,7 @@ class CredentialsManager {
             $this._logger.LogInformation("Storage credential path doesn't exist. Creating it.")
             $this._logger.LogInformation("| Path: $($storagePath)")
             
-            New-Item -ItemType Directory -Force -Path $storagePath
+            New-Item -ItemType Directory -Path $storagePath -Force
         }
 
         $this._logger.LogInformation("Enter your credentials.")
@@ -347,7 +347,7 @@ class FileApiService {
             $this._logger.LogInformation("Download path doesn't exist. Creating it.")
             $this._logger.LogInformation("| Path: $($path)")
             
-            New-Item -ItemType Directory -Force -Path $path
+            New-Item -ItemType Directory -Path $path -Force
         }
 
         $downloadedFilesCount = 0
@@ -520,14 +520,14 @@ class Validator {
 
 class Logger {
     hidden [bool] $_storeLogs
-    hidden [string] $_logsPath
+    hidden [string] $_logPath
 
-    Logger ([bool] $storeLogs, [string] $logsPath) {
+    Logger ([bool] $storeLogs, [string] $logsDirectory) {
         $this._storeLogs = $storeLogs
-        $this._logsPath = $logsPath
+        $this._logPath = Join-Path $logsDirectory "log - $([Helper]::NewUtcDate("yyyy-MM-dd"))"
         
-        if (-not (Test-Path -Path $this._logsPath -PathType Container)) {
-            New-Item -ItemType Directory -Force -Path $this._logsPath
+        if (-not (Test-Path -Path $logsDirectory -PathType Container)) {
+            New-Item -ItemType Directory -Path $logsDirectory -Force
         }
     }
 
@@ -536,7 +536,7 @@ class Logger {
         
         Write-Host $text
         if ($this._storeLogs) {
-            $text | Out-File $this._logsPath -Append -Force
+            $text | Out-File $this._logPath -Append -Force
         }
     }
 
@@ -545,7 +545,7 @@ class Logger {
 
         Write-Host $text -ForegroundColor "Red"
         if ($this._storeLogs) {
-            $text | Out-File $this._logsPath -Append -Force
+            $text | Out-File $this._logPath -Append -Force
         }
     }
 }
