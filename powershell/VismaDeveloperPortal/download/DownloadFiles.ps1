@@ -31,7 +31,6 @@ try {
     $logConfig = [ConfigurationManager]::GetLogConfiguration(($_configPath))
 }
 catch {
-    # XXX This shouldn't crash if the logger is not passed
     [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.")
 }
 
@@ -160,7 +159,7 @@ class ConfigurationManager {
         return $logConfiguration
     }
 
-   static [Configuration] GetConfiguration($configPath) {
+    static [Configuration] GetConfiguration($configPath) {
         if (-not (Test-Path $configPath -PathType Leaf)) {
             throw "Configuration not found.`r`n| Path: $($configPath)"
         }
@@ -557,12 +556,15 @@ class Logger {
     hidden [bool] $_storeLogs
     hidden [string] $_logPath
 
-    Logger ([bool] $storeLogs, [string] $logsDirectory) {
+    Logger([bool] $storeLogs, [string] $logsDirectory) {
         $this._storeLogs = $storeLogs
-        $this._logPath = Join-Path $logsDirectory "download log - $([Helper]::NewUtcDate("yyyy-MM-dd"))"
+
+        if ($storeLogs) {
+            $this._logPath = Join-Path $logsDirectory "download log - $([Helper]::NewUtcDate("yyyy-MM-dd"))"
         
-        if (-not (Test-Path -Path $logsDirectory -PathType Container)) {
-            New-Item -ItemType Directory -Path $logsDirectory -Force
+            if (-not (Test-Path -Path $logsDirectory -PathType Container)) {
+                New-Item -ItemType Directory -Path $logsDirectory -Force
+            }
         }
     }
 
@@ -615,10 +617,12 @@ class Helper {
     }
 
     static [void] EndProgram([Logger] $logger) {
-        [Helper]::FinishProgram($logger, $false)
+        [Helper]::FinishProgram($false, $logger)
     }
 
     static [void] EndProgramWithError([System.Management.Automation.ErrorRecord] $errorRecord, [string] $genericErrorMessage, [Logger] $logger) {
+        if (!$logger) { $logger = [Logger]::new($false) }
+
         $logger.LogError("ERROR - $($genericErrorMessage)")
 
         $errorMessage = "Unknown error."
@@ -641,7 +645,9 @@ class Helper {
         [Helper]::FinishProgram($true)
     }
 
-    hidden static [void] FinishProgram([Logger] $logger, [bool] $finishWithError) {
+    hidden static [void] FinishProgram([bool] $finishWithError, [Logger] $logger) {
+        if (!$logger) { $logger = [Logger]::new($false) }
+        
         $logger.LogInformation("----")
         $logger.LogInformation("End of the example.")
 
