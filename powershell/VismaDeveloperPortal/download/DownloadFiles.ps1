@@ -532,7 +532,7 @@ class Logger {
     }
 
     [void] LogInformation([string] $text) {
-        $text = "$([Helper]::GetTimeStamp()) [Information] $($text)"
+        $text = "$([Helper]::NewUtcDate("yy/MM/dd HH:mm:ss")) [Information] $($text)"
         
         Write-Host $text
         if ($this._storeLogs) {
@@ -541,7 +541,7 @@ class Logger {
     }
 
     [void] LogError([string] $text) {
-        $text = "$([Helper]::GetTimeStamp()) [Error] $($text)"
+        $text = "$([Helper]::NewUtcDate("yy/MM/dd HH:mm:ss")) [Error] $($text)"
 
         Write-Host $text -ForegroundColor "Red"
         if ($this._storeLogs) {
@@ -555,7 +555,7 @@ class Helper {
         $fileNameInfo = [Helper]::GetFileNameInfo($fileName)
         $fileNameWithoutExtension = $fileNameInfo.Name
         $fileExtension = $fileNameInfo.Extension
-        $timestamp = Get-Date -Format FileDateTimeUniversal
+        $timestamp = [Helper]::NewUtcDate("yyyyMMddTHHmmssffffZ")
     
         $uniqueFileName = "$($fileNameWithoutExtension)_$($timestamp)$($fileExtension)"
         return $uniqueFileName
@@ -575,8 +575,8 @@ class Helper {
         return $fileNameInfo
     }
 
-    static [string] GetTimeStamp() {
-        return (Get-Date).ToUniversalTime().ToString("yy/MM/dd HH:mm:ss")
+    static [string] NewUtcDate([string] $format) {
+        return (Get-Date).ToUniversalTime().ToString($format)
     }
 
     static [void] EndProgram([Logger] $logger) {
