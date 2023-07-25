@@ -31,10 +31,10 @@ try {
     $logConfig = [ConfigurationManager]::GetLogConfiguration(($_configPath))
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.")
+    [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.", $null)
 }
 
-[Logger] $logger = [Logger]::new($logConfig.Logs.Enabled, $logConfig.Logs.Path)
+[Logger] $logger = [Logger]::new($logConfig.Enabled, $logConfig.Path)
 
 #endregion Log configuration
 
@@ -560,7 +560,7 @@ class Logger {
         $this._storeLogs = $storeLogs
 
         if ($storeLogs) {
-            $this._logPath = Join-Path $logsDirectory "download log - $([Helper]::NewUtcDate("yyyy-MM-dd"))"
+            $this._logPath = Join-Path $logsDirectory "download log - $([Helper]::NewUtcDate("yyyy-MM-dd")).txt"
         
             if (-not (Test-Path -Path $logsDirectory -PathType Container)) {
                 New-Item -ItemType Directory -Path $logsDirectory -Force
@@ -573,7 +573,7 @@ class Logger {
         
         Write-Host $text
         if ($this._storeLogs) {
-            $text | Out-File $this._logPath -Append -Force
+            $text | Out-File $this._logPath -Encoding utf8 -Append -Force
         }
     }
 
@@ -582,7 +582,7 @@ class Logger {
 
         Write-Host $text -ForegroundColor "Red"
         if ($this._storeLogs) {
-            $text | Out-File $this._logPath -Append -Force
+            $text | Out-File $this._logPath -Encoding utf8 -Append -Force
         }
     }
 }
@@ -623,7 +623,7 @@ class Helper {
     static [void] EndProgramWithError([System.Management.Automation.ErrorRecord] $errorRecord, [string] $genericErrorMessage, [Logger] $logger) {
         if (!$logger) { $logger = [Logger]::new($false) }
 
-        $logger.LogError("ERROR - $($genericErrorMessage)")
+        $logger.LogError($genericErrorMessage)
 
         $errorMessage = "Unknown error."
         if ($errorRecord.ErrorDetails.Message) {
@@ -642,14 +642,14 @@ class Helper {
         $logger.LogError("| Error message: $($errorMessage)")
         $logger.LogError("| Error line in the script: $($errorRecord.InvocationInfo.ScriptLineNumber)")
 
-        [Helper]::FinishProgram($true)
+        [Helper]::FinishProgram($true, $logger)
     }
 
     hidden static [void] FinishProgram([bool] $finishWithError, [Logger] $logger) {
         if (!$logger) { $logger = [Logger]::new($false) }
-        
+
         $logger.LogInformation("----")
-        $logger.LogInformation("End of the example.")
+        $logger.LogInformation("End of the example.`n")
 
         if ($finishWithError) {
             exit 1
