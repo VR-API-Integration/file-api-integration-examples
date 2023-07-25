@@ -25,7 +25,19 @@ if (-not $_configPath) {
     $_configPath = "$($PSScriptRoot)\config.xml"
 }
 
-[Logger] $logger = [Logger]::new()
+#region Log configuration
+
+try {
+    $logConfig = [ConfigurationManager]::GetLogConfiguration(($_configPath))
+}
+catch {
+    # XXX This shouldn't crash if the logger is not passed
+    [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.")
+}
+
+[Logger] $logger = [Logger]::new($logConfig.Logs.Enabled, $logConfig.Logs.Path)
+
+#endregion Log configuration
 
 $logger.LogInformation("=========================================================")
 $logger.LogInformation("File API example: Download files specified in a filter.")
@@ -33,18 +45,16 @@ $logger.LogInformation("========================================================
 
 $logger.LogInformation("(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')")
 
-#region Configuration
-
-[ConfigurationManager] $configurationManager = [ConfigurationManager]::new($logger)
+#region Rest of the configuration
 
 try {
-    $config = $configurationManager.Get($_configPath)
+    $config = [ConfigurationManager]::GetConfiguration($_configPath)
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.")
+    [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.", $logger)
 }
 
-#endregion Configuration
+#endregion Rest of the configuration
 
 #region Retrieve/Create credentials
 
@@ -60,7 +70,7 @@ try {
     }
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure retrieving the credentials.")
+    [Helper]::EndProgramWithError($_, "Failure retrieving the credentials.", $logger)
 }
 
 #endregion Retrieve/Create credentials
@@ -74,7 +84,7 @@ try {
     $token = $authenticationApiService.NewToken($credentials.ClientId, $credentials.ClientSecret, $credentials.TenantId)
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure retrieving the authentication token.")
+    [Helper]::EndProgramWithError($_, "Failure retrieving the authentication token.", $logger)
 }
 
 #endregion Retrieve authentication token
@@ -88,11 +98,11 @@ try {
     $filesInfo = $fileApiService.GetFilesInfo($config.Download.Filter)
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure retrieving the files.")
+    [Helper]::EndProgramWithError($_, "Failure retrieving the files.", $logger)
 }
 
 if ($filesInfo.Count -eq 0) {
-    [Helper]::EndProgram()
+    [Helper]::EndProgram($logger)
 }
 
 #endregion List files
@@ -103,12 +113,12 @@ try {
     $fileApiService.DownloadFiles($filesInfo, $config.Download.Path, $config.Download.EnsureUniqueNames)
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure downloading the files.")
+    [Helper]::EndProgramWithError($_, "Failure downloading the files.". $logger)
 }
 
 #endregion Download files
 
-[Helper]::EndProgram()
+[Helper]::EndProgram($logger)
 
 # -------- END OF THE PROGRAM --------
 # Below there are classes and models to help the readability of the program
@@ -116,16 +126,41 @@ catch {
 #region Helper classes
 
 class ConfigurationManager {
-    hidden [Logger] $_logger
+    static [ConfigurationSectionLogs] GetLogConfiguration($configPath) {
+        if (-not (Test-Path $configPath -PathType Leaf)) {
+            throw "Configuration not found.`r`n| Path: $($configPath)"
+        }
+        
+        $configDocument = [xml](Get-Content $configPath)
+        $config = $configDocument.Configuration
+    
+        $enableLogs = $config.Logs.Enabled
+        $logsPath = $config.Logs.Path
 
-    ConfigurationManager([Logger] $logger) {
-        $this._logger = $logger
+        $missingConfiguration = @()
+        if ([string]::IsNullOrEmpty($enableLogs)) { $missingConfiguration += "Logs.Enabled" }
+        if ([string]::IsNullOrEmpty($logsPath)) { $missingConfiguration += "Logs.Path" }
+    
+        if ($missingConfiguration.Count -gt 0) {
+            throw "Missing parameters: $($missingConfiguration -Join ", ")"
+        }
+
+        $wrongConfiguration = @()
+        if (-not [Validator]::IsBool($enableLogs)) { $wrongConfiguration += "Logs.Enabled" }
+        if (-not [Validator]::IsPath($logsPath)) { $wrongConfiguration += "Logs.Path" }
+    
+        if ($wrongConfiguration.Count -gt 0) {
+            throw "Wrong configured parameters: $($wrongConfiguration -Join ", ")"
+        }
+
+        $logConfiguration = [ConfigurationSectionLogs]::new()
+        $logConfiguration.Enabled = [System.Convert]::ToBoolean($enableLogs)
+        $logConfiguration.Path = $logsPath
+
+        return $logConfiguration
     }
 
-    [Configuration] Get($configPath) {
-        $this._logger.LogInformation("----")
-        $this._logger.LogInformation("Retrieving the configuration.")
-    
+   static [Configuration] GetConfiguration($configPath) {
         if (-not (Test-Path $configPath -PathType Leaf)) {
             throw "Configuration not found.`r`n| Path: $($configPath)"
         }
@@ -182,12 +217,12 @@ class ConfigurationManager {
         $configuration.Credentials.TenantId = $vismaConnectTenantId
         $configuration.Services.FileApiBaseUrl = $fileApiBaseUrl
         $configuration.Services.AuthenticationTokenApiBaseUrl = $authenticationTokenApiBaseUrl
+        $configuration.Logs.Enabled = [System.Convert]::ToBoolean($enableLogs)
+        $configuration.Logs.Path = $logsPath
         $configuration.Download.Role = $role
         $configuration.Download.Path = $downloadPath
         $configuration.Download.EnsureUniqueNames = [System.Convert]::ToBoolean($ensureUniqueNames)
         $configuration.Download.Filter = $filter
-    
-        $this._logger.LogInformation("Configuration retrieved.")
 
         return $configuration
     }
@@ -524,7 +559,7 @@ class Logger {
 
     Logger ([bool] $storeLogs, [string] $logsDirectory) {
         $this._storeLogs = $storeLogs
-        $this._logPath = Join-Path $logsDirectory "log - $([Helper]::NewUtcDate("yyyy-MM-dd"))"
+        $this._logPath = Join-Path $logsDirectory "download log - $([Helper]::NewUtcDate("yyyy-MM-dd"))"
         
         if (-not (Test-Path -Path $logsDirectory -PathType Container)) {
             New-Item -ItemType Directory -Path $logsDirectory -Force
@@ -583,7 +618,7 @@ class Helper {
         [Helper]::FinishProgram($logger, $false)
     }
 
-    static [void] EndProgramWithError([Logger] $logger, [System.Management.Automation.ErrorRecord] $errorRecord, [string] $genericErrorMessage) {
+    static [void] EndProgramWithError([System.Management.Automation.ErrorRecord] $errorRecord, [string] $genericErrorMessage, [Logger] $logger) {
         $logger.LogError("ERROR - $($genericErrorMessage)")
 
         $errorMessage = "Unknown error."
@@ -626,6 +661,7 @@ class Helper {
 class Configuration {
     $Credentials = [ConfigurationSectionCredentials]::new()
     $Services = [ConfigurationSectionServices]::new()
+    $Logs = [ConfigurationSectionLogs]::new()
     $Download = [ConfigurationSectionDownload]::new()
 }
 
