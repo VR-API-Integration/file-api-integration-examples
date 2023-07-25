@@ -25,15 +25,17 @@ if (-not $_configPath) {
     $_configPath = "$($PSScriptRoot)\config.xml"
 }
 
-Write-Host "========================================================="
-Write-Host "File API example: Download files specified in a filter."
-Write-Host "========================================================="
+[Logger] $logger = [Logger]::new()
 
-Write-Host "(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')"
+$logger.LogInformation("=========================================================")
+$logger.LogInformation("File API example: Download files specified in a filter.")
+$logger.LogInformation("=========================================================")
+
+$logger.LogInformation("(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')")
 
 #region Configuration
 
-[ConfigurationManager] $configurationManager = [ConfigurationManager]::new()
+[ConfigurationManager] $configurationManager = [ConfigurationManager]::new($logger)
 
 try {
     $config = $configurationManager.Get($_configPath)
@@ -46,7 +48,7 @@ catch {
 
 #region Retrieve/Create credentials
 
-$credentialsManager = [CredentialsManager]::new($config.Credentials.Path)
+$credentialsManager = [CredentialsManager]::new($logger, $config.Credentials.Path)
 $credentialsService = [CredentialsService]::new($credentialsManager, $config.Credentials.TenantId)
 
 try {
@@ -66,7 +68,7 @@ catch {
 #region Retrieve authentication token
 
 $authenticationApiClient = [AuthenticationApiClient]::new($config.Services.AuthenticationTokenApiBaseUrl)
-$authenticationApiService = [AuthenticationApiService]::new($authenticationApiClient)
+$authenticationApiService = [AuthenticationApiService]::new($logger, $authenticationApiClient)
 
 try {
     $token = $authenticationApiService.NewToken($credentials.ClientId, $credentials.ClientSecret, $credentials.TenantId)
@@ -78,7 +80,7 @@ catch {
 #endregion Retrieve authentication token
 
 $fileApiClient = [FileApiClient]::new($config.Services.FileApiBaseUrl, $token)
-$fileApiService = [FileApiService]::new($fileApiClient, $config.Download.Role, 200)
+$fileApiService = [FileApiService]::new($logger, $fileApiClient, $config.Download.Role, 200)
 
 #region List files
 
@@ -114,9 +116,15 @@ catch {
 #region Helper classes
 
 class ConfigurationManager {
+    hidden [Logger] $_logger
+
+    ConfigurationManager([Logger] $logger) {
+        $this._logger = $logger
+    }
+
     [Configuration] Get($configPath) {
-        Write-Host "----"
-        Write-Host "Retrieving the configuration."
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("Retrieving the configuration.")
     
         if (-not (Test-Path $configPath -PathType Leaf)) {
             throw "Configuration not found.`r`n| Path: $($configPath)"
@@ -179,7 +187,7 @@ class ConfigurationManager {
         $configuration.Download.EnsureUniqueNames = [System.Convert]::ToBoolean($ensureUniqueNames)
         $configuration.Download.Filter = $filter
     
-        Write-Host "Configuration retrieved."
+        $this._logger.LogInformation("Configuration retrieved.")
 
         return $configuration
     }
@@ -217,46 +225,48 @@ class CredentialsService {
 }
 
 class CredentialsManager {
+    hidden [Logger] $_logger
     hidden [string] $_credentialsPath
 
-    CredentialsManager([string] $storagePath) {
+    CredentialsManager([Logger] $logger, [string] $storagePath) {
+        $this._logger = $logger
         $this._credentialsPath = $storagePath
     }
 
     [void] CreateNew() {
         $storagePath = Split-Path $this._credentialsPath
         
-        Write-Host "----"
-        Write-Host "Saving your credentials."
-        Write-Host "| Path: $($this._credentialsPath)"
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("Saving your credentials.")
+        $this._logger.LogInformation("| Path: $($this._credentialsPath)")
 
         if (-not (Test-Path -Path $storagePath -PathType Container)) {
-            Write-Host "----"
-            Write-Host "Storage credential path doesn't exist. Creating it."
-            Write-Host "| Path: $($storagePath)"
+            $this._logger.LogInformation("----")
+            $this._logger.LogInformation("Storage credential path doesn't exist. Creating it.")
+            $this._logger.LogInformation("| Path: $($storagePath)")
             
             New-Item -ItemType Directory -Force -Path $storagePath
         }
 
-        Write-Host "Enter your credentials."
+        $this._logger.LogInformation("Enter your credentials.")
         $clientId = Read-Host -Prompt '| Client ID'
         $clientSecret = Read-Host -Prompt '| Client secret' -AsSecureString
 
         [PSCredential]::new($clientId, $clientSecret) | Export-CliXml -Path $this._credentialsPath
 
-        Write-Host "----"
-        Write-Host "Credentials saved."
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("Credentials saved.")
     }
 
     [Credentials] Retrieve() {
-        Write-Host "----"
-        Write-Host "Retrieving your credentials."
-        Write-Host "| Path: $($this._credentialsPath)"
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("Retrieving your credentials.")
+        $this._logger.LogInformation("| Path: $($this._credentialsPath)")
 
         if (-not (Test-Path -Path $this._credentialsPath -PathType Leaf)) {
-            Write-Host "----"
-            Write-Host "Credentials not found."
-            Write-Host "| Path: $($this._credentialsPath)"
+            $this._logger.LogInformation("----")
+            $this._logger.LogInformation("Credentials not found.")
+            $this._logger.LogInformation("| Path: $($this._credentialsPath)")
             
             return $null
         }
@@ -267,23 +277,26 @@ class CredentialsManager {
         $credentials.ClientId = $credentialsStorage.GetNetworkCredential().UserName
         $credentials.ClientSecret = $credentialsStorage.GetNetworkCredential().Password
 
-        Write-Host "Credentials retrieved."
+        $this._logger.LogInformation("Credentials retrieved.")
 
         return $credentials
     }
 }
 
 class FileApiService {
+    hidden [Logger] $_logger
     hidden [FileApiClient] $_fileApiClient
     hidden [string] $_role
     hidden [string] $_waitTimeBetweenCallsMS
     hidden [long] $_downloadSizeLimit
 
     FileApiService(
+        [Logger] $logger,
         [FileApiClient] $fileApiClient,
         [string] $role,
         [int] $waitTimeBetweenCallsMS
     ) {
+        $this._logger = $logger
         $this._fileApiClient = $fileApiClient
         $this._role = $role
         $this._waitTimeBetweenCallsMS = $waitTimeBetweenCallsMS
@@ -295,10 +308,10 @@ class FileApiService {
     }
 
     [FileInfo[]] GetFilesInfo([string] $filter) {
-        Write-Host "----"
-        Write-Host "Retrieving list of files."
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("Retrieving list of files.")
         if ($filter) {
-            Write-Host "| Filter: $($filter)"
+            $this._logger.LogInformation("| Filter: $($filter)")
         }
 
         $pageIndex = 0
@@ -323,56 +336,56 @@ class FileApiService {
             Start-Sleep -Milliseconds $this._waitTimeBetweenCallsMS
         } while (-not $isLastPage)
 
-        Write-Host "$($filesInfo.Count) files retrieved."
+        $this._logger.LogInformation("$($filesInfo.Count) files retrieved.")
 
         return $filesInfo
     }
 
     [void] DownloadFiles([FileInfo[]] $filesInfo, [string] $path, [bool] $ensureUniqueNames) {
         if (-not (Test-Path $path -PathType Container)) {
-            Write-Host "----"
-            Write-Host "Download path doesn't exist. Creating it."
-            Write-Host "| Path: $($path)"
+            $this._logger.LogInformation("----")
+            $this._logger.LogInformation("Download path doesn't exist. Creating it.")
+            $this._logger.LogInformation("| Path: $($path)")
             
             New-Item -ItemType Directory -Force -Path $path
         }
 
         $downloadedFilesCount = 0
         foreach ($fileInfo in $filesInfo) {
-            Write-Host "----"
-            Write-Host "Downloading file $($downloadedFilesCount + 1)/$($filesInfo.Count)."
-            Write-Host "| ID: $($fileInfo.Id)"
-            Write-Host "| Name: $($fileInfo.Name)"
-            Write-Host "| Size: $($fileInfo.Size)"
+            $this._logger.LogInformation("----")
+            $this._logger.LogInformation("Downloading file $($downloadedFilesCount + 1)/$($filesInfo.Count).")
+            $this._logger.LogInformation("| ID: $($fileInfo.Id)")
+            $this._logger.LogInformation("| Name: $($fileInfo.Name)")
+            $this._logger.LogInformation("| Size: $($fileInfo.Size)")
 
             if ($fileInfo.Size -ge $this._downloadSizeLimit) {
-                Write-Host "----" -ForegroundColor "Red"
-                Write-Host "Cannot download files bigger or equal than $($this._downloadSizeLimit) bytes." -ForegroundColor "Red"
-                Write-Host "File will be skipped." -ForegroundColor "Red"
+                $this._logger.LogError("----")
+                $this._logger.LogError("Cannot download files bigger or equal than $($this._downloadSizeLimit) bytes.")
+                $this._logger.LogError("File will be skipped.")
 
                 continue
             }
 
             if (($ensureUniqueNames -eq $true) -and (Test-Path "$($path)\$($fileInfo.Name)" -PathType Leaf)) {
-                Write-Host "There is already a file with the same name in the download path."
+                $this._logger.LogInformation("There is already a file with the same name in the download path.")
 
                 $fileInfo.Name = [Helper]::ConverToUniqueFileName($fileInfo.Name)
 
-                Write-Host "| New name: $($fileInfo.Name)"
+                $this._logger.LogInformation("| New name: $($fileInfo.Name)")
             }
 
             $this._fileApiClient.DownloadFile($this._role, $fileInfo, $path)
             $downloadedFilesCount++
         
-            Write-Host "The file was downloaded."
+            $this._logger.LogInformation("The file was downloaded.")
 
             Start-Sleep -Milliseconds $this._waitTimeBetweenCallsMS
         }
 
-        Write-Host "----"
-        Write-Host "All files were downloaded."
-        Write-Host "| Amount: $($downloadedFilesCount)"
-        Write-Host "| Path: $($path)"
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("All files were downloaded.")
+        $this._logger.LogInformation("| Amount: $($downloadedFilesCount)")
+        $this._logger.LogInformation("| Path: $($path)")
     }
 }
 
@@ -417,20 +430,22 @@ class FileApiClient {
 }
 
 class AuthenticationApiService {
+    hidden [Logger] $_logger
     hidden [AuthenticationApiClient] $_authenticationApiClient
 
-    AuthenticationApiService([AuthenticationApiClient] $authenticationApiClient) {
+    AuthenticationApiService([Logger] $logger, [AuthenticationApiClient] $authenticationApiClient) {
+        $this._logger = $logger
         $this._authenticationApiClient = $authenticationApiClient
     }
 
     [string] NewToken([string] $clientId, [string] $clientSecret, [string] $tenantId) {
-        Write-Host "----"
-        Write-Host "Retrieving the authentication token."
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("Retrieving the authentication token.")
 
         $response = $this._authenticationApiClient.NewToken($clientId, $clientSecret, $tenantId)
         $token = $response.access_token
 
-        Write-Host "Authentication token retrieved."
+        $this._logger.LogInformation("Authentication token retrieved.")
 
         return $token
     }
@@ -517,17 +532,18 @@ class Logger {
     }
 
     [void] LogInformation([string] $text) {
-        $this.Log("[Information] $($text)");
+        $text = "$([Helper]::GetTimeStamp()) [Information] $($text)"
+        
+        Write-Host $text
+        if ($this._storeLogs) {
+            $text | Out-File $this._logsPath -Append -Force
+        }
     }
 
     [void] LogError([string] $text) {
-        $this.Log("[Error] $($text)");
-    }
+        $text = "$([Helper]::GetTimeStamp()) [Error] $($text)"
 
-    hidden [void] Log([string] $text) {
-        $text = "$([Helper]::GetTimeStamp()) $($text)"
-
-        Write-Host $text
+        Write-Host $text -ForegroundColor "Red"
         if ($this._storeLogs) {
             $text | Out-File $this._logsPath -Append -Force
         }
@@ -563,12 +579,12 @@ class Helper {
         return (Get-Date).ToUniversalTime().ToString("yy/MM/dd HH:mm:ss")
     }
 
-    static [void] EndProgram() {
-        [Helper]::FinishProgram($false)
+    static [void] EndProgram([Logger] $logger) {
+        [Helper]::FinishProgram($logger, $false)
     }
 
-    static [void] EndProgramWithError([System.Management.Automation.ErrorRecord] $errorRecord, [string] $genericErrorMessage) {
-        Write-Host "ERROR - $($genericErrorMessage)" -ForegroundColor "Red"
+    static [void] EndProgramWithError([Logger] $logger, [System.Management.Automation.ErrorRecord] $errorRecord, [string] $genericErrorMessage) {
+        $logger.LogError("ERROR - $($genericErrorMessage)")
 
         $errorMessage = "Unknown error."
         if ($errorRecord.ErrorDetails.Message) {
@@ -584,15 +600,15 @@ class Helper {
             $errorMessage = $errorRecord.Exception.message
         }
 
-        Write-Host "| Error message: $($errorMessage)" -ForegroundColor "Red"
-        Write-Host "| Error line in the script: $($errorRecord.InvocationInfo.ScriptLineNumber)" -ForegroundColor "Red"
+        $logger.LogError("| Error message: $($errorMessage)")
+        $logger.LogError("| Error line in the script: $($errorRecord.InvocationInfo.ScriptLineNumber)")
 
         [Helper]::FinishProgram($true)
     }
 
-    hidden static [void] FinishProgram([bool] $finishWithError) {
-        Write-Host "----"
-        Write-Host "End of the example."
+    hidden static [void] FinishProgram([Logger] $logger, [bool] $finishWithError) {
+        $logger.LogInformation("----")
+        $logger.LogInformation("End of the example.")
 
         if ($finishWithError) {
             exit 1
