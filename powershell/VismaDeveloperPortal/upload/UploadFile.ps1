@@ -95,7 +95,7 @@ Get-ChildItem -Path $config.Upload.Path -Filter $config.Upload.Filter | ForEach-
     }
 
     try {
-        $archivedFile =  [Helper]::ArchiveFile($config.Upload.ArchivePath, $_.FullName)
+        $archivedFile = [Helper]::ArchiveFile($config.Upload.ArchivePath, $_.FullName)
     }
     catch {
         [Helper]::EndProgramWithError($_, "Failure archiving file to $($archivedFile).")
@@ -160,8 +160,8 @@ class ConfigurationManager {
         if (-not [Validator]::IsUri($authenticationTokenApiBaseUrl)) { $wrongConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
         if (-not [Validator]::IsPath($contentDirectoryPath)) { $wrongConfiguration += "Upload.Path" }
         if (-not [Validator]::IsPath($archivePath)) { $wrongConfiguration += "Upload.ArchivePath" }
-        if($chunkSize -gt $chunkSizeLimit) { $wrongConfiguration += "Chunk size ($($chunkSize)) cannot be bigger than $($chunkSizeLimit) bytes."}
-        if($chunkSize -lt 1){$wrongConfiguration += "Chunk size ($($chunkSize)) cannot be smaller than 1 (Mbyte)."}
+        if ($chunkSize -gt $chunkSizeLimit) { $wrongConfiguration += "Chunk size ($($chunkSize)) cannot be bigger than $($chunkSizeLimit) bytes." }
+        if ($chunkSize -lt 1) { $wrongConfiguration += "Chunk size ($($chunkSize)) cannot be smaller than 1 (Mbyte)." }
 
 
         if ($wrongConfiguration.Count -gt 0) {
@@ -294,7 +294,7 @@ class FileApiService {
         $this._uploadDelay = 0
     }
 
-    [void] UploadFile($filenameToUpload){
+    [void] UploadFile($filenameToUpload) {
         Write-Host "----"
         Write-Host "Uploading the file."
         Write-Host "| File: $($(Split-Path -Path $filenameToUpload -Leaf))"
@@ -303,7 +303,7 @@ class FileApiService {
         $result = $this.UploadFirstRequest($filenameToUpload)
         $fileToken = $result.FileToken
         $chunkNumber = 1
-        While( -not $result.Eof ) {
+        While ( -not $result.Eof ) {
             Write-Host "Uploading Chunk #$($chunkNumber + 1)."
             $result = $this.UploadChunkRequest($fileToken, $filenameToUpload, $chunkNumber)
             $chunkNumber += 1
@@ -311,7 +311,7 @@ class FileApiService {
         Write-Host "File $($(Split-Path -Path $filenameToUpload -Leaf)) uploaded."
     }
 
-    [PSCustomObject] UploadFirstRequest([string] $filenameToUpload){
+    [PSCustomObject] UploadFirstRequest([string] $filenameToUpload) {
         $this._fileSize = (Get-Item $filenameToUpload).Length
         $this._fileBytesRead = 0
         $filenameOnly = Split-Path -Path $filenameToUpload -Leaf
@@ -319,21 +319,21 @@ class FileApiService {
         $result = $this.CreateChunk($filenameToUpload, $this._chunkSize, $chunkNumber)
         $FirstRequestData = $this.CreateFirstRequestToUpload($filenameOnly, $result.ChunkPath)
         $response = $this.UploadFile($FirstRequestData, $filenameOnly, "multipart/related;boundary=$($this._boundary)", "", $chunkNumber, $result.Eof)
-        $fileToken =   $response.uploadToken
+        $fileToken = $response.uploadToken
         
         return [PSCustomObject]@{
             FileToken = $fileToken
-            Eof = $result.Eof
-            }
+            Eof       = $result.Eof
+        }
     }
 
-    [PSCustomObject] UploadChunkRequest([string] $fileToken, [string] $filenameToUpload, [long] $chunkNumber){
+    [PSCustomObject] UploadChunkRequest([string] $fileToken, [string] $filenameToUpload, [long] $chunkNumber) {
         $result = $this.CreateChunk($filenameToUpload, $this._chunkSize, $chunkNumber)
         $response = $this.UploadFile($result.ChunkPath, $(Split-Path -Path $filenameToUpload -Leaf), "application/octet-stream", $fileToken, $chunkNumber, $result.Eof)
 
         return [PSCustomObject]@{
             Eof = $result.Eof
-            }
+        }
     }
 
     [string] CreateFirstRequestToUpload([string] $filename, [string] $chunkPath) {
@@ -378,7 +378,7 @@ class FileApiService {
         }
     }
 
-    [PSCustomObject] CreateChunk([string] $contentFilePath, [long] $chunkSize, [long] $chunkNumber){
+    [PSCustomObject] CreateChunk([string] $contentFilePath, [long] $chunkSize, [long] $chunkNumber) {
         $folderPath = $(Split-Path -Path $contentFilePath)
         $contentFilename = $(Split-Path -Path $contentFilePath -Leaf)
         $createdChunkPath = "$($folderPath)\$([Helper]::ConvertToUniqueFilename("Chunk_$($chunkNumber).bin"))"
@@ -390,7 +390,7 @@ class FileApiService {
        
         $this._fileBytesRead += $bytes.Length
         [bool] $streamEof = 0
-        if(($bytes.Length -lt $chunkSize) -or ($this._fileBytesRead -ge $this._fileSize)) {
+        if (($bytes.Length -lt $chunkSize) -or ($this._fileBytesRead -ge $this._fileSize)) {
             $streamEof = 1
         }
 
@@ -400,14 +400,14 @@ class FileApiService {
 
         return [PSCustomObject]@{
             ChunkPath = $createdChunkPath
-            Eof = $streamEof
-            }
+            Eof       = $streamEof
+        }
     }
 
     [PSCustomObject] UploadFile([string] $filePath, [string] $originalFilename, [string] $contentType, [string] $token, [long] $chunkNumber, [bool] $close) {
     
-        while(1 -eq 1) {
-            try{
+        while (1 -eq 1) {
+            try {
                 Start-Sleep -Milliseconds $this._uploadDelay
 
                 $result = $this._fileApiClient.UploadFile($filePath, $contentType, $token, $chunkNumber, $close )
@@ -418,8 +418,8 @@ class FileApiService {
 
                 return $result
             }
-            catch{
-                if( $_.Exception.Message.Contains("(429)")){
+            catch {
+                if ( $_.Exception.Message.Contains("(429)")) {
                     $this._uploadDelay += 100
                     Write-Host "Spike arrest detected: Setting uploadDelay to $($this._uploadDelay) msec."
                     Write-Host "Waiting 60 seconds for spike arrest to clear"
@@ -432,7 +432,7 @@ class FileApiService {
         }
 
         throw "UploadFile aborted: should never come here"
-   }
+    }
 }
 
 class FileApiClient {
@@ -452,39 +452,39 @@ class FileApiClient {
 
     [PSCustomObject] UploadFile([string] $bodyPath, [string] $contentType, [string] $token, [long] $chunkNumber, [bool] $close) {
         $headers = $this._defaultHeaders
-        if(-not [string]::IsNullOrEmpty($contentType)){
+        if (-not [string]::IsNullOrEmpty($contentType)) {
             $headers["Content-Type"] = $contentType
         }
         $uri = "$($this.BaseUrl)/files"
-        if(($chunkNumber -eq 0) -and $close) {
+        if (($chunkNumber -eq 0) -and $close) {
             $uri += "?uploadType=multipart"
         }
         else {
             $uri += "?uploadType=resumable"
         }
-        if(-not [string]::IsNullOrEmpty($token)){
+        if (-not [string]::IsNullOrEmpty($token)) {
             $uri += "&uploadToken=$($token)"
         }
-        if($chunkNumber -ne 0){
-         $uri += "&position=$($chunkNumber)"
+        if ($chunkNumber -ne 0) {
+            $uri += "&position=$($chunkNumber)"
         }
-        if($close -and ($chunkNumber -gt 0)) {
+        if ($close -and ($chunkNumber -gt 0)) {
             $uri += "&close=true"
         }
-        if($chunkNumber -eq 0){
+        if ($chunkNumber -eq 0) {
             $response = Invoke-RestMethod `
                 -Method "Post" `
                 -Uri     $uri `
                 -Headers $headers `
                 -InFile "$($bodyPath)"
-            }
-            else {
+        }
+        else {
             $response = Invoke-RestMethod `
                 -Method "Put" `
                 -Uri     $uri `
                 -Headers $headers `
                 -InFile "$($bodyPath)"
-            }
+        }
 
         return $response
     }
@@ -599,7 +599,7 @@ class Helper {
         $filenameWithoutExtension = $filenameInfo.Name
         $fileExtension = $filenameInfo.Extension
         $timestamp = Get-Date -Format "yyyyMMdd_HHmmss_fff"
-        if([string]::IsNullOrEmpty($filepath)){
+        if ([string]::IsNullOrEmpty($filepath)) {
             $uniqueFilename = "$($filenameWithoutExtension)_$($timestamp)$($fileExtension)"
         }
         else {
@@ -628,7 +628,7 @@ class Helper {
         }
 
         $splitFilename = $filenameInfo.FullName -split "\."
-        if($splitFilename.Length -gt 1) {
+        if ($splitFilename.Length -gt 1) {
             $filenameInfo.Name = $splitFilename[0]
             $filenameInfo.Extension = ".$($splitFilename[-1])"
         }
