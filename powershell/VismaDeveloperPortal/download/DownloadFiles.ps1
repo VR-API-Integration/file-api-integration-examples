@@ -686,7 +686,7 @@ class ConfigurationSectionServices {
 }
 
 class ConfigurationSectionLogs {
-    [string] $Enabled
+    [bool] $Enabled
     [string] $Path
 }
 
