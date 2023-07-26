@@ -105,7 +105,7 @@ Inside the **config.xml** file you will find these parameters:
 **`Enabled`**
 > Indicates if you want to store the logs in your machine.
 > 
-> Must be set to any of these values:
+> Must be set to any of these values:  
 > **· false:** the logs will only be shown in the console.
 > **· true:** the logs will be shown in the console and will be stored in your machine.
 
@@ -122,7 +122,7 @@ Inside the **config.xml** file you will find these parameters:
 **`Role`**
 > Role of your application.
 > 
-> Must be set to any of these values:
+> Must be set to any of these values:  
 > **· Subscriber:** to download files provided to you (the most common scenario).  
 > **· Publisher:** to download files uploaded by you.
 
@@ -138,7 +138,7 @@ Inside the **config.xml** file you will find these parameters:
 **`EnsureUniqueNames`**
 > Indicates if you want to rename the files to be unique before downloading them.
 > 
-> Must be set to any of these values:
+> Must be set to any of these values:  
 > **· false:** the downloaded file will replace any existing file with the same name.  
 > **· true:** the downloaded file will be renamed if there is any existing file with the same name.  
 > &nbsp;&nbsp;Format: {original file name}_{timestamp}.{original extension}  
