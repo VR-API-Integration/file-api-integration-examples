@@ -96,16 +96,33 @@ Inside the **config.xml** file you will find these parameters:
 ### Attributes of the `Authentication` element
 
 **`VismaConnectTenantId`**
-> The Visma developer portal tenant id.
+> The Visma developer portal tenant ID.
 
 <br />
+
+### Attributes of the `Logs` element
+
+**`Enabled`**
+> Indicates if you want to store the logs in your machine.
+> 
+> Must be set to any of these values:
+> **· false:** the logs will only be shown in the console.
+> **· true:** the logs will be shown in the console and will be stored in your machine.
+
+<br/>
+
+**`Path`**
+> Path where the logs will be stored.
+> If the attribute **`Logs`**>**`Enabled`** is set to false, this attribute do nothing.
+> 
+> It should be set to **https://connect.visma.com/connect**
 
 ### Attributes of the `Download` element
 
 **`Role`**
 > Role of your application.
 > 
-> Must be set to any of these values:  
+> Must be set to any of these values:
 > **· Subscriber:** to download files provided to you (the most common scenario).  
 > **· Publisher:** to download files uploaded by you.
 
@@ -121,7 +138,7 @@ Inside the **config.xml** file you will find these parameters:
 **`EnsureUniqueNames`**
 > Indicates if you want to rename the files to be unique before downloading them.
 > 
-> Must be set to any of these values:  
+> Must be set to any of these values:
 > **· false:** the downloaded file will replace any existing file with the same name.  
 > **· true:** the downloaded file will be renamed if there is any existing file with the same name.  
 > &nbsp;&nbsp;Format: {original file name}_{timestamp}.{original extension}  
@@ -152,6 +169,11 @@ Inside the **config.xml** file you will find these parameters:
     <Authentication>
         <VismaConnectTenantId>11111111-1111-1111-1111-111111111111</VismaConnectTenantId>
     </Authentication>
+
+    <Logs>
+        <Enabled>true</Enabled>
+        <Path>C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\logs</Path>
+    </Logs>
 
     <Download>
         <Role>subscriber</Role>
