@@ -115,7 +115,7 @@ Inside the **config.xml** file you will find these parameters:
 > Path where the logs will be stored.  
 > If the attribute **`Logs`**>**`Enabled`** is set to false, this attribute do nothing.
 > 
-> It should be set to **https://connect.visma.com/connect**
+> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\logs
 
 ### Attributes of the `Download` element
 
