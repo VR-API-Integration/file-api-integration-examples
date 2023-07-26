@@ -558,7 +558,7 @@ class Logger {
     Logger([bool] $storeLogs, [string] $logsDirectory) {
         $this._storeLogs = $storeLogs
 
-        if ($storeLogs) {
+        if ($this._storeLogs) {
             $this._logPath = Join-Path $logsDirectory "download log - $([Helper]::NewUtcDate("yyyy-MM-dd")).txt"
         
             if (-not (Test-Path -Path $logsDirectory -PathType Container)) {
