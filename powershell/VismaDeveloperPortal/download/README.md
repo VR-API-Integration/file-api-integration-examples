@@ -113,7 +113,7 @@ Inside the **config.xml** file you will find these parameters:
 
 **`Path`**
 > Path where the logs will be stored.  
-> If the attribute **`Logs`**>**`Enabled`** is set to false, this attribute do nothing.
+> If the attribute `Logs`>`Enabled` is set to `false`, this attribute will do nothing.
 > 
 > **Example:** C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\logs
 
@@ -131,7 +131,7 @@ Inside the **config.xml** file you will find these parameters:
 **`Path`**
 > Path where the files will be downloaded.
 > 
-> **Example:** C:\Visma\File API\Ftaas.Examples\VismaDeveloperPortal\powershell\download\output
+> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\output
 
 <br/>
 
