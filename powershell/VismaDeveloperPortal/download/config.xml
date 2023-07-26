@@ -14,12 +14,12 @@
 
     <Logs>
         <Enabled>true</Enabled>
-        <Path>EnterTheFolderPathWhereYouWantToStoreTheLogs (e.g. C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\logs)</Path>
+        <Path>EnterTheFolderPathWhereYouWantToStoreTheLogs (e.g. C:\Visma\File API\Ftaas.Examples\powershell\download\logs)</Path>
     </Logs>
 
     <Download>
         <Role>subscriber</Role>
-        <Path>EnterTheFolderPathWhereYouWantToDownloadTheFilesTo (e.g. C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\output)</Path>
+        <Path>EnterTheFolderPathWhereYouWantToDownloadTheFilesTo (e.g. C:\Visma\File API\Ftaas.Examples\powershell\download\output)</Path>
         <EnsureUniqueNames>true</EnsureUniqueNames>
 
         <!-- Here you can find several examples for filtering the files.

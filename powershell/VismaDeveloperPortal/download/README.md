@@ -52,19 +52,19 @@ The next executions will use the saved credentials unless you manually specify t
 #### Example 1. Download files using the default configuration path
 
 ```powershell
-& "C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\DownloadFiles.ps1"
+& "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1"
 ```
 
 #### Example 2. Download files specifying the configuration path
 
 ```powershell
-& "C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\DownloadFiles.ps1" -ConfigPath "C:\Users\Foorby\config.xml"
+& "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1" -ConfigPath "C:\Users\Foorby\config.xml"
 ```
 
 #### Example 3. Download files using new credentials
 
 ```powershell
-& "C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\DownloadFiles.ps1" -RenewCredentials $true
+& "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1" -RenewCredentials $true
 ```
 
 ## Understanding the configuration
@@ -77,7 +77,7 @@ Inside the **config.xml** file you will find these parameters:
 > XML file path where the credentials will be storaged.  
 > :warning: It's important that the file you put in the path has an .xml extension, otherwise the example will not work properly.
 > 
-> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\credentials\credentials_integration1.xml
+> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml
 
 ### Attributes of the `Services` element
 
@@ -115,7 +115,7 @@ Inside the **config.xml** file you will find these parameters:
 > Path where the logs will be stored.  
 > If the attribute **`Logs`**>**`Enabled`** is set to **`false`**, this attribute will do nothing.
 > 
-> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\logs
+> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\download\logs
 
 ### Attributes of the `Download` element
 
@@ -131,7 +131,7 @@ Inside the **config.xml** file you will find these parameters:
 **`Path`**
 > Path where the files will be downloaded.
 > 
-> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\output
+> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\download\output
 
 <br/>
 
@@ -158,7 +158,7 @@ Inside the **config.xml** file you will find these parameters:
 ```xml
 <Configuration>
     <Credentials>
-        <Path>C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\credentials\credentials_integration.xml</Path>
+        <Path>C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration.xml</Path>
     </Credentials>
 
     <Services>
@@ -172,12 +172,12 @@ Inside the **config.xml** file you will find these parameters:
 
     <Logs>
         <Enabled>true</Enabled>
-        <Path>C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\logs</Path>
+        <Path>C:\Visma\File API\Ftaas.Examples\powershell\download\logs</Path>
     </Logs>
 
     <Download>
         <Role>subscriber</Role>
-        <Path>C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\output</Path>
+        <Path>C:\Visma\File API\Ftaas.Examples\powershell\download\output</Path>
         <EnsureUniqueNames>true</EnsureUniqueNames>
         <Filter>startsWith(FileName, 'employee_profile') and uploadDate gt 2022-02-08T11:02:00Z</Filter>
     </Download>
