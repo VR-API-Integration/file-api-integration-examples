@@ -41,7 +41,6 @@ catch {
 $logger.LogInformation("==============================================")
 $logger.LogInformation("File API integration example: Download files.")
 $logger.LogInformation("==============================================")
-
 $logger.LogInformation("(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')")
 
 #region Rest of the configuration
