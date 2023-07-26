@@ -329,7 +329,7 @@ class FileApiService {
 
     [PSCustomObject] UploadChunkRequest([string] $fileToken, [string] $filenameToUpload, [long] $chunkNumber) {
         $result = $this.CreateChunk($filenameToUpload, $this._chunkSize, $chunkNumber)
-        $response = $this.UploadFile($result.ChunkPath, $(Split-Path -Path $filenameToUpload -Leaf), "application/octet-stream", $fileToken, $chunkNumber, $result.Eof)
+        $this.UploadFile($result.ChunkPath, $(Split-Path -Path $filenameToUpload -Leaf), "application/octet-stream", $fileToken, $chunkNumber, $result.Eof)
 
         return [PSCustomObject]@{
             Eof = $result.Eof
@@ -380,12 +380,11 @@ class FileApiService {
 
     [PSCustomObject] CreateChunk([string] $contentFilePath, [long] $chunkSize, [long] $chunkNumber) {
         $folderPath = $(Split-Path -Path $contentFilePath)
-        $contentFilename = $(Split-Path -Path $contentFilePath -Leaf)
         $createdChunkPath = "$($folderPath)\$([Helper]::ConvertToUniqueFilename("Chunk_$($chunkNumber).bin"))"
         [byte[]]$bytes = new-object Byte[] $chunkSize
         $fileStream = New-Object System.IO.FileStream($contentFilePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read)
         $binaryReader = New-Object System.IO.BinaryReader( $fileStream)
-        $pos = $binaryReader.BaseStream.Seek($chunkNumber * $chunkSize, [System.IO.SeekOrigin]::Begin)
+        $binaryReader.BaseStream.Seek($chunkNumber * $chunkSize, [System.IO.SeekOrigin]::Begin)
         $bytes = $binaryReader.ReadBytes($chunkSize) 
        
         $this._fileBytesRead += $bytes.Length
