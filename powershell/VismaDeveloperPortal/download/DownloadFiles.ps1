@@ -28,7 +28,7 @@ if (-not $_configPath) {
 #region Log configuration
 
 try {
-    $logConfig = [ConfigurationManager]::GetLogConfiguration(($_configPath))
+    $logConfig = [ConfigurationManager]::GetLogConfiguration($_configPath)
 }
 catch {
     [Helper]::EndProgramWithError($_, "Failure retrieving the logger configuration. Tip: see the README.MD to check the format of the parameters.", $null)
