@@ -106,13 +106,13 @@ Inside the **config.xml** file you will find these parameters:
 > Indicates if you want to store the logs in your machine.
 > 
 > Must be set to any of these values:  
-> **· false:** the logs will only be shown in the console.
+> **· false:** the logs will only be shown in the console.  
 > **· true:** the logs will be shown in the console and will be stored in your machine.
 
 <br/>
 
 **`Path`**
-> Path where the logs will be stored.
+> Path where the logs will be stored.  
 > If the attribute **`Logs`**>**`Enabled`** is set to false, this attribute do nothing.
 > 
 > It should be set to **https://connect.visma.com/connect**
