@@ -31,7 +31,7 @@ try {
     $logConfig = [ConfigurationManager]::GetLogConfiguration(($_configPath))
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.", $null)
+    [Helper]::EndProgramWithError($_, "Failure retrieving the logger configuration. Tip: see the README.MD to check the format of the parameters.", $null)
 }
 
 [Logger] $logger = [Logger]::new($logConfig.Enabled, $logConfig.Path)
@@ -621,7 +621,9 @@ class Helper {
     }
 
     static [void] EndProgramWithError([System.Management.Automation.ErrorRecord] $errorRecord, [string] $genericErrorMessage, [Logger] $logger) {
-        if (!$logger) { $logger = [Logger]::new($false) }
+        if (-not $logger) {
+            $logger = [Logger]::new($false, "")
+        }
 
         $logger.LogError($genericErrorMessage)
 
@@ -646,7 +648,9 @@ class Helper {
     }
 
     hidden static [void] FinishProgram([bool] $finishWithError, [Logger] $logger) {
-        if (!$logger) { $logger = [Logger]::new($false) }
+        if (-not $logger) {
+            $logger = [Logger]::new($false, "")
+        }
 
         $logger.LogInformation("----")
         $logger.LogInformation("End of the example.`n")
