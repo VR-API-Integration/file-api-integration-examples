@@ -559,7 +559,7 @@ class Logger {
         $this._storeLogs = $storeLogs
 
         if ($this._storeLogs) {
-            $this._logPath = Join-Path $logsDirectory "download log - $([Helper]::NewUtcDate("yyyy-MM-dd")).txt"
+            $this._logPath = Join-Path $logsDirectory "download log - $(Get-Date -Format "yyyy-MM-dd").txt"
         
             if (-not (Test-Path -Path $logsDirectory -PathType Container)) {
                 New-Item -ItemType Directory -Path $logsDirectory -Force
@@ -568,7 +568,7 @@ class Logger {
     }
 
     [void] LogInformation([string] $text) {
-        $text = "$([Helper]::NewUtcDate("yy/MM/dd HH:mm:ss")) [Information] $($text)"
+        $text = "$(Get-Date -Format "yy/MM/dd HH:mm:ss") [Information] $($text)"
         
         Write-Host $text
         if ($this._storeLogs) {
@@ -577,7 +577,7 @@ class Logger {
     }
 
     [void] LogError([string] $text) {
-        $text = "$([Helper]::NewUtcDate("yy/MM/dd HH:mm:ss")) [Error] $($text)"
+        $text = "$(Get-Date -Format "yy/MM/dd HH:mm:ss") [Error] $($text)"
 
         Write-Host $text -ForegroundColor "Red"
         if ($this._storeLogs) {
@@ -591,7 +591,7 @@ class Helper {
         $fileNameInfo = [Helper]::GetFileNameInfo($fileName)
         $fileNameWithoutExtension = $fileNameInfo.Name
         $fileExtension = $fileNameInfo.Extension
-        $timestamp = [Helper]::NewUtcDate("yyyyMMddTHHmmssffffZ")
+        $timestamp = Get-Date -Format "yyyyMMddTHHmmssffffZ"
     
         $uniqueFileName = "$($fileNameWithoutExtension)_$($timestamp)$($fileExtension)"
         return $uniqueFileName
@@ -609,10 +609,6 @@ class Helper {
         }
     
         return $fileNameInfo
-    }
-
-    static [string] NewUtcDate([string] $format) {
-        return (Get-Date).ToUniversalTime().ToString($format)
     }
 
     static [void] EndProgram([Logger] $logger) {
