@@ -657,7 +657,7 @@ class Helper {
         }
 
         $logger.LogInformation("----")
-        $logger.LogInformation("End of the example.`n")
+        $logger.LogInformation("End of the example.")
 
         if ($finishWithError) {
             exit 1
