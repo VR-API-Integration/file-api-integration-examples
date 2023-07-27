@@ -38,6 +38,7 @@ catch {
 
 #endregion Log configuration
 
+$logger.LogRaw("")
 $logger.LogInformation("==============================================")
 $logger.LogInformation("File API integration example: Download files.")
 $logger.LogInformation("==============================================")
@@ -565,6 +566,13 @@ class Logger {
             if (-not (Test-Path -Path $logsDirectory -PathType Container)) {
                 New-Item -ItemType Directory -Path $logsDirectory -Force
             }
+        }
+    }
+
+    [void] LogRaw([string] $text) {
+        Write-Host $text
+        if ($this._storeLogs) {
+            $text | Out-File $this._logPath -Encoding utf8 -Append -Force
         }
     }
 
