@@ -93,24 +93,37 @@ $fileApiService = [FileApiService]::new($logger, $fileApiClient, $config.Upload.
 
 #region Upload Directory contents
 
-Get-ChildItem -Path $config.Upload.Path -Filter $config.Upload.Filter | ForEach-Object -Process {
+$logger.LogInformation("----")
+$logger.LogInformation("Uploading files:")
+$logger.LogInformation("| Path: $($config.Upload.Path)")
+$logger.LogInformation("| Mask: $($config.Upload.Filter)")
 
-    $filenameToUpload = $_.FullName
+if (-not (Test-Path -Path $config.Upload.Path -PathType Container)) {
+    [Helper]::EndProgramWithError($null, "Directory <$($config.Upload.Path)> doesn't exist.", $logger)
+}
 
+$uploadedFilesCount = 0
+$filesToUploadInfo = Get-ChildItem -Path $config.Upload.Path -Filter $config.Upload.Filter
+foreach ($fullFilenameToUpload in $filesToUploadInfo.FullName) {
     try {
-        $fileApiService.UploadFile($filenameToUpload)
+        $fileApiService.UploadFile($fullFilenameToUpload)
+        $uploadedFilesCount++
     }
     catch {
-        [Helper]::EndProgramWithError($_, "Failure uploading file $($filenameToUpload).", $logger)
+        [Helper]::EndProgramWithError($_, "Failure uploading the file.", $logger)
     }
 
     try {
-        $archivedFile = [Helper]::ArchiveFile($config.Upload.ArchivePath, $_.FullName, $logger)
+        [Helper]::ArchiveFile($config.Upload.ArchivePath, $fullFilenameToUpload, $logger)
     }
     catch {
-        [Helper]::EndProgramWithError($_, "Failure archiving file to $($archivedFile).", $logger)
+        [Helper]::EndProgramWithError($_, "Failure archiving the file.", $logger)
     }
 }
+
+$logger.LogInformation("----")
+$logger.LogInformation("All files were uploaded.")
+$logger.LogInformation("| Amount: $($uploadedFilesCount)")
 
 #endregion Upload Directory contents
 
@@ -347,7 +360,7 @@ class FileApiService {
 
     [void] UploadFile($filenameToUpload) {
         $this._logger.LogInformation("----")
-        $this._logger.LogInformation("Uploading the file.")
+        $this._logger.LogInformation("Uploading the file:")
         $this._logger.LogInformation("| File: $($(Split-Path -Path $filenameToUpload -Leaf))")
         $this._logger.LogInformation("| Business type: $($this._businessTypeId)")
 
@@ -362,14 +375,14 @@ class FileApiService {
         $this._logger.LogInformation("File $($(Split-Path -Path $filenameToUpload -Leaf)) uploaded.")
     }
 
-    [PSCustomObject] UploadFirstRequest([string] $filenameToUpload) {
+    hidden [PSCustomObject] UploadFirstRequest([string] $filenameToUpload) {
         $this._fileSize = (Get-Item $filenameToUpload).Length
         $this._fileBytesRead = 0
         $filenameOnly = Split-Path -Path $filenameToUpload -Leaf
         $chunkNumber = 0
         $result = $this.CreateChunk($filenameToUpload, $this._chunkSize, $chunkNumber)
         $FirstRequestData = $this.CreateFirstRequestToUpload($filenameOnly, $result.ChunkPath)
-        $response = $this.UploadFile($FirstRequestData, $filenameOnly, "multipart/related;boundary=$($this._boundary)", "", $chunkNumber, $result.Eof)
+        $response = $this.UploadAndRemoveFile($FirstRequestData, $filenameOnly, "multipart/related;boundary=$($this._boundary)", "", $chunkNumber, $result.Eof)
         $fileToken = $response.uploadToken
         
         return [PSCustomObject]@{
@@ -378,16 +391,16 @@ class FileApiService {
         }
     }
 
-    [PSCustomObject] UploadChunkRequest([string] $fileToken, [string] $filenameToUpload, [long] $chunkNumber) {
+    hidden [PSCustomObject] UploadChunkRequest([string] $fileToken, [string] $filenameToUpload, [long] $chunkNumber) {
         $result = $this.CreateChunk($filenameToUpload, $this._chunkSize, $chunkNumber)
-        $this.UploadFile($result.ChunkPath, $(Split-Path -Path $filenameToUpload -Leaf), "application/octet-stream", $fileToken, $chunkNumber, $result.Eof)
+        $this.UploadAndRemoveFile($result.ChunkPath, $(Split-Path -Path $filenameToUpload -Leaf), "application/octet-stream", $fileToken, $chunkNumber, $result.Eof)
 
         return [PSCustomObject]@{
             Eof = $result.Eof
         }
     }
 
-    [string] CreateFirstRequestToUpload([string] $filename, [string] $chunkPath) {
+    hidden [string] CreateFirstRequestToUpload([string] $filename, [string] $chunkPath) {
         $this._logger.LogInformation("----")
         $this._logger.LogInformation("Creating first request with the file $($filename) to upload.")
         $headerFilePath = ""
@@ -429,7 +442,7 @@ class FileApiService {
         }
     }
 
-    [PSCustomObject] CreateChunk([string] $contentFilePath, [long] $chunkSize, [long] $chunkNumber) {
+    hidden [PSCustomObject] CreateChunk([string] $contentFilePath, [long] $chunkSize, [long] $chunkNumber) {
         $folderPath = $(Split-Path -Path $contentFilePath)
         $createdChunkPath = "$($folderPath)\$([Helper]::ConvertToUniqueFilename("Chunk_$($chunkNumber).bin"))"
         [byte[]]$bytes = new-object Byte[] $chunkSize
@@ -454,8 +467,8 @@ class FileApiService {
         }
     }
 
-    [PSCustomObject] UploadFile([string] $filePath, [string] $originalFilename, [string] $contentType, [string] $token, [long] $chunkNumber, [bool] $close) {
-        while (1 -eq 1) {
+    hidden [PSCustomObject] UploadAndRemoveFile([string] $filePath, [string] $originalFilename, [string] $contentType, [string] $token, [long] $chunkNumber, [bool] $close) {
+        while ($true) {
             try {
                 Start-Sleep -Milliseconds $this._uploadDelay
 
@@ -664,27 +677,38 @@ class Logger {
 }
 
 class Helper {
-    static [string] ArchiveFile([string] $archivePath, [string] $filename, [Logger] $logger) {
+    static [void] ArchiveFile([string] $archivePath, [string] $filename, [Logger] $logger) {
         if (-not $logger) {
             $logger = [Logger]::new($false, "")
         }
 
         $filenameInfo = [Helper]::GetFilenameInfo($filename)
-        $uniqueArchiveFilename = [Helper]::ConvertToUniqueFilename($filenameInfo.FullName)
-        $archivePath = Join-Path $archivePath $uniqueArchiveFilename
+        $archiveFilename = [Helper]::ConvertToUniqueFilename($filenameInfo.FullName)
+        $archiveFilePath = Join-Path $archivePath $archiveFilename
 
         $logger.logInformation("----")
-        $logger.LogInformation("Archiving file <$($filenameInfo.Name)> to <$($archivePath)>.")
+        $logger.LogInformation("Archiving file:")
+        $logger.LogInformation("| Name: $($filenameInfo.Name)")
+        $logger.LogInformation("| Destination path: $($archiveFilePath)")
+
+        if (-not (Test-Path -Path $archivePath -PathType Container)) {
+            $logger.logInformation("----")
+            $logger.LogInformation("Archive path doesn't exist. Creating it.")
+            $logger.LogInformation("| Path: $($archivePath)")
+
+            New-Item -ItemType Directory -Force -Path $archivePath | Out-Null
+
+            $logger.LogInformation("The archive path was created.")
+        }
 
         try {
-            Move-Item $filename -Destination $archivePath
-            $logger.logInformation("File archived.")
+            Move-Item $filename -Destination $archiveFilePath
+            $logger.logInformation("The file was archived.")
         }
         catch {
             $logger.LogError("The file was not archived.")
             throw $_
         }
-        return $archivePath
     }
 
     static [string] ConvertToUniqueFilename([string] $filename) {
