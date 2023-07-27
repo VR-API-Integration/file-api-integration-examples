@@ -38,6 +38,7 @@ catch {
 
 #endregion Log configuration
 
+$logger.LogRaw("")
 $logger.LogInformation("=============================================================")
 $logger.LogInformation("File API integration example: Upload files from a directory.")
 $logger.LogInformation("                              Supports files > 100Mb")
@@ -89,44 +90,19 @@ catch {
 
 #endregion Retrieve authentication token
 
+#region Upload directory contents
+
 $fileApiClient = [FileApiClient]::new($config.Services.FileApiBaseUrl, $token)
 $fileApiService = [FileApiService]::new($logger, $fileApiClient, $config.Upload.BusinessTypeId, $config.Upload.ChunkSize)
 
-#region Upload Directory contents
-
-$logger.LogInformation("----")
-$logger.LogInformation("Uploading files:")
-$logger.LogInformation("| Path: $($config.Upload.Path)")
-$logger.LogInformation("| Mask: $($config.Upload.Filter)")
-
-if (-not (Test-Path -Path $config.Upload.Path -PathType Container)) {
-    [Helper]::EndProgramWithError($null, "Directory <$($config.Upload.Path)> doesn't exist.", $logger)
+try {
+    $fileApiService.UploadAndArchiveFiles($config.Upload.Path, $config.Upload.Filter, $config.Upload.ArchivePath)
+}
+catch {
+    [Helper]::EndProgramWithError($_, "Failure uploading the files.", $logger)
 }
 
-$uploadedFilesCount = 0
-$filesToUploadInfo = Get-ChildItem -Path $config.Upload.Path -Filter $config.Upload.Filter
-foreach ($fullFilenameToUpload in $filesToUploadInfo.FullName) {
-    try {
-        $fileApiService.UploadFile($fullFilenameToUpload)
-        $uploadedFilesCount++
-    }
-    catch {
-        [Helper]::EndProgramWithError($_, "Failure uploading the file.", $logger)
-    }
-
-    try {
-        [Helper]::ArchiveFile($config.Upload.ArchivePath, $fullFilenameToUpload, $logger)
-    }
-    catch {
-        [Helper]::EndProgramWithError($_, "Failure archiving the file.", $logger)
-    }
-}
-
-$logger.LogInformation("----")
-$logger.LogInformation("All files were uploaded.")
-$logger.LogInformation("| Amount: $($uploadedFilesCount)")
-
-#endregion Upload Directory contents
+#endregion Upload directory contents
 
 [Helper]::EndProgram($logger)
 
@@ -359,31 +335,63 @@ class FileApiService {
         $this._uploadDelay = 0
     }
 
-    [void] UploadFile($filenameToUpload) {
+    [void] UploadAndArchiveFiles([string] $uploadPath, [string] $mask, [string] $archivePath) {
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("Uploading files:")
+        $this._logger.LogInformation("| Path: $($uploadPath)")
+        $this._logger.LogInformation("| Mask: $($mask)")
+    
+        if (-not (Test-Path -Path $uploadPath -PathType Container)) {
+            throw "Directory <$($uploadPath)> doesn't exist."
+        }
+    
+        $filesToUploadInfo = Get-ChildItem -Path $uploadPath -Filter $mask
+
+        $this._logger.LogInformation("$($filesToUploadInfo.Length) files found.")
+
+        $uploadedFilesCount = 0
+        foreach ($fullFilenameToUpload in $filesToUploadInfo.FullName) {
+            $this.UploadFile($fullFilenameToUpload)
+            [Helper]::ArchiveFile($archivePath, $fullFilenameToUpload, $this._logger)
+
+            $uploadedFilesCount++
+        }
+    
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("All files were uploaded.")
+        $this._logger.LogInformation("| Amount: $($uploadedFilesCount)")
+    }
+
+    hidden [void] UploadFile($filenameToUpload) {
         $this._logger.LogInformation("----")
         $this._logger.LogInformation("Uploading the file:")
         $this._logger.LogInformation("| File: $($(Split-Path -Path $filenameToUpload -Leaf))")
         $this._logger.LogInformation("| Business type: $($this._businessTypeId)")
 
+        $this._logger.LogInformation("Uploading chunk #1.")
+
         $result = $this.UploadFirstRequest($filenameToUpload)
         $fileToken = $result.FileToken
         $chunkNumber = 1
-        While ( -not $result.Eof ) {
-            $this._logger.LogInformation("Uploading Chunk #$($chunkNumber + 1).")
+        While (-not $result.Eof) {
+            $this._logger.LogInformation("Uploading chunk #$($chunkNumber + 1).")
+
             $result = $this.UploadChunkRequest($fileToken, $filenameToUpload, $chunkNumber)
-            $chunkNumber += 1
+            $chunkNumber++
         }
-        $this._logger.LogInformation("File $($(Split-Path -Path $filenameToUpload -Leaf)) uploaded.")
+
+        $this._logger.LogInformation("The file was uploaded.")
     }
 
     hidden [PSCustomObject] UploadFirstRequest([string] $filenameToUpload) {
         $this._fileSize = (Get-Item $filenameToUpload).Length
         $this._fileBytesRead = 0
         $filenameOnly = Split-Path -Path $filenameToUpload -Leaf
+
         $chunkNumber = 0
         $result = $this.CreateChunk($filenameToUpload, $this._chunkSize, $chunkNumber)
-        $FirstRequestData = $this.CreateFirstRequestToUpload($filenameOnly, $result.ChunkPath)
-        $response = $this.UploadAndRemoveFile($FirstRequestData, $filenameOnly, "multipart/related;boundary=$($this._boundary)", "", $chunkNumber, $result.Eof)
+        $firstRequestData = $this.CreateFirstChunkRequest($filenameOnly, $result.ChunkPath)
+        $response = $this.UploadAndRemoveChunk($firstRequestData, $filenameOnly, "multipart/related;boundary=$($this._boundary)", "", $chunkNumber, $result.Eof)
         $fileToken = $response.uploadToken
         
         return [PSCustomObject]@{
@@ -394,16 +402,14 @@ class FileApiService {
 
     hidden [PSCustomObject] UploadChunkRequest([string] $fileToken, [string] $filenameToUpload, [long] $chunkNumber) {
         $result = $this.CreateChunk($filenameToUpload, $this._chunkSize, $chunkNumber)
-        $this.UploadAndRemoveFile($result.ChunkPath, $(Split-Path -Path $filenameToUpload -Leaf), "application/octet-stream", $fileToken, $chunkNumber, $result.Eof)
+        $this.UploadAndRemoveChunk($result.ChunkPath, $(Split-Path -Path $filenameToUpload -Leaf), "application/octet-stream", $fileToken, $chunkNumber, $result.Eof)
 
         return [PSCustomObject]@{
             Eof = $result.Eof
         }
     }
 
-    hidden [string] CreateFirstRequestToUpload([string] $filename, [string] $chunkPath) {
-        $this._logger.LogInformation("----")
-        $this._logger.LogInformation("Creating first request with the file $($filename) to upload.")
+    hidden [string] CreateFirstChunkRequest([string] $filename, [string] $chunkPath) {
         $headerFilePath = ""
         $footerFilePath = ""
         try {
@@ -427,7 +433,7 @@ class FileApiService {
             New-Item -Path $folderPath -Name $footerFilename -Value $footerContent
 
             cmd /c copy /b $headerFilePath + $chunkPath + $footerFilePath $createdFilePath
-            $this._logger.LogInformation("File created.")
+
             return $createdFilePath
         }
         finally {
@@ -475,7 +481,7 @@ class FileApiService {
         }
     }
 
-    hidden [PSCustomObject] UploadAndRemoveFile([string] $filePath, [string] $originalFilename, [string] $contentType, [string] $token, [long] $chunkNumber, [bool] $close) {
+    hidden [PSCustomObject] UploadAndRemoveChunk([string] $filePath, [string] $originalFilename, [string] $contentType, [string] $token, [long] $chunkNumber, [bool] $close) {
         while ($true) {
             try {
                 Start-Sleep -Milliseconds $this._uploadDelay
@@ -489,11 +495,15 @@ class FileApiService {
                 return $result
             }
             catch {
-                if ( $_.Exception.Message.Contains("(429)")) {
+                if ($_.Exception.Message.Contains("(429)")) {
                     $this._uploadDelay += 100
-                    $this._logger.LogInformation("Spike arrest detected: Setting uploadDelay to $($this._uploadDelay) msec.")
-                    $this._logger.LogInformation("Waiting 60 seconds for spike arrest to clear")
-                    Start-Sleep -Seconds 60
+
+                    $waitSeconds = 60
+
+                    $this._logger.LogInformation("Spike arrest detected: Setting uploadDelay to $($this._uploadDelay) ms.")
+                    $this._logger.LogInformation("Waiting $($waitSeconds) seconds for spike arrest to clear")
+
+                    Start-Sleep -Seconds $waitSeconds
                 }
                 else {
                     throw $_
@@ -665,6 +675,13 @@ class Logger {
         }
     }
 
+    [void] LogRaw([string] $text) {
+        Write-Host $text
+        if ($this._storeLogs) {
+            $text | Out-File $this._logPath -Encoding utf8 -Append -Force
+        }
+    }
+
     [void] LogInformation([string] $text) {
         $text = "$(Get-Date -Format "yy/MM/dd HH:mm:ss") [Information] $($text)"
 
@@ -723,7 +740,7 @@ class Helper {
         $filenameInfo = [Helper]::GetFilenameInfo($filename)
         $filenameWithoutExtension = $filenameInfo.Name
         $fileExtension = $filenameInfo.Extension
-        $timestamp = Get-Date -Format "yyyyMMdd_HHmmss_fff"
+        $timestamp = Get-Date -Format "yyyyMMddTHHmmssffffZ"
         
         $filePath = $filenameInfo.Path
         if ([string]::IsNullOrEmpty($filepath)) {
@@ -800,7 +817,7 @@ class Helper {
         }
 
         $logger.LogInformation("----")
-        $logger.LogInformation("End of the example.`n")
+        $logger.LogInformation("End of the example.")
 
         if ($finishWithError) {
             exit 1
