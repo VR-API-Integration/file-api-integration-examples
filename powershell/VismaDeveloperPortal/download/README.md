@@ -4,6 +4,7 @@ A collection of examples to download files with the File API using **PowerShell*
 
 ## Prerequisites
 
+- To run the script you need administrator privileges.
 - The script was prepared for PowerShell version 5.1 or above. With lower versions it might not work properly.
 - Files to be downloaded cannot be bigger than 2 GB.
 
@@ -51,19 +52,19 @@ The next executions will use the saved credentials unless you manually specify t
 #### Example 1. Download files using the default configuration path
 
 ```powershell
-& "C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\DownloadFiles.ps1"
+& "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1"
 ```
 
 #### Example 2. Download files specifying the configuration path
 
 ```powershell
-& "C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\DownloadFiles.ps1" -ConfigPath "C:\Users\Foorby\config.xml"
+& "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1" -ConfigPath "C:\Users\Foorby\config.xml"
 ```
 
 #### Example 3. Download files using new credentials
 
 ```powershell
-& "C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\DownloadFiles.ps1" -RenewCredentials $true
+& "C:\Visma\File API\Ftaas.Examples\powershell\download\DownloadFiles.ps1" -RenewCredentials $true
 ```
 
 ## Understanding the configuration
@@ -76,7 +77,7 @@ Inside the **config.xml** file you will find these parameters:
 > XML file path where the credentials will be storaged.  
 > :warning: It's important that the file you put in the path has an .xml extension, otherwise the example will not work properly.
 > 
-> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\credentials\credentials_integration1.xml
+> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml
 
 ### Attributes of the `Services` element
 
@@ -95,9 +96,26 @@ Inside the **config.xml** file you will find these parameters:
 ### Attributes of the `Authentication` element
 
 **`VismaConnectTenantId`**
-> The Visma developer portal tenant id.
+> The Visma developer portal tenant ID.
 
 <br />
+
+### Attributes of the `Logs` element
+
+**`Enabled`**
+> Indicates if you want to store the logs in your machine.
+> 
+> Must be set to any of these values:  
+> **· false:** the logs will only be shown in the console.  
+> **· true:** the logs will be shown in the console and will be stored in your machine.
+
+<br/>
+
+**`Path`**
+> Path where the logs will be stored.  
+> If the attribute **`Logs`**>**`Enabled`** is set to **`false`**, this attribute will do nothing.
+> 
+> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\download\logs
 
 ### Attributes of the `Download` element
 
@@ -113,7 +131,7 @@ Inside the **config.xml** file you will find these parameters:
 **`Path`**
 > Path where the files will be downloaded.
 > 
-> **Example:** C:\Visma\File API\Ftaas.Examples\VismaDeveloperPortal\powershell\download\output
+> **Example:** C:\Visma\File API\Ftaas.Examples\powershell\download\output
 
 <br/>
 
@@ -140,7 +158,7 @@ Inside the **config.xml** file you will find these parameters:
 ```xml
 <Configuration>
     <Credentials>
-        <Path>C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\credentials\credentials_integration.xml</Path>
+        <Path>C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration.xml</Path>
     </Credentials>
 
     <Services>
@@ -152,9 +170,14 @@ Inside the **config.xml** file you will find these parameters:
         <VismaConnectTenantId>11111111-1111-1111-1111-111111111111</VismaConnectTenantId>
     </Authentication>
 
+    <Logs>
+        <Enabled>true</Enabled>
+        <Path>C:\Visma\File API\Ftaas.Examples\powershell\download\logs</Path>
+    </Logs>
+
     <Download>
         <Role>subscriber</Role>
-        <Path>C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\output</Path>
+        <Path>C:\Visma\File API\Ftaas.Examples\powershell\download\output</Path>
         <EnsureUniqueNames>true</EnsureUniqueNames>
         <Filter>startsWith(FileName, 'employee_profile') and uploadDate gt 2022-02-08T11:02:00Z</Filter>
     </Download>
