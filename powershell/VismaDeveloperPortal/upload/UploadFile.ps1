@@ -41,7 +41,6 @@ catch {
 $logger.LogRaw("")
 $logger.LogInformation("=============================================================")
 $logger.LogInformation("File API integration example: Upload files from a directory.")
-$logger.LogInformation("                              Supports files > 100Mb")
 $logger.LogInformation("=============================================================")
 $logger.LogInformation("(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')")
 $logger.LogInformation("PowerShell version: $($global:PSVersionTable.PSVersion)")
