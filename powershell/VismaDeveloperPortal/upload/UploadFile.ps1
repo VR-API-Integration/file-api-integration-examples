@@ -43,6 +43,7 @@ $logger.LogInformation("File API integration example: Upload files from a direct
 $logger.LogInformation("                              Supports files > 100Mb")
 $logger.LogInformation("=============================================================")
 $logger.LogInformation("(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')")
+$logger.LogInformation("PowerShell version: $($global:PSVersionTable.PSVersion)")
 
 #region Rest of the configuration
 
@@ -457,9 +458,16 @@ class FileApiService {
             $streamEof = 1
         }
 
-        $binaryReader.Dispose()  
+        $binaryReader.Dispose()
 
-        Set-Content -Path $createdChunkPath -Value $bytes -Encoding Byte
+        # The way of encoding the bytes changed in the version 6.0.0. See the following link for more information:
+        # https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/set-content?view=powershell-7.3#parameters
+        if ($global:PSVersionTable.PSVersion -ge "6.0.0") {
+            Set-Content -Path $createdChunkPath -Value $bytes -AsByteStream
+        }
+        else {
+            Set-Content -Path $createdChunkPath -Value $bytes -Encoding Byte
+        }
 
         return [PSCustomObject]@{
             ChunkPath = $createdChunkPath
