@@ -112,7 +112,7 @@ Inside the **config.xml** file you will find these parameters:
 <br/>
 
 **`Path`**
-> Path where the logs will be stored.  
+> Full path of the directory where the log files will be stored.  
 > If the attribute **`Logs`**>**`Enabled`** is set to **`false`**, this attribute will do nothing.
 > 
 > **Example:** C:\Visma\File API\Ftaas.Examples\powershell\download\logs

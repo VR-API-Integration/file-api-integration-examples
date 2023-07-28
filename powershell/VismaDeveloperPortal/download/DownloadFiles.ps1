@@ -38,6 +38,7 @@ catch {
 
 #endregion Log configuration
 
+$logger.LogRaw("")
 $logger.LogInformation("==============================================")
 $logger.LogInformation("File API integration example: Download files.")
 $logger.LogInformation("==============================================")
@@ -568,6 +569,13 @@ class Logger {
         }
     }
 
+    [void] LogRaw([string] $text) {
+        Write-Host $text
+        if ($this._storeLogs) {
+            $text | Out-File $this._logPath -Encoding utf8 -Append -Force
+        }
+    }
+
     [void] LogInformation([string] $text) {
         $text = "$(Get-Date -Format "yy/MM/dd HH:mm:ss") [Information] $($text)"
         
@@ -649,7 +657,7 @@ class Helper {
         }
 
         $logger.LogInformation("----")
-        $logger.LogInformation("End of the example.`n")
+        $logger.LogInformation("End of the example.")
 
         if ($finishWithError) {
             exit 1
