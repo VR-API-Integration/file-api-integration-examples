@@ -78,7 +78,7 @@ catch {
 #endregion Retrieve authentication token
 
 $fileApiClient = [FileApiClient]::new($config.Services.FileApiBaseUrl, $token)
-$fileApiService = [FileApiService]::new($fileApiClient, $config.Download.Role, 200)
+$fileApiService = [FileApiService]::new($fileApiClient, $config.Download.TempFolder, $config.Download.Role, 200, $config.Download.ChunkSize)
 
 #region List files
 
@@ -133,7 +133,10 @@ class ConfigurationManager {
 
         $role = $Config.Download.Role
         $downloadPath = $config.Download.Path
+        $tempFolder = $config.Download.TempFolder
         $ensureUniqueNames = $config.Download.EnsureUniqueNames
+        $chunkSize = [long] $config.Download.ChunkSize 
+        $chunkSizeLimit = [long] 100
         $filter = $config.Download.Filter
     
         $missingConfiguration = @()
@@ -143,7 +146,10 @@ class ConfigurationManager {
         if ([string]::IsNullOrEmpty($vismaConnectTenantId)) { $missingConfiguration += "Authentication.VismaConnectTenantId" }
         if ([string]::IsNullOrEmpty($role)) { $missingConfiguration += "Download.Role" }
         if ([string]::IsNullOrEmpty($downloadPath)) { $missingConfiguration += "Download.Path" }
+        if ([string]::IsNullOrEmpty($tempFolder)) { $missingConfiguration += "Download.TempFolder" }
         if ([string]::IsNullOrEmpty($ensureUniqueNames)) { $missingConfiguration += "Download.EnsureUniqueNames" }
+        if ([string]::IsNullOrEmpty($chunkSize)) { $missingConfiguration += "Download.ChunkSize" }
+
         if ($null -eq $filter) { $missingConfiguration += "Download.Filter" }
     
         if ($missingConfiguration.Count -gt 0) {
@@ -151,11 +157,14 @@ class ConfigurationManager {
         }
     
         $wrongConfiguration = @()
-        if (-not [Validator]::IsPath($credentialsPath)) { $wrongConfiguration += "Credentials.Path" }
+        if (-not [Validator]::IsPath($credentialsPath)) { $wrongConfiguration += "Credentials.Path does not exist" }
         if (-not [Validator]::IsUri($fileApiBaseUrl)) { $wrongConfiguration += "Services.FileApiBaseUrl" }
         if (-not [Validator]::IsUri($authenticationTokenApiBaseUrl)) { $wrongConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
-        if (-not [Validator]::IsPath($downloadPath)) { $wrongConfiguration += "Download.Path" }
+        if (-not [Validator]::IsPath($downloadPath)) { $wrongConfiguration += "Download.Path does not exist" }
+        if (-not [Validator]::IsPath($tempFolder)) { $wrongConfiguration += "Download.TempFolder does not exist" }
         if (-not [Validator]::IsBool($ensureUniqueNames)) { $wrongConfiguration += "Download.EnsureUniqueNames" }
+        if($chunkSize -gt $chunkSizeLimit) { $wrongConfiguration += "Chunk size ($($chunkSize)) cannot be bigger than $($chunkSizeLimit) bytes."}
+        if($chunkSize -lt 1){$wrongConfiguration += "Chunk size ($($chunkSize)) cannot be smaller than 1 (Mbyte)."}
     
         if ($wrongConfiguration.Count -gt 0) {
             throw "Wrong configured parameters: $($wrongConfiguration -Join ", ")"
@@ -168,7 +177,9 @@ class ConfigurationManager {
         $configuration.Services.AuthenticationTokenApiBaseUrl = $authenticationTokenApiBaseUrl
         $configuration.Download.Role = $role
         $configuration.Download.Path = $downloadPath
+        $configuration.Download.TempFolder = $tempFolder
         $configuration.Download.EnsureUniqueNames = [System.Convert]::ToBoolean($ensureUniqueNames)
+        $configuration.Download.ChunkSize = $chunkSize * 1024 * 1024 #convert to bytes
         $configuration.Download.Filter = $filter
     
         Write-Host "Configuration retrieved."
@@ -267,23 +278,23 @@ class CredentialsManager {
 
 class FileApiService {
     hidden [FileApiClient] $_fileApiClient
+    hidden [string] $_tempFolder
     hidden [string] $_role
-    hidden [string] $_waitTimeBetweenCallsMS
-    hidden [long] $_downloadSizeLimit
+    hidden [int] $_waitTimeBetweenCallsMS
+    hidden [long] $_chunkSize
 
     FileApiService(
         [FileApiClient] $fileApiClient,
+        [string] $tempFolder,
         [string] $role,
-        [int] $waitTimeBetweenCallsMS
+        [int] $waitTimeBetweenCallsMS,
+        [long] $chunkSize
     ) {
         $this._fileApiClient = $fileApiClient
+        $this._tempFolder = $tempFolder
         $this._role = $role
         $this._waitTimeBetweenCallsMS = $waitTimeBetweenCallsMS
-
-        # This limit is set because the method Invoke-RestMethod doesn't allow
-        # the download of files bigger than 2 GiB.
-        # I set the limit a bit less than 2 GiB to give some margin.
-        $this._downloadSizeLimit = 2147000000
+        $this._chunkSize = $chunkSize
     }
 
     [FileInfo[]] GetFilesInfo([string] $filter) {
@@ -321,57 +332,123 @@ class FileApiService {
     }
 
     [void] DownloadFiles([FileInfo[]] $filesInfo, [string] $path, [bool] $ensureUniqueNames) {
-        if (-not (Test-Path $path -PathType Container)) {
-            Write-Host "----"
-            Write-Host "Download path doesn't exist. Creating it."
-            Write-Host "| Path: $($path)"
-            
-            New-Item -ItemType Directory -Force -Path $path
-        }
-
         $downloadedFilesCount = 0
+        $failedFiles = @()
         foreach ($fileInfo in $filesInfo) {
             Write-Host "----"
             Write-Host "Downloading file $($downloadedFilesCount + 1)/$($filesInfo.Count)."
-            Write-Host "| ID: $($fileInfo.Id)"
+            Write-Host "| ID  : $($fileInfo.Id)"
             Write-Host "| Name: $($fileInfo.Name)"
             Write-Host "| Size: $($fileInfo.Size)"
-
-            if ($fileInfo.Size -ge $this._downloadSizeLimit) {
-                Write-Host "----" -ForegroundColor "Red"
-                Write-Host "Cannot download files bigger or equal than $($this._downloadSizeLimit) bytes." -ForegroundColor "Red"
-                Write-Host "File will be skipped." -ForegroundColor "Red"
-
-                continue
-            }
 
             if (($ensureUniqueNames -eq $true) -and (Test-Path "$($path)\$($fileInfo.Name)" -PathType Leaf)) {
                 Write-Host "There is already a file with the same name in the download path."
 
-                $fileInfo.Name = [Helper]::ConverToUniqueFileName($fileInfo.Name)
+                $fileInfo.Name = [Helper]::ConvertToUniqueFileName($fileInfo.Name)
 
                 Write-Host "| New name: $($fileInfo.Name)"
             }
-
-            $this._fileApiClient.DownloadFile($this._role, $fileInfo, $path)
-            $downloadedFilesCount++
+            try{
+                $this.DownloadFile($this._role, $fileInfo, $path)
+                $downloadedFilesCount++
+                Write-Host "The file $($fileinfo.Name) was downloaded."
+            } catch {
+                $failedFiles += $fileinfo
+                Write-Host "The file $($fileinfo.Name) failed."
+            }
         
-            Write-Host "The file was downloaded."
-
             Start-Sleep -Milliseconds $this._waitTimeBetweenCallsMS
         }
 
         Write-Host "----"
-        Write-Host "All files were downloaded."
-        Write-Host "| Amount: $($downloadedFilesCount)"
+        if( $failedFiles.Length -eq 0) {
+            Write-Host "All files were downloaded."
+        } else {
+            Write-Host "$($downloadedFilesCount) of $($filesInfo.Length) files were downloaded"
+            Write-Host "The following files failed ($($failedFiles.Length)):"
+            foreach( $fileinfo in $failedFiles){
+                Write-Host "$($fileinfo.Name)"
+            }
+        }
         Write-Host "| Path: $($path)"
     }
+
+    [void] DownloadFile([string] $role, [FileInfo] $fileInfo, [string] $downloadPath) {
+        # Download the file in the temp folder
+        # Move it when succesfully downloaded
+
+        $destinationFilename = $fileinfo.Name
+        $tempFilePath = "$($this._tempFolder)\$($destinationFilename)"
+
+        if($fileinfo.Size -le $this._chunkSize) {
+            $result = $this._fileApiClient.DownloadFileInOneGo($this._role, $fileInfo, $tempFilePath)
+        } else {
+            [long] $fileBytesRead = 0
+            [long] $chunkNumber = 0
+            [int] $totalchunks = $fileinfo.Size / $this._chunkSize
+
+            Write-Host "Downloading Headers"
+            $result = $this._fileApiClient.DownloadHeader($this._role, $fileInfo, $this._tempFolder)
+
+            while ($fileBytesRead -lt $fileinfo.Size){
+                Write-Host "Downloading Chunk $($chunkNumber + 1) / $($totalchunks)"
+
+                $bytes = $this.DownloadChunk($this._role, $fileInfo, $this._chunkSize, $chunkNumber)
+                Add-Content -Path "$tempFilePath" -Value $bytes -Encoding Byte 
+
+                $fileBytesRead += $bytes.Length
+                $chunkNumber += 1
+            }
+        }
+        Move-Item -Path $tempFilePath -Destination $downloadPath -Force
+    }
+
+    [byte[]] DownloadChunk([string] $role, [FileInfo] $fileInfo, [int32] $chunkSize, [int]$chunkNumber) {
+        [int]$maxretry = 10
+        [int]$retry = 0
+
+        while(1 -eq 1) {
+            try{
+                Start-Sleep -Milliseconds $this._waitTimeBetweenCallsMS
+
+                $bytes = $this._fileApiClient.DownloadChunk($role, $fileInfo, $chunkSize, $chunkNumber)
+
+                return $bytes
+            }
+            catch{
+                if( $_.Exception.Message -match "(429)"){
+                    $this._waitTimeBetweenCallsMS += 100
+                    Write-Host "Spike arrest detected: Setting requestDelay to $($this._waitTimeBetweenCallsMS) msec."
+                    Write-Host "Waiting 60 seconds for spike arrest to clear"
+                    Start-Sleep -Seconds 60
+                }
+                else {
+                    if($_.Exception.Message -match "(5..)") {
+                        $retry += 1
+                        if( $retry -le $maxretry) {
+                            Write-Host "Downloading chunk $($chunkNumber): retry $($retry)"
+                        } else { 
+                            throw "$($_)"
+                        }
+                    }
+                    else {
+                        throw "$($_)"
+                    }
+                }
+            }
+        }
+
+        throw "UploadFile aborted: should never come here"
+
+    }
+
 }
 
 class FileApiClient {
     [string] $BaseUrl
     
     hidden [PSCustomObject] $_defaultHeaders
+    hidden [string] $_authorization
 
     FileApiClient (
         [string] $baseUrl,
@@ -380,11 +457,15 @@ class FileApiClient {
         $this.BaseUrl = $baseUrl
         $this._defaultHeaders = @{
             "Authorization"    = "Bearer $($token)";
-        }
+            }
+        $this._authorization = "Bearer $($token)";
     }
 
     [PSCustomObject] ListFiles([string] $role, [int] $pageIndex, [int] $pageSize, [string] $filter) {
         $headers = $this._defaultHeaders
+
+        $uri = "$($this.BaseUrl)/files?role=$($role)&pageIndex=$($pageIndex)&pageSize=$($pageSize)&`$filter=$($filter)&`$orderBy=uploadDate asc"
+        Write-Host "Uri: $($uri)"
 
         $response = Invoke-RestMethod `
             -Method "Get" `
@@ -394,7 +475,8 @@ class FileApiClient {
         return $response
     }
 
-    [PSCustomObject] DownloadFile([string] $role, [FileInfo] $fileInfo, [string] $downloadPath) {
+
+    [PSCustomObject] DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadPath) {
         $headers = $this._defaultHeaders
         $headers.Accept = "application/octet-stream"
 
@@ -403,6 +485,43 @@ class FileApiClient {
             -Uri "$($this.BaseUrl)/files/$($fileInfo.Id)?role=$($role)" `
             -Headers $headers `
             -OutFile "$($downloadPath)\$($fileInfo.Name)"
+
+        return $response
+    }
+
+    [PSCustomObject] DownloadHeader([string] $role, [FileInfo] $fileInfo, [string] $downloadPath) {
+        $headers = $this._defaultHeaders
+        $headers.Accept = "application/octet-stream"
+
+        $response = Invoke-RestMethod `
+            -Method "Head" `
+            -Uri "$($this.BaseUrl)/files/$($fileInfo.Id)?role=$($role)" `
+            -Headers $headers `
+            -OutFile "$($downloadPath)\$($fileInfo.Name)"
+
+        return $response
+    }
+
+    [byte[]] DownloadChunk([string] $role, [FileInfo] $fileInfo, [int32] $chunkSize, [int]$chunkNumber) {
+ #       $headers = $this._defaultHeaders
+ #       $headers.Accept = "application/octet-stream"
+
+#        $headers.Range = "bytes=$($rangeStart)-$($rangeEnd)";
+
+        $uri = "$($this.BaseUrl)/files/$($fileInfo.Id)?role=$($role)"
+
+        $request = [System.Net.WebRequest]::Create($uri)
+        $request.Method = "GET"
+        $request.Headers.Add("Authorization", $this._defaultHeaders["Authorization"])
+        $request.Accept = "application/octet-stream"
+
+        # add range header
+        $rangeStart = [long] ($chunkNumber * $chunkSize)
+        $rangeEnd = [long] $rangeStart + $chunkSize - 1
+        $request.AddRange("bytes", $rangeStart, $rangeEnd)
+
+        $reader = New-Object System.IO.BinaryReader($request.GetResponse().GetResponseStream())
+        $response = $reader.ReadBytes($chunksize)
 
         return $response
     }
@@ -486,7 +605,7 @@ class Validator {
 
     static [bool] IsPath([string] $testParameter) {
         try {
-            $result = Test-Path $testParameter -IsValid
+            $result = Test-Path $testParameter
             return $result
         }
         catch {
@@ -496,11 +615,11 @@ class Validator {
 }
 
 class Helper {
-    static [string] ConverToUniqueFileName([string] $fileName) {
+    static [string] ConvertToUniqueFileName([string] $fileName) {
         $fileNameInfo = [Helper]::GetFileNameInfo($fileName)
         $fileNameWithoutExtension = $fileNameInfo.Name
         $fileExtension = $fileNameInfo.Extension
-        $timestamp = Get-Date -Format FileDateTimeUniversal
+        $timestamp = Get-Date -Format FileDateTime
     
         $uniqueFileName = "$($fileNameWithoutExtension)_$($timestamp)$($fileExtension)"
         return $uniqueFileName
@@ -583,7 +702,9 @@ class ConfigurationSectionServices {
 class ConfigurationSectionDownload {
     [string] $Role
     [string] $Path
+    [string] $TempFolder
     [bool] $EnsureUniqueNames
+    [long] $ChunkSize
     [string] $Filter
 }
 
