@@ -6,14 +6,14 @@ Param(
     [Alias("ConfigPath")]
     [Parameter(
         Mandatory = $false,
-        HelpMessage = 'Full filePath of the configuration (e.g. C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\upload\config.xml). Default value: set in the code.'
+        HelpMessage = 'Full filePath of the configuration (e.g. C:\Visma\File API\Ftaas.Examples\powershell\upload\config.xml). Default value: set in the code.'
     )]
     [string] $_configPath,
 
     [Alias("RenewCredentials")]
     [Parameter(
         Mandatory = $false,
-        HelpMessage = 'Boolean. $true if you want to renew your credentials. $false otherwise'
+        HelpMessage = 'Boolean. $true if you want to renew your credentials. $false otherwise.'
     )]
     [bool] $_renewCredentials = $false
 )
@@ -25,29 +25,40 @@ if (-not $_configPath) {
     $_configPath = "$($PSScriptRoot)\config.xml"
 }
 
-Write-Host "========================================================="
-Write-Host "File API example: Upload files from a directory."
-Write-Host "                  Supports files > 100Mb"
-Write-Host "========================================================="
-
-Write-Host "(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')"
-
-#region Configuration
-
-[ConfigurationManager] $configurationManager = [ConfigurationManager]::new()
+#region Log configuration
 
 try {
-    $config = $configurationManager.Get($_configPath)
+    $logConfig = [ConfigurationManager]::GetLogConfiguration($_configPath)
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.")
+    [Helper]::EndProgramWithError($_, "Failure retrieving the logger configuration. Tip: see the README.MD to check the format of the parameters.", $null)
 }
 
-#endregion Configuration
+[Logger] $logger = [Logger]::new($logConfig.Enabled, $logConfig.Path)
+
+#endregion Log configuration
+
+$logger.LogRaw("")
+$logger.LogInformation("=============================================================")
+$logger.LogInformation("File API integration example: Upload files from a directory.")
+$logger.LogInformation("=============================================================")
+$logger.LogInformation("(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')")
+$logger.LogInformation("PowerShell version: $($global:PSVersionTable.PSVersion)")
+
+#region Rest of the configuration
+
+try {
+    $config = [ConfigurationManager]::GetConfiguration($_configPath)
+}
+catch {
+    [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.", $logger)
+}
+
+#endregion Rest of the configuration
 
 #region Retrieve/Create credentials
 
-$credentialsManager = [CredentialsManager]::new($config.Credentials.Path)
+$credentialsManager = [CredentialsManager]::new($logger, $config.Credentials.Path)
 $credentialsService = [CredentialsService]::new($credentialsManager, $config.Credentials.TenantId)
 
 try {
@@ -59,7 +70,7 @@ try {
     }
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure retrieving the credentials.")
+    [Helper]::EndProgramWithError($_, "Failure retrieving the credentials.", $logger)
 }
 
 #endregion Retrieve/Create credentials
@@ -67,46 +78,32 @@ catch {
 #region Retrieve authentication token
 
 $authenticationApiClient = [AuthenticationApiClient]::new($config.Services.AuthenticationTokenApiBaseUrl)
-$authenticationApiService = [AuthenticationApiService]::new($authenticationApiClient)
+$authenticationApiService = [AuthenticationApiService]::new($logger, $authenticationApiClient)
 
 try {
     $token = $authenticationApiService.NewToken($credentials.ClientId, $credentials.ClientSecret, $credentials.TenantId)
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure retrieving the authentication token.")
+    [Helper]::EndProgramWithError($_, "Failure retrieving the authentication token.", $logger)
 }
 
 #endregion Retrieve authentication token
 
+#region Upload directory contents
+
 $fileApiClient = [FileApiClient]::new($config.Services.FileApiBaseUrl, $token)
-$fileApiService = [FileApiService]::new($fileApiClient, $config.Upload.BusinessTypeId, $config.Upload.ChunkSize)
+$fileApiService = [FileApiService]::new($logger, $fileApiClient, $config.Upload.BusinessTypeId, $config.Upload.ChunkSize)
 
-#region Upload Directory contents
-
-Get-ChildItem -Path $config.Upload.Path -Filter $config.Upload.Filter | ForEach-Object -Process {
-
-    $filenameToUpload = $_.FullName
-
-    try {
-        $fileApiService.UploadFile($filenameToUpload)
-    }
-    catch {
-        [Helper]::EndProgramWithError($_, "Failure uploading file $($filenameToUpload).")
-    }
-
-    try {
-        $archivedFile =  [Helper]::ArchiveFile($config.Upload.ArchivePath, $_.FullName)
-    }
-    catch {
-        [Helper]::EndProgramWithError($_, "Failure archiving file to $($archivedFile).")
-    }
+try {
+    $fileApiService.UploadAndArchiveFiles($config.Upload.Path, $config.Upload.Filter, $config.Upload.ArchivePath)
+}
+catch {
+    [Helper]::EndProgramWithError($_, "Failure uploading the files.", $logger)
 }
 
+#endregion Upload directory contents
 
-
-#endregion Upload Directory contents
-
-[Helper]::EndProgram()
+[Helper]::EndProgram($logger)
 
 # -------- END OF THE PROGRAM --------
 # Below there are classes and models to help the readability of the program
@@ -114,10 +111,41 @@ Get-ChildItem -Path $config.Upload.Path -Filter $config.Upload.Filter | ForEach-
 #region Helper classes
 
 class ConfigurationManager {
-    [Configuration] Get($configPath) {
-        Write-Host "----"
-        Write-Host "Retrieving the configuration."
-    
+    static [ConfigurationSectionLogs] GetLogConfiguration($configPath) {
+        if (-not (Test-Path $configPath -PathType Leaf)) {
+            throw "Configuration not found.`r`n| Path: $($configPath)"
+        }
+
+        $configDocument = [xml](Get-Content $configPath)
+        $config = $configDocument.Configuration
+
+        $enableLogs = $config.Logs.Enabled
+        $logsPath = $config.Logs.Path
+
+        $missingConfiguration = @()
+        if ([string]::IsNullOrEmpty($enableLogs)) { $missingConfiguration += "Logs.Enabled" }
+        if ([string]::IsNullOrEmpty($logsPath)) { $missingConfiguration += "Logs.Path" }
+
+        if ($missingConfiguration.Count -gt 0) {
+            throw "Missing parameters: $($missingConfiguration -Join ", ")"
+        }
+
+        $wrongConfiguration = @()
+        if (-not [Validator]::IsBool($enableLogs)) { $wrongConfiguration += "Logs.Enabled" }
+        if (-not [Validator]::IsPath($logsPath)) { $wrongConfiguration += "Logs.Path" }
+
+        if ($wrongConfiguration.Count -gt 0) {
+            throw "Wrong configured parameters: $($wrongConfiguration -Join ", ")"
+        }
+
+        $logConfiguration = [ConfigurationSectionLogs]::new()
+        $logConfiguration.Enabled = [System.Convert]::ToBoolean($enableLogs)
+        $logConfiguration.Path = $logsPath
+
+        return $logConfiguration
+    }
+
+    static [Configuration] GetConfiguration($configPath) {
         if (-not (Test-Path $configPath -PathType Leaf)) {
             throw "Configuration not found.`r`n| Path: $($configPath)"
         }
@@ -129,21 +157,26 @@ class ConfigurationManager {
     
         $fileApiBaseUrl = $config.Services.FileApiBaseUrl
         $authenticationTokenApiBaseUrl = $config.Services.AuthenticationTokenApiBaseUrl
+
         $vismaConnectTenantId = $config.Authentication.VismaConnectTenantId
+
+        $enableLogs = $config.Logs.Enabled
+        $logsPath = $config.Logs.Path
 
         $businessTypeId = $config.Upload.BusinessTypeId
         $contentDirectoryPath = $config.Upload.Path
         $contentFilter = $config.Upload.Filter
+        $archivePath = $config.Upload.ArchivePath
         $chunkSize = [long] $config.Upload.ChunkSize 
         $chunkSizeLimit = [long] 100
-
-        $archivePath = $config.Upload.ArchivePath
     
         $missingConfiguration = @()
         if ([string]::IsNullOrEmpty($credentialsPath)) { $missingConfiguration += "Credentials.Path" }
         if ([string]::IsNullOrEmpty($fileApiBaseUrl)) { $missingConfiguration += "Services.FileApiBaseUrl" }
         if ([string]::IsNullOrEmpty($authenticationTokenApiBaseUrl)) { $missingConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
         if ([string]::IsNullOrEmpty($vismaConnectTenantId)) { $missingConfiguration += "Authentication.VismaConnectTenantId" }
+        if ([string]::IsNullOrEmpty($enableLogs)) { $missingConfiguration += "Logs.Enabled" }
+        if ([string]::IsNullOrEmpty($logsPath)) { $missingConfiguration += "Logs.Path" }
         if ([string]::IsNullOrEmpty($businessTypeId)) { $missingConfiguration += "Upload.BusinessTypeId" }
         if ([string]::IsNullOrEmpty($contentDirectoryPath)) { $missingConfiguration += "Upload.Path" }
         if ([string]::IsNullOrEmpty($contentFilter)) { $missingConfiguration += "Upload.Filter" }
@@ -158,10 +191,12 @@ class ConfigurationManager {
         if (-not [Validator]::IsPath($credentialsPath)) { $wrongConfiguration += "Credentials.Path" }
         if (-not [Validator]::IsUri($fileApiBaseUrl)) { $wrongConfiguration += "Services.FileApiBaseUrl" }
         if (-not [Validator]::IsUri($authenticationTokenApiBaseUrl)) { $wrongConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
+        if (-not [Validator]::IsBool($enableLogs)) { $wrongConfiguration += "Logs.Enabled" }
+        if (-not [Validator]::IsPath($logsPath)) { $wrongConfiguration += "Logs.Path" }
         if (-not [Validator]::IsPath($contentDirectoryPath)) { $wrongConfiguration += "Upload.Path" }
         if (-not [Validator]::IsPath($archivePath)) { $wrongConfiguration += "Upload.ArchivePath" }
-        if($chunkSize -gt $chunkSizeLimit) { $wrongConfiguration += "Chunk size ($($chunkSize)) cannot be bigger than $($chunkSizeLimit) bytes."}
-        if($chunkSize -lt 1){$wrongConfiguration += "Chunk size ($($chunkSize)) cannot be smaller than 1 (Mbyte)."}
+        if ($chunkSize -gt $chunkSizeLimit) { $wrongConfiguration += "Chunk size ($($chunkSize)) cannot be bigger than $($chunkSizeLimit) bytes." }
+        if ($chunkSize -lt 1) { $wrongConfiguration += "Chunk size ($($chunkSize)) cannot be smaller than 1 (Mbyte)." }
 
 
         if ($wrongConfiguration.Count -gt 0) {
@@ -170,16 +205,16 @@ class ConfigurationManager {
 
         $configuration = [Configuration]::new()
         $configuration.Credentials.Path = $credentialsPath
-        $configuration.Credentials.TenantId = $vismaConnectTenantId
         $configuration.Services.FileApiBaseUrl = $fileApiBaseUrl
         $configuration.Services.AuthenticationTokenApiBaseUrl = $authenticationTokenApiBaseUrl
+        $configuration.Credentials.TenantId = $vismaConnectTenantId
+        $configuration.Logs.Enabled = [System.Convert]::ToBoolean($enableLogs)
+        $configuration.Logs.Path = $logsPath
         $configuration.Upload.BusinessTypeId = $businessTypeId
         $configuration.Upload.Path = $contentDirectoryPath
         $configuration.Upload.Filter = $contentFilter
         $configuration.Upload.ArchivePath = $archivePath
-        $configuration.Upload.ChunkSize = $chunkSize * 1024 * 1024 #convert to bytes
-
-        Write-Host "Configuration retrieved."
+        $configuration.Upload.ChunkSize = $chunkSize * 1024 * 1024 # convert to bytes
 
         return $configuration
     }
@@ -217,46 +252,48 @@ class CredentialsService {
 }
 
 class CredentialsManager {
+    hidden [Logger] $_logger
     hidden [string] $_credentialsPath
 
-    CredentialsManager([string] $storagePath) {
+    CredentialsManager([Logger] $logger, [string] $storagePath) {
+        $this._logger = $logger
         $this._credentialsPath = $storagePath
     }
 
     [void] CreateNew() {
         $storagePath = Split-Path $this._credentialsPath
         
-        Write-Host "----"
-        Write-Host "Saving your credentials."
-        Write-Host "| Path: $($this._credentialsPath)"
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("Saving your credentials.")
+        $this._logger.LogInformation("| Path: $($this._credentialsPath)")
 
         if (-not (Test-Path -Path $storagePath -PathType Container)) {
-            Write-Host "----"
-            Write-Host "Storage credential filePath doesn't exist. Creating it."
-            Write-Host "| Path: $($storagePath)"
+            $this._logger.LogInformation("----")
+            $this._logger.LogInformation("Storage credential filePath doesn't exist. Creating it.")
+            $this._logger.LogInformation("| Path: $($storagePath)")
             
             New-Item -ItemType Directory -Force -Path $storagePath
         }
 
-        Write-Host "Enter your credentials."
+        $this._logger.LogInformation("Enter your credentials.")
         $clientId = Read-Host -Prompt '| Client ID'
         $clientSecret = Read-Host -Prompt '| Client secret' -AsSecureString
 
         [PSCredential]::new($clientId, $clientSecret) | Export-CliXml -Path $this._credentialsPath
 
-        Write-Host "----"
-        Write-Host "Credentials saved."
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("Credentials saved.")
     }
 
     [Credentials] Retrieve() {
-        Write-Host "----"
-        Write-Host "Retrieving your credentials."
-        Write-Host "| Path: $($this._credentialsPath)"
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("Retrieving your credentials.")
+        $this._logger.LogInformation("| Path: $($this._credentialsPath)")
 
         if (-not (Test-Path -Path $this._credentialsPath -PathType Leaf)) {
-            Write-Host "----"
-            Write-Host "Credentials not found."
-            Write-Host "| Path: $($this._credentialsPath)"
+            $this._logger.LogInformation("----")
+            $this._logger.LogInformation("Credentials not found.")
+            $this._logger.LogInformation("| Path: $($this._credentialsPath)")
             
             return $null
         }
@@ -267,13 +304,14 @@ class CredentialsManager {
         $credentials.ClientId = $credentialsStorage.GetNetworkCredential().UserName
         $credentials.ClientSecret = $credentialsStorage.GetNetworkCredential().Password
 
-        Write-Host "Credentials retrieved."
+        $this._logger.LogInformation("Credentials retrieved.")
 
         return $credentials
     }
 }
 
 class FileApiService {
+    hidden [Logger] $_logger
     hidden [FileApiClient] $_fileApiClient
     hidden [long] $_fileSize
     hidden [long] $_fileBytesRead
@@ -283,10 +321,12 @@ class FileApiService {
     hidden [int] $_uploadDelay
 
     FileApiService(
+        [Logger] $logger,
         [FileApiClient] $fileApiClient,
         [string] $businessTypeId,
         [long] $chunkSize
     ) {
+        $this._logger = $logger
         $this._fileApiClient = $fileApiClient
         $this._boundary = "file_info"
         $this._businessTypeId = $businessTypeId
@@ -294,51 +334,81 @@ class FileApiService {
         $this._uploadDelay = 0
     }
 
-    [void] UploadFile($filenameToUpload){
-        Write-Host "----"
-        Write-Host "Uploading the file."
-        Write-Host "| File: $($(Split-Path -Path $filenameToUpload -Leaf))"
-        Write-Host "| Business type: $($this._businessTypeId)"
+    [void] UploadAndArchiveFiles([string] $uploadPath, [string] $mask, [string] $archivePath) {
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("Uploading files:")
+        $this._logger.LogInformation("| Path: $($uploadPath)")
+        $this._logger.LogInformation("| Mask: $($mask)")
+    
+        if (-not (Test-Path -Path $uploadPath -PathType Container)) {
+            throw "Directory <$($uploadPath)> doesn't exist."
+        }
+    
+        $filesToUploadInfo = Get-ChildItem -Path $uploadPath -Filter $mask
+
+        $this._logger.LogInformation("$($filesToUploadInfo.Length) files found.")
+
+        $uploadedFilesCount = 0
+        foreach ($fullFilenameToUpload in $filesToUploadInfo.FullName) {
+            $this.UploadFile($fullFilenameToUpload)
+            [Helper]::ArchiveFile($archivePath, $fullFilenameToUpload, $this._logger)
+
+            $uploadedFilesCount++
+        }
+    
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("All files were uploaded.")
+        $this._logger.LogInformation("| Amount: $($uploadedFilesCount)")
+    }
+
+    hidden [void] UploadFile($filenameToUpload) {
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("Uploading the file:")
+        $this._logger.LogInformation("| File: $($(Split-Path -Path $filenameToUpload -Leaf))")
+        $this._logger.LogInformation("| Business type: $($this._businessTypeId)")
+
+        $this._logger.LogInformation("Uploading chunk #1.")
 
         $result = $this.UploadFirstRequest($filenameToUpload)
         $fileToken = $result.FileToken
         $chunkNumber = 1
-        While( -not $result.Eof ) {
-            Write-Host "Uploading Chunk #$($chunkNumber + 1)."
+        While (-not $result.Eof) {
+            $this._logger.LogInformation("Uploading chunk #$($chunkNumber + 1).")
+
             $result = $this.UploadChunkRequest($fileToken, $filenameToUpload, $chunkNumber)
-            $chunkNumber += 1
+            $chunkNumber++
         }
-        Write-Host "File $($(Split-Path -Path $filenameToUpload -Leaf)) uploaded."
+
+        $this._logger.LogInformation("The file was uploaded.")
     }
 
-    [PSCustomObject] UploadFirstRequest([string] $filenameToUpload){
+    hidden [PSCustomObject] UploadFirstRequest([string] $filenameToUpload) {
         $this._fileSize = (Get-Item $filenameToUpload).Length
         $this._fileBytesRead = 0
         $filenameOnly = Split-Path -Path $filenameToUpload -Leaf
+
         $chunkNumber = 0
         $result = $this.CreateChunk($filenameToUpload, $this._chunkSize, $chunkNumber)
-        $FirstRequestData = $this.CreateFirstRequestToUpload($filenameOnly, $result.ChunkPath)
-        $response = $this.UploadFile($FirstRequestData, $filenameOnly, "multipart/related;boundary=$($this._boundary)", "", $chunkNumber, $result.Eof)
-        $fileToken =   $response.uploadToken
+        $firstRequestData = $this.CreateFirstChunkRequest($filenameOnly, $result.ChunkPath)
+        $response = $this.UploadAndRemoveChunk($firstRequestData, $filenameOnly, "multipart/related;boundary=$($this._boundary)", "", $chunkNumber, $result.Eof)
+        $fileToken = $response.uploadToken
         
         return [PSCustomObject]@{
             FileToken = $fileToken
-            Eof = $result.Eof
-            }
+            Eof       = $result.Eof
+        }
     }
 
-    [PSCustomObject] UploadChunkRequest([string] $fileToken, [string] $filenameToUpload, [long] $chunkNumber){
+    hidden [PSCustomObject] UploadChunkRequest([string] $fileToken, [string] $filenameToUpload, [long] $chunkNumber) {
         $result = $this.CreateChunk($filenameToUpload, $this._chunkSize, $chunkNumber)
-        $response = $this.UploadFile($result.ChunkPath, $(Split-Path -Path $filenameToUpload -Leaf), "application/octet-stream", $fileToken, $chunkNumber, $result.Eof)
+        $this.UploadAndRemoveChunk($result.ChunkPath, $(Split-Path -Path $filenameToUpload -Leaf), "application/octet-stream", $fileToken, $chunkNumber, $result.Eof)
 
         return [PSCustomObject]@{
             Eof = $result.Eof
-            }
+        }
     }
 
-    [string] CreateFirstRequestToUpload([string] $filename, [string] $chunkPath) {
-        Write-Host "----"
-        Write-Host "Creating first request with the file $($filename) to upload."
+    hidden [string] CreateFirstChunkRequest([string] $filename, [string] $chunkPath) {
         $headerFilePath = ""
         $footerFilePath = ""
         try {
@@ -362,7 +432,7 @@ class FileApiService {
             New-Item -Path $folderPath -Name $footerFilename -Value $footerContent
 
             cmd /c copy /b $headerFilePath + $chunkPath + $footerFilePath $createdFilePath
-            Write-Host "File created."
+
             return $createdFilePath
         }
         finally {
@@ -378,36 +448,41 @@ class FileApiService {
         }
     }
 
-    [PSCustomObject] CreateChunk([string] $contentFilePath, [long] $chunkSize, [long] $chunkNumber){
+    hidden [PSCustomObject] CreateChunk([string] $contentFilePath, [long] $chunkSize, [long] $chunkNumber) {
         $folderPath = $(Split-Path -Path $contentFilePath)
-        $contentFilename = $(Split-Path -Path $contentFilePath -Leaf)
         $createdChunkPath = "$($folderPath)\$([Helper]::ConvertToUniqueFilename("Chunk_$($chunkNumber).bin"))"
         [byte[]]$bytes = new-object Byte[] $chunkSize
         $fileStream = New-Object System.IO.FileStream($contentFilePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read)
         $binaryReader = New-Object System.IO.BinaryReader( $fileStream)
-        $pos = $binaryReader.BaseStream.Seek($chunkNumber * $chunkSize, [System.IO.SeekOrigin]::Begin)
+        $binaryReader.BaseStream.Seek($chunkNumber * $chunkSize, [System.IO.SeekOrigin]::Begin)
         $bytes = $binaryReader.ReadBytes($chunkSize) 
        
         $this._fileBytesRead += $bytes.Length
         [bool] $streamEof = 0
-        if(($bytes.Length -lt $chunkSize) -or ($this._fileBytesRead -ge $this._fileSize)) {
+        if (($bytes.Length -lt $chunkSize) -or ($this._fileBytesRead -ge $this._fileSize)) {
             $streamEof = 1
         }
 
-        $binaryReader.Dispose()  
+        $binaryReader.Dispose()
 
-        Set-Content -Path $createdChunkPath -Value $bytes -Encoding Byte
+        # The way of encoding the bytes changed in the version 6.0.0. See the following link for more information:
+        # https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/set-content?view=powershell-7.3#parameters
+        if ($global:PSVersionTable.PSVersion -ge "6.0.0") {
+            Set-Content -Path $createdChunkPath -Value $bytes -AsByteStream
+        }
+        else {
+            Set-Content -Path $createdChunkPath -Value $bytes -Encoding Byte
+        }
 
         return [PSCustomObject]@{
             ChunkPath = $createdChunkPath
-            Eof = $streamEof
-            }
+            Eof       = $streamEof
+        }
     }
 
-    [PSCustomObject] UploadFile([string] $filePath, [string] $originalFilename, [string] $contentType, [string] $token, [long] $chunkNumber, [bool] $close) {
-    
-        while(1 -eq 1) {
-            try{
+    hidden [PSCustomObject] UploadAndRemoveChunk([string] $filePath, [string] $originalFilename, [string] $contentType, [string] $token, [long] $chunkNumber, [bool] $close) {
+        while ($true) {
+            try {
                 Start-Sleep -Milliseconds $this._uploadDelay
 
                 $result = $this._fileApiClient.UploadFile($filePath, $contentType, $token, $chunkNumber, $close )
@@ -418,21 +493,25 @@ class FileApiService {
 
                 return $result
             }
-            catch{
-                if( $_.Exception.Message.Contains("(429)")){
+            catch {
+                if ($_.Exception.Message.Contains("(429)")) {
                     $this._uploadDelay += 100
-                    Write-Host "Spike arrest detected: Setting uploadDelay to $($this._uploadDelay) msec."
-                    Write-Host "Waiting 60 seconds for spike arrest to clear"
-                    Start-Sleep -Seconds 60
+
+                    $waitSeconds = 60
+
+                    $this._logger.LogInformation("Spike arrest detected: Setting uploadDelay to $($this._uploadDelay) ms.")
+                    $this._logger.LogInformation("Waiting $($waitSeconds) seconds for spike arrest to clear")
+
+                    Start-Sleep -Seconds $waitSeconds
                 }
                 else {
-                    throw "$($_)"
+                    throw $_
                 }
             }
         }
 
         throw "UploadFile aborted: should never come here"
-   }
+    }
 }
 
 class FileApiClient {
@@ -452,59 +531,61 @@ class FileApiClient {
 
     [PSCustomObject] UploadFile([string] $bodyPath, [string] $contentType, [string] $token, [long] $chunkNumber, [bool] $close) {
         $headers = $this._defaultHeaders
-        if(-not [string]::IsNullOrEmpty($contentType)){
+        if (-not [string]::IsNullOrEmpty($contentType)) {
             $headers["Content-Type"] = $contentType
         }
         $uri = "$($this.BaseUrl)/files"
-        if(($chunkNumber -eq 0) -and $close) {
+        if (($chunkNumber -eq 0) -and $close) {
             $uri += "?uploadType=multipart"
         }
         else {
             $uri += "?uploadType=resumable"
         }
-        if(-not [string]::IsNullOrEmpty($token)){
+        if (-not [string]::IsNullOrEmpty($token)) {
             $uri += "&uploadToken=$($token)"
         }
-        if($chunkNumber -ne 0){
-         $uri += "&position=$($chunkNumber)"
+        if ($chunkNumber -ne 0) {
+            $uri += "&position=$($chunkNumber)"
         }
-        if($close -and ($chunkNumber -gt 0)) {
+        if ($close -and ($chunkNumber -gt 0)) {
             $uri += "&close=true"
         }
-        if($chunkNumber -eq 0){
+        if ($chunkNumber -eq 0) {
             $response = Invoke-RestMethod `
                 -Method "Post" `
                 -Uri     $uri `
                 -Headers $headers `
                 -InFile "$($bodyPath)"
-            }
-            else {
+        }
+        else {
             $response = Invoke-RestMethod `
                 -Method "Put" `
                 -Uri     $uri `
                 -Headers $headers `
                 -InFile "$($bodyPath)"
-            }
+        }
 
         return $response
     }
 }
 
 class AuthenticationApiService {
+    hidden [Logger] $_logger
     hidden [AuthenticationApiClient] $_authenticationApiClient
 
-    AuthenticationApiService([AuthenticationApiClient] $authenticationApiClient) {
+    AuthenticationApiService([Logger] $logger, [AuthenticationApiClient] $authenticationApiClient) {
+        $this._logger = $logger
         $this._authenticationApiClient = $authenticationApiClient
     }
 
     [string] NewToken([string] $clientId, [string] $clientSecret, [string] $tenantId) {
-        Write-Host "----"
-        Write-Host "Retrieving the authentication token."
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("Retrieving the authentication token.")
 
         $response = $this._authenticationApiClient.NewToken($clientId, $clientSecret, $tenantId)
         $token = $response.access_token
 
-        Write-Host "Authentication token retrieved."
+        $this._logger.LogInformation("Authentication token retrieved.")
 
         return $token
     }
@@ -577,29 +658,91 @@ class Validator {
     }
 }
 
+class Logger {
+    hidden [bool] $_storeLogs
+    hidden [string] $_logPath
+
+    Logger([bool] $storeLogs, [string] $logsDirectory) {
+        $this._storeLogs = $storeLogs
+
+        if ($this._storeLogs) {
+            $this._logPath = Join-Path $logsDirectory "upload log - $(Get-Date -Format "yyyy-MM-dd").txt"
+
+            if (-not (Test-Path -Path $logsDirectory -PathType Container)) {
+                New-Item -ItemType Directory -Path $logsDirectory -Force
+            }
+        }
+    }
+
+    [void] LogRaw([string] $text) {
+        Write-Host $text
+        if ($this._storeLogs) {
+            $text | Out-File $this._logPath -Encoding utf8 -Append -Force
+        }
+    }
+
+    [void] LogInformation([string] $text) {
+        $text = "$(Get-Date -Format "yy/MM/dd HH:mm:ss") [Information] $($text)"
+
+        Write-Host $text
+        if ($this._storeLogs) {
+            $text | Out-File $this._logPath -Encoding utf8 -Append -Force
+        }
+    }
+
+    [void] LogError([string] $text) {
+        $text = "$(Get-Date -Format "yy/MM/dd HH:mm:ss") [Error] $($text)"
+
+        Write-Host $text -ForegroundColor "Red"
+        if ($this._storeLogs) {
+            $text | Out-File $this._logPath -Encoding utf8 -Append -Force
+        }
+    }
+}
+
 class Helper {
-    static [string] ArchiveFile([string] $archivePath, [string] $filename) {
+    static [void] ArchiveFile([string] $archivePath, [string] $filename, [Logger] $logger) {
+        if (-not $logger) {
+            $logger = [Logger]::new($false, "")
+        }
+
         $filenameInfo = [Helper]::GetFilenameInfo($filename)
-        $uniqueArchiveFilename = [Helper]::ConvertToUniqueFilename($filenameInfo.FullName)
-        $archivePath = Join-Path $($archivePath) $($uniqueArchiveFilename)
-        try { 
-            Move-Item $filename -Destination $archivePath
-            Write-Host "File archived to ($($archivePath))."
+        $archiveFilename = [Helper]::ConvertToUniqueFilename($filenameInfo.FullName)
+        $archiveFilePath = Join-Path $archivePath $archiveFilename
+
+        $logger.logInformation("----")
+        $logger.LogInformation("Archiving file:")
+        $logger.LogInformation("| Name: $($filenameInfo.Name)")
+        $logger.LogInformation("| Destination path: $($archiveFilePath)")
+
+        if (-not (Test-Path -Path $archivePath -PathType Container)) {
+            $logger.logInformation("----")
+            $logger.LogInformation("Archive path doesn't exist. Creating it.")
+            $logger.LogInformation("| Path: $($archivePath)")
+
+            New-Item -ItemType Directory -Force -Path $archivePath | Out-Null
+
+            $logger.LogInformation("The archive path was created.")
+        }
+
+        try {
+            Move-Item $filename -Destination $archiveFilePath
+            $logger.logInformation("The file was archived.")
         }
         catch {
-            Write-Host "File NOT archived."
+            $logger.LogError("The file was not archived.")
             throw $_
         }
-        return $archivePath
     }
 
     static [string] ConvertToUniqueFilename([string] $filename) {
         $filenameInfo = [Helper]::GetFilenameInfo($filename)
-        $filePath = $filenameInfo.Path
         $filenameWithoutExtension = $filenameInfo.Name
         $fileExtension = $filenameInfo.Extension
-        $timestamp = Get-Date -Format "yyyyMMdd_HHmmss_fff"
-        if([string]::IsNullOrEmpty($filepath)){
+        $timestamp = Get-Date -Format "yyyyMMddTHHmmssffffZ"
+        
+        $filePath = $filenameInfo.Path
+        if ([string]::IsNullOrEmpty($filepath)) {
             $uniqueFilename = "$($filenameWithoutExtension)_$($timestamp)$($fileExtension)"
         }
         else {
@@ -628,7 +771,7 @@ class Helper {
         }
 
         $splitFilename = $filenameInfo.FullName -split "\."
-        if($splitFilename.Length -gt 1) {
+        if ($splitFilename.Length -gt 1) {
             $filenameInfo.Name = $splitFilename[0]
             $filenameInfo.Extension = ".$($splitFilename[-1])"
         }
@@ -636,12 +779,16 @@ class Helper {
         return $filenameInfo
     }
 
-    static [void] EndProgram() {
-        [Helper]::FinishProgram($false)
+    static [void] EndProgram([Logger] $logger) {
+        [Helper]::FinishProgram($false, $logger)
     }
 
-    static [void] EndProgramWithError([System.Management.Automation.ErrorRecord] $errorRecord, [string] $genericErrorMessage) {
-        Write-Host "ERROR - $($genericErrorMessage)" -ForegroundColor "Red"
+    static [void] EndProgramWithError([System.Management.Automation.ErrorRecord] $errorRecord, [string] $genericErrorMessage, [Logger] $logger) {
+        if (-not $logger) {
+            $logger = [Logger]::new($false, "")
+        }
+        
+        $logger.LogError($genericErrorMessage)
 
         $errorMessage = "Unknown error."
         if ($errorRecord.ErrorDetails.Message) {
@@ -657,15 +804,19 @@ class Helper {
             $errorMessage = $errorRecord.Exception.message
         }
 
-        Write-Host "| Error message: $($errorMessage)" -ForegroundColor "Red"
-        Write-Host "| Error line in the script: $($errorRecord.InvocationInfo.ScriptLineNumber)" -ForegroundColor "Red"
+        $logger.LogError("| Error message: $($errorMessage)")
+        $logger.LogError("| Error line in the script: $($errorRecord.InvocationInfo.ScriptLineNumber)")
 
-        [Helper]::FinishProgram($true)
+        [Helper]::FinishProgram($true, $logger)
     }
 
-    hidden static [void] FinishProgram([bool] $finishWithError) {
-        Write-Host "----"
-        Write-Host "End of the example."
+    hidden static [void] FinishProgram([bool] $finishWithError, [Logger] $logger) {
+        if (-not $logger) {
+            $logger = [Logger]::new($false, "")
+        }
+
+        $logger.LogInformation("----")
+        $logger.LogInformation("End of the example.")
 
         if ($finishWithError) {
             exit 1
@@ -683,6 +834,7 @@ class Helper {
 class Configuration {
     $Credentials = [ConfigurationSectionCredentials]::new()
     $Services = [ConfigurationSectionServices]::new()
+    $Logs = [ConfigurationSectionLogs]::new()
     $Upload = [ConfigurationSectionUpload]::new()
 }
 
@@ -694,6 +846,11 @@ class ConfigurationSectionCredentials {
 class ConfigurationSectionServices {
     [string] $FileApiBaseUrl
     [string] $AuthenticationTokenApiBaseUrl
+}
+
+class ConfigurationSectionLogs {
+    [bool] $Enabled
+    [string] $Path
 }
 
 class ConfigurationSectionUpload {

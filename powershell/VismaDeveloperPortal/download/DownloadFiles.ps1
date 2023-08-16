@@ -6,14 +6,14 @@ Param(
     [Alias("ConfigPath")]
     [Parameter(
         Mandatory = $false,
-        HelpMessage = 'Full path of the configuration (e.g. C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\config.xml). Default value: set in the code.'
+        HelpMessage = 'Full path of the configuration (e.g. C:\Visma\File API\Ftaas.Examples\powershell\download\config.xml). Default value: set in the code.'
     )]
     [string] $_configPath,
 
     [Alias("RenewCredentials")]
     [Parameter(
         Mandatory = $false,
-        HelpMessage = 'Boolean. $true if you want to renew your credentials. $false otherwise'
+        HelpMessage = 'Boolean. $true if you want to renew your credentials. $false otherwise.'
     )]
     [bool] $_renewCredentials = $false
 )
@@ -25,28 +25,55 @@ if (-not $_configPath) {
     $_configPath = "$($PSScriptRoot)\config.xml"
 }
 
-Write-Host "========================================================="
-Write-Host "File API example: Download files specified in a filter."
-Write-Host "========================================================="
-
-Write-Host "(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')"
-
-#region Configuration
-
-[ConfigurationManager] $configurationManager = [ConfigurationManager]::new()
+#region Log configuration
+#try reading <Logs> configuration first so that we are able to log other possible errors in the configuration
 
 try {
-    $config = $configurationManager.Get($_configPath)
+    $logConfig = [ConfigurationManager]::GetLogConfiguration($_configPath)
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.")
+    [Helper]::EndProgramWithError($_, "Failure retrieving the logger configuration. Tip: see the README.MD to check the format of the parameters.", $null)
 }
 
-#endregion Configuration
+[Logger] $logger = [Logger]::new($logConfig.Enabled, $logConfig.Path, $logConfig.MonitorFile, "DOWNLOAD")
+
+#endregion Log configuration
+
+$logger.LogRaw("")
+$logger.LogInformation("==============================================")
+$logger.LogInformation("File API integration example: Download files.")
+$logger.LogInformation("==============================================")
+$logger.LogInformation("(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')")
+$logger.LogInformation("PowerShell version: $($global:PSVersionTable.PSVersion)")
+
+$logger.MonitorInformation("Download script started")
+
+#region Rest of the configuration
+
+try {
+    $config = [ConfigurationManager]::GetConfiguration($_configPath)
+}
+catch {
+    $logger.MonitorError("Failure reading the configuration file")
+    [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.", $logger)
+}
+
+#endregion Rest of the configuration
+
+#region Network Settings
+
+   #pick defaults for proxy;
+   [System.Net.WebRequest]::DefaultWebProxy = [System.Net.WebRequest]::GetSystemWebProxy()
+   [System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+
+   #set TLS1.2 as security Protocol
+   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+#endregion Network Settings
 
 #region Retrieve/Create credentials
 
-$credentialsManager = [CredentialsManager]::new($config.Credentials.Path)
+$credentialsManager = [CredentialsManager]::new($logger, $config.Credentials.Path)
 $credentialsService = [CredentialsService]::new($credentialsManager, $config.Credentials.TenantId)
 
 try {
@@ -58,7 +85,8 @@ try {
     }
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure retrieving the credentials.")
+    $logger.MonitorError("Failure retrieving the credentials")
+    [Helper]::EndProgramWithError($_, "Failure retrieving the credentials.", $logger)
 }
 
 #endregion Retrieve/Create credentials
@@ -66,31 +94,39 @@ catch {
 #region Retrieve authentication token
 
 $authenticationApiClient = [AuthenticationApiClient]::new($config.Services.AuthenticationTokenApiBaseUrl)
-$authenticationApiService = [AuthenticationApiService]::new($authenticationApiClient)
+$authenticationApiService = [AuthenticationApiService]::new($logger, $authenticationApiClient)
 
 try {
     $token = $authenticationApiService.NewToken($credentials.ClientId, $credentials.ClientSecret, $credentials.TenantId)
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure retrieving the authentication token.")
+    $logger.MonitorError("Failure retrieving the authentication token")
+    [Helper]::EndProgramWithError($_, "Failure retrieving the authentication token.", $logger)
 }
 
 #endregion Retrieve authentication token
 
 $fileApiClient = [FileApiClient]::new($config.Services.FileApiBaseUrl, $token)
-$fileApiService = [FileApiService]::new($fileApiClient, $config.Download.TempFolder, $config.Download.Role, 200, $config.Download.ChunkSize)
+$fileApiService = [FileApiService]::new($logger, $fileApiClient, $config.Download.Role, 200, $config.Download.ChunkSize)
 
 #region List files
 
 try {
     $filesInfo = $fileApiService.GetFilesInfo($config.Download.Filter)
+
+    if($filesInfo.Count -gt 0){
+        $logger.MonitorInformation("$($filesInfo.Count) file(s) ready for download with filter : $($config.Download.Filter)" )
+    } else {
+        $logger.MonitorInformation("No files to download with filter : $($config.Download.Filter)")
+    }
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure retrieving the files.")
+    $logger.MonitorError("Failure retrieving the filelist from File Api")
+    [Helper]::EndProgramWithError($_, "Failure retrieving the files.", $logger)
 }
 
 if ($filesInfo.Count -eq 0) {
-    [Helper]::EndProgram()
+    [Helper]::EndProgram($logger)
 }
 
 #endregion List files
@@ -101,12 +137,13 @@ try {
     $fileApiService.DownloadFiles($filesInfo, $config.Download.Path, $config.Download.EnsureUniqueNames)
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure downloading the files.")
+    $logger.MonitorError("Failure downloading file(s) : $($_)")
+    [Helper]::EndProgramWithError($_, "Failure downloading the files.". $logger)
 }
 
 #endregion Download files
 
-[Helper]::EndProgram()
+[Helper]::EndProgram($logger)
 
 # -------- END OF THE PROGRAM --------
 # Below there are classes and models to help the readability of the program
@@ -114,10 +151,7 @@ catch {
 #region Helper classes
 
 class ConfigurationManager {
-    [Configuration] Get($configPath) {
-        Write-Host "----"
-        Write-Host "Retrieving the configuration."
-    
+    static [ConfigurationSectionLogs] GetLogConfiguration($configPath) {
         if (-not (Test-Path $configPath -PathType Leaf)) {
             throw "Configuration not found.`r`n| Path: $($configPath)"
         }
@@ -125,28 +159,74 @@ class ConfigurationManager {
         $configDocument = [xml](Get-Content $configPath)
         $config = $configDocument.Configuration
     
+        $enableLogs = $config.Logs.Enabled
+        $logsPath = $config.Logs.Path
+        $monitorFile = $config.Logs.MonitorFile
+
+        # check for missing Logs configuration options
+        $missingConfiguration = @()
+        if ([string]::IsNullOrEmpty($enableLogs)) { $missingConfiguration += "Logs.Enabled" }
+        if ([string]::IsNullOrEmpty($logsPath)) { $missingConfiguration += "Logs.Path" }
+        if ([string]::IsNullOrEmpty($monitorFile)) { $missingConfiguration += "Logs.MonitorFile" }
+    
+        if ($missingConfiguration.Count -gt 0) {
+            throw "Missing parameters: $($missingConfiguration -Join ", ")"
+        }
+
+        #check for invalid Logs configuration options
+        $wrongConfiguration = @()
+        if (-not [Validator]::IsBool($enableLogs)) { $wrongConfiguration += "Logs.Enabled" }
+        if (-not [Validator]::IsPath($logsPath)) { $wrongConfiguration += "Logs.Path" }
+    
+        if ($wrongConfiguration.Count -gt 0) {
+            throw "Wrong configured parameters: $($wrongConfiguration -Join ", ")"
+        }
+
+        #set configuration parameters
+        $logConfiguration = [ConfigurationSectionLogs]::new()
+        $logConfiguration.Enabled = [System.Convert]::ToBoolean($enableLogs)
+        $logConfiguration.Path = $logsPath
+        $logConfiguration.MonitorFile = $monitorFile
+
+        return $logConfiguration
+    }
+
+    static [Configuration] GetConfiguration($configPath) {
+        if (-not (Test-Path $configPath -PathType Leaf)) {
+            throw "Configuration not found.`r`n| Path: $($configPath)"
+        }
+        
+        #read config.xml
+        $configDocument = [xml](Get-Content $configPath)
+        $config = $configDocument.Configuration
+    
         $credentialsPath = $config.Credentials.Path
     
         $fileApiBaseUrl = $config.Services.FileApiBaseUrl
         $authenticationTokenApiBaseUrl = $config.Services.AuthenticationTokenApiBaseUrl
+        
         $vismaConnectTenantId = $config.Authentication.VismaConnectTenantId
+
+        $enableLogs = $config.Logs.Enabled
+        $logsPath = $config.Logs.Path
 
         $role = $Config.Download.Role
         $downloadPath = $config.Download.Path
-        $tempFolder = $config.Download.TempFolder
         $ensureUniqueNames = $config.Download.EnsureUniqueNames
-        $chunkSize = [long] $config.Download.ChunkSize 
-        $chunkSizeLimit = [long] 100
+        $chunkSize = [int] $config.Download.ChunkSize 
+        $chunkSizeLimit = [int] 100
         $filter = $config.Download.Filter
     
+        #check for missing configuration options
         $missingConfiguration = @()
         if ([string]::IsNullOrEmpty($credentialsPath)) { $missingConfiguration += "Credentials.Path" }
         if ([string]::IsNullOrEmpty($fileApiBaseUrl)) { $missingConfiguration += "Services.FileApiBaseUrl" }
         if ([string]::IsNullOrEmpty($authenticationTokenApiBaseUrl)) { $missingConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
         if ([string]::IsNullOrEmpty($vismaConnectTenantId)) { $missingConfiguration += "Authentication.VismaConnectTenantId" }
+        if ([string]::IsNullOrEmpty($enableLogs)) { $missingConfiguration += "Logs.Enabled" }
+        if ([string]::IsNullOrEmpty($logsPath)) { $missingConfiguration += "Logs.Path" }
         if ([string]::IsNullOrEmpty($role)) { $missingConfiguration += "Download.Role" }
         if ([string]::IsNullOrEmpty($downloadPath)) { $missingConfiguration += "Download.Path" }
-        if ([string]::IsNullOrEmpty($tempFolder)) { $missingConfiguration += "Download.TempFolder" }
         if ([string]::IsNullOrEmpty($ensureUniqueNames)) { $missingConfiguration += "Download.EnsureUniqueNames" }
         if ([string]::IsNullOrEmpty($chunkSize)) { $missingConfiguration += "Download.ChunkSize" }
 
@@ -156,33 +236,35 @@ class ConfigurationManager {
             throw "Missing parameters: $($missingConfiguration -Join ", ")"
         }
     
+        #check for invalid configuration options
         $wrongConfiguration = @()
-        if (-not [Validator]::IsPath($credentialsPath)) { $wrongConfiguration += "Credentials.Path does not exist" }
-        if (-not [Validator]::IsUri($fileApiBaseUrl)) { $wrongConfiguration += "Services.FileApiBaseUrl" }
+        if (-not [Validator]::IsPath($credentialsPath)) { $wrongConfiguration += "Credentials.Path is not a valid path" }
+        if (-not [Validator]::IsUri($fileApiBaseUrl)) { $wrongConfiguration += "Services.FileApiBaseUrl is not a valid Url" }
         if (-not [Validator]::IsUri($authenticationTokenApiBaseUrl)) { $wrongConfiguration += "Services.AuthenticationTokenApiBaseUrl" }
-        if (-not [Validator]::IsPath($downloadPath)) { $wrongConfiguration += "Download.Path does not exist" }
-        if (-not [Validator]::IsPath($tempFolder)) { $wrongConfiguration += "Download.TempFolder does not exist" }
-        if (-not [Validator]::IsBool($ensureUniqueNames)) { $wrongConfiguration += "Download.EnsureUniqueNames" }
-        if($chunkSize -gt $chunkSizeLimit) { $wrongConfiguration += "Chunk size ($($chunkSize)) cannot be bigger than $($chunkSizeLimit) bytes."}
-        if($chunkSize -lt 1){$wrongConfiguration += "Chunk size ($($chunkSize)) cannot be smaller than 1 (Mbyte)."}
+        if (-not [Validator]::IsBool($enableLogs)) { $wrongConfiguration += "Logs.Enabled is not a boolean" }
+        if (-not [Validator]::IsPath($logsPath)) { $wrongConfiguration += "Logs.Path is not a valid path" }
+        if (-not [Validator]::IsPath($downloadPath)) { $wrongConfiguration += "Download.Path is not a valid path" }
+        if (-not [Validator]::IsBool($ensureUniqueNames)) { $wrongConfiguration += "Download.EnsureUniqueNames is not a boolean" }
+        if($chunkSize -gt $chunkSizeLimit) { $wrongConfiguration += "Chunk size ($($chunkSize)) cannot be bigger than $($chunkSizeLimit) MB"}
+        if($chunkSize -lt 1){$wrongConfiguration += "Chunk size ($($chunkSize)) cannot be smaller than 1 (MB)."}
     
         if ($wrongConfiguration.Count -gt 0) {
             throw "Wrong configured parameters: $($wrongConfiguration -Join ", ")"
         }
 
+        #set configuration parameters
         $configuration = [Configuration]::new()
         $configuration.Credentials.Path = $credentialsPath
         $configuration.Credentials.TenantId = $vismaConnectTenantId
         $configuration.Services.FileApiBaseUrl = $fileApiBaseUrl
         $configuration.Services.AuthenticationTokenApiBaseUrl = $authenticationTokenApiBaseUrl
+        $configuration.Logs.Enabled = [System.Convert]::ToBoolean($enableLogs)
+        $configuration.Logs.Path = $logsPath
         $configuration.Download.Role = $role
         $configuration.Download.Path = $downloadPath
-        $configuration.Download.TempFolder = $tempFolder
         $configuration.Download.EnsureUniqueNames = [System.Convert]::ToBoolean($ensureUniqueNames)
         $configuration.Download.ChunkSize = $chunkSize * 1024 * 1024 #convert to bytes
         $configuration.Download.Filter = $filter
-    
-        Write-Host "Configuration retrieved."
 
         return $configuration
     }
@@ -194,6 +276,8 @@ class CredentialsService {
 
     CredentialsService ([CredentialsManager] $manager, [string] $tenantId) {
         $this._credentialsManager = $manager
+
+        #tenantid is VismaConnect Tenantid
         $this._tenantId = $tenantId
     }
 
@@ -220,94 +304,104 @@ class CredentialsService {
 }
 
 class CredentialsManager {
+    hidden [Logger] $_logger
     hidden [string] $_credentialsPath
 
-    CredentialsManager([string] $storagePath) {
+    CredentialsManager([Logger] $logger, [string] $storagePath) {
+        $this._logger = $logger
         $this._credentialsPath = $storagePath
     }
 
     [void] CreateNew() {
         $storagePath = Split-Path $this._credentialsPath
         
-        Write-Host "----"
-        Write-Host "Saving your credentials."
-        Write-Host "| Path: $($this._credentialsPath)"
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("Saving your credentials.")
+        $this._logger.LogInformation("| Path: $($this._credentialsPath)")
 
         if (-not (Test-Path -Path $storagePath -PathType Container)) {
-            Write-Host "----"
-            Write-Host "Storage credential path doesn't exist. Creating it."
-            Write-Host "| Path: $($storagePath)"
+            $this._logger.LogInformation("----")
+            $this._logger.LogInformation("Storage credential path doesn't exist. Creating it.")
+            $this._logger.LogInformation("| Path: $($storagePath)")
             
-            New-Item -ItemType Directory -Force -Path $storagePath
+            New-Item -ItemType Directory -Path $storagePath -Force
         }
 
-        Write-Host "Enter your credentials."
+        #asking credentials via the console
+        $this._logger.LogInformation("Enter your credentials.")
         $clientId = Read-Host -Prompt '| Client ID'
         $clientSecret = Read-Host -Prompt '| Client secret' -AsSecureString
 
+        #save secure credentials xml file
         [PSCredential]::new($clientId, $clientSecret) | Export-CliXml -Path $this._credentialsPath
 
-        Write-Host "----"
-        Write-Host "Credentials saved."
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("Credentials saved.")
     }
 
     [Credentials] Retrieve() {
-        Write-Host "----"
-        Write-Host "Retrieving your credentials."
-        Write-Host "| Path: $($this._credentialsPath)"
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("Retrieving your credentials.")
+        $this._logger.LogInformation("| Path: $($this._credentialsPath)")
 
         if (-not (Test-Path -Path $this._credentialsPath -PathType Leaf)) {
-            Write-Host "----"
-            Write-Host "Credentials not found."
-            Write-Host "| Path: $($this._credentialsPath)"
+            $this._logger.LogInformation("----")
+            $this._logger.LogInformation("Credentials not found.")
+            $this._logger.LogInformation("| Path: $($this._credentialsPath)")
             
             return $null
         }
 
+        #read credentials from secure xml file
         $credentialsStorage = Import-CliXml -Path $this._credentialsPath
 
         $credentials = [Credentials]::new()
         $credentials.ClientId = $credentialsStorage.GetNetworkCredential().UserName
         $credentials.ClientSecret = $credentialsStorage.GetNetworkCredential().Password
 
-        Write-Host "Credentials retrieved."
+        $this._logger.LogInformation("Credentials retrieved.")
 
         return $credentials
     }
 }
 
 class FileApiService {
+    hidden [Logger] $_logger
     hidden [FileApiClient] $_fileApiClient
-    hidden [string] $_tempFolder
     hidden [string] $_role
-    hidden [int] $_waitTimeBetweenCallsMS
+    hidden [string] $_waitTimeBetweenCallsMS
     hidden [long] $_chunkSize
+    hidden [string] $_partial
 
     FileApiService(
+        [Logger] $logger,
         [FileApiClient] $fileApiClient,
-        [string] $tempFolder,
         [string] $role,
         [int] $waitTimeBetweenCallsMS,
         [long] $chunkSize
     ) {
+        $this._logger = $logger
         $this._fileApiClient = $fileApiClient
-        $this._tempFolder = $tempFolder
-        $this._role = $role
-        $this._waitTimeBetweenCallsMS = $waitTimeBetweenCallsMS
+        $this._role = $role # subscriber or provider
+        $this._waitTimeBetweenCallsMS = $waitTimeBetweenCallsMS # delay between requests to avoid spike arrest
         $this._chunkSize = $chunkSize
+        $this._partial = ".partial" # file extension while downloading file
     }
 
+    # get filelist from FileAPI with the specified filter
     [FileInfo[]] GetFilesInfo([string] $filter) {
-        Write-Host "----"
-        Write-Host "Retrieving list of files."
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("Retrieving list of files.")
         if ($filter) {
-            Write-Host "| Filter: $($filter)"
+            $this._logger.LogInformation("| Filter: $($filter)")
         }
 
         $pageIndex = 0
-        $pageSize = 20
+        $pageSize = 21
         $isLastPage = $false
         $filesInfo = @()
+
+        # retrieve (possible) multiple pages
         do {
             $response = $this._fileApiClient.ListFiles($this._role, $pageIndex, $pageSize, $filter)
 
@@ -326,88 +420,171 @@ class FileApiService {
             Start-Sleep -Milliseconds $this._waitTimeBetweenCallsMS
         } while (-not $isLastPage)
 
-        Write-Host "$($filesInfo.Count) files retrieved."
+        $this._logger.LogInformation("$($filesInfo.Count) files retrieved.")
 
         return $filesInfo
     }
 
     [void] DownloadFiles([FileInfo[]] $filesInfo, [string] $path, [bool] $ensureUniqueNames) {
+        if (-not (Test-Path $path -PathType Container)) {
+            $this._logger.LogInformation("----")
+            $this._logger.LogInformation("Download path doesn't exist. Creating it.")
+            $this._logger.LogInformation("| Path: $($path)")
+            
+            New-Item -ItemType Directory -Path $path -Force
+        }
+
         $downloadedFilesCount = 0
-        $failedFiles = @()
+        $failedFiles = @()  # maintain a list of failed files for logging
+
+        # download each file in the list
         foreach ($fileInfo in $filesInfo) {
-            Write-Host "----"
-            Write-Host "Downloading file $($downloadedFilesCount + 1)/$($filesInfo.Count)."
-            Write-Host "| ID  : $($fileInfo.Id)"
-            Write-Host "| Name: $($fileInfo.Name)"
-            Write-Host "| Size: $($fileInfo.Size)"
+            $this._logger.LogInformation("----")
+            $this._logger.LogInformation("Downloading file $($downloadedFilesCount + 1)/$($filesInfo.Count).")
+            $this._logger.LogInformation("| ID  : $($fileInfo.Id)")
+            $this._logger.LogInformation("| Name: $($fileInfo.Name)")
+            $this._logger.LogInformation("| Size: $($fileInfo.Size)")
 
+            # if EnsureUniqueNames is true in config then make sure downloaded file is (made) unique
             if (($ensureUniqueNames -eq $true) -and (Test-Path "$($path)\$($fileInfo.Name)" -PathType Leaf)) {
-                Write-Host "There is already a file with the same name in the download path."
+                $this._logger.LogInformation("There is already a file with the same name in the download path.")
 
-                $fileInfo.Name = [Helper]::ConvertToUniqueFileName($fileInfo.Name)
+                $oldFileName = $fileInfo.Name
+                $fileInfo.Name = [Helper]::ConverToUniqueFileName($fileInfo.Name)
 
-                Write-Host "| New name: $($fileInfo.Name)"
+                $this._logger.LogInformation("| New name: $($fileInfo.Name)")
+                $this._logger.MonitorInformation("File already exists ($($oldFileName)). New download filename $($fileInfo.Name)")
             }
+
             try{
-                $this.DownloadFile($this._role, $fileInfo, $path)
+                $this._logger.MonitorInformation("File $($fileinfo.Name) is downloading.")
+
+                $this.DownloadFile($this._role, $fileInfo, $path, $ensureUniqueNames)
                 $downloadedFilesCount++
-                Write-Host "The file $($fileinfo.Name) was downloaded."
+                
+                $this._logger.LogInformation("The file $($fileinfo.Name) was downloaded successfully.")
+                $this._logger.MonitorInformation("File $($fileinfo.Name) was downloaded successfully.")
             } catch {
                 $failedFiles += $fileinfo
-                Write-Host "The file $($fileinfo.Name) failed."
+                $this._logger.LogError("The file $($fileinfo.Name) failed.")
+                $this._logger.LogError("Error: $($_)")
+                $this._logger.MonitorError("Failed download $($fileinfo.Name) : $($_)")
             }
-        
-            Start-Sleep -Milliseconds $this._waitTimeBetweenCallsMS
         }
 
-        Write-Host "----"
+        $this._logger.LogInformation("----")
+
+        # log summary
         if( $failedFiles.Length -eq 0) {
-            Write-Host "All files were downloaded."
+            $this._logger.LogInformation("All files were downloaded.")
         } else {
-            Write-Host "$($downloadedFilesCount) of $($filesInfo.Length) files were downloaded"
-            Write-Host "The following files failed ($($failedFiles.Length)):"
+            $this._logger.LogInformation("$($downloadedFilesCount) of $($filesInfo.Length) files were downloaded")
+            $this._logger.LogInformation("The following files failed ($($failedFiles.Length)):")
             foreach( $fileinfo in $failedFiles){
-                Write-Host "$($fileinfo.Name)"
+                $this._logger.LogInformation("$($fileinfo.Name)")
+
+                $partialFileName = "$($path)\$($fileinfo.Name)$($this._partial)"
+                if(Test-Path -Path $partialFileName -PathType Leaf) {
+                    Remove-Item -Path $partialFileName -Force
+                }
             }
         }
-        Write-Host "| Path: $($path)"
+        $this._logger.LogInformation("| Path: $($path)")
     }
 
-    [void] DownloadFile([string] $role, [FileInfo] $fileInfo, [string] $downloadPath) {
-        # Download the file in the temp folder
-        # Move it when succesfully downloaded
+    [void] DownloadFile([string] $role, [FileInfo] $fileInfo, [string] $downloadPath, [bool] $ensureUniqueNames) {
+        # Download the file with a .partial extension
+        # Rename it when succesfully downloaded
 
-        $destinationFilename = $fileinfo.Name
-        $tempFilePath = "$($this._tempFolder)\$($destinationFilename)"
+        $destFileName = "$($downloadPath)\$($fileinfo.Name)"
+        $tempFileName = "$($destFileName)$($this._partial)"
 
+        # if the file is smaller than the ChunkSize --> download it in 1 request.
         if($fileinfo.Size -le $this._chunkSize) {
-            $result = $this._fileApiClient.DownloadFileInOneGo($this._role, $fileInfo, $tempFilePath)
+            $result = $this.DownloadFileInOneGo($this._role, $fileInfo, $tempFileName)
         } else {
+            # download the file in multiple chunks
             [long] $fileBytesRead = 0
             [long] $chunkNumber = 0
-            [int] $totalchunks = $fileinfo.Size / $this._chunkSize
+            [int] $totalchunks = [math]::ceiling($fileinfo.Size / $this._chunkSize)
 
-            Write-Host "Downloading Headers"
+            $this._logger.LogInformation("Downloading Headers")
             $result = $this._fileApiClient.DownloadHeader($this._role, $fileInfo, $this._tempFolder)
 
-            while ($fileBytesRead -lt $fileinfo.Size){
-                Write-Host "Downloading Chunk $($chunkNumber + 1) / $($totalchunks)"
+            $filestream = New-Object IO.FileStream $tempFileName ,'Append','Write','Read'
+            try {
+                # download chunks until all bytes are read
+                while ($fileBytesRead -lt $fileinfo.Size){
+                    $this._logger.LogInformation("Downloading Chunk $($chunkNumber + 1) / $($totalchunks)")
 
-                $bytes = $this.DownloadChunk($this._role, $fileInfo, $this._chunkSize, $chunkNumber)
-                Add-Content -Path "$tempFilePath" -Value $bytes -Encoding Byte 
+                    $bytes = $this.DownloadChunk($this._role, $fileInfo, $this._chunkSize, $chunkNumber)
 
-                $fileBytesRead += $bytes.Length
-                $chunkNumber += 1
+                    $filestream.Write($bytes, 0, $bytes.Length)
+
+                    $fileBytesRead += $bytes.Length
+                    $chunkNumber += 1
+                }
+            } catch{
+                throw "$($_)"
+            }
+            finally {
+                $filestream.Close()
             }
         }
-        Move-Item -Path $tempFilePath -Destination $downloadPath -Force
+        # download complete - remove the .partial extension
+        if(($ensureUniqueNames -eq $false) -and (Test-Path "$($destFileName)" -PathType Leaf)) {
+            $this._logger.LogInformation("Overwriting file $($fileinfo.Name) because EnsureUniqueNames in config.xml is 'false'")
+            $this._logger.MonitorInformation("Overwriting file $($fileinfo.Name) because EnsureUniqueNames in config.xml is 'false'")
+        } 
+        Move-Item -Path $tempFileName -Destination $destFileName -Force
+    }
+
+    [PSCustomObject] DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath) {
+        [int]$maxretry = 10
+        [int]$retry = 0
+
+        while(1 -eq 1) {
+            try{
+                Start-Sleep -Milliseconds $this._waitTimeBetweenCallsMS
+
+                $result = $this._fileApiClient.DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath)
+                
+                return $result
+            }
+            catch{
+                # when download fails due to spike arrest
+                # increase delay to try avoid spike arrest for next requests
+                # retry the download
+                if( $_.Exception.Message -match "\(429\)"){
+                    $this._waitTimeBetweenCallsMS += 100
+                    $this._logger.LogInformation("Spike arrest detected: Setting requestDelay to $($this._waitTimeBetweenCallsMS) msec.")
+                    $this._logger.LogInformation("Waiting 60 seconds for spike arrest to clear")
+                    Start-Sleep -Seconds 60
+                }
+                else {
+                    # when download fails due to server error 5xx retry download max $maxretry (10) times
+                    if($_.Exception.Message -match "\(5..\)") {
+                        $retry += 1
+                        if( $retry -le $maxretry) {
+                            $this._logger.LogInformation("Downloading file $($fileInfo.Name): retry $($retry)")
+                        } else { 
+                            throw "$($_)"
+                        }
+                    }
+                    else {
+                        throw "$($_)"
+                    }
+                }
+            }
+        }
+        throw "DownloadFileInOneGo aborted: should never come here"
     }
 
     [byte[]] DownloadChunk([string] $role, [FileInfo] $fileInfo, [int32] $chunkSize, [int]$chunkNumber) {
         [int]$maxretry = 10
         [int]$retry = 0
 
-        while(1 -eq 1) {
+        while($true) {
             try{
                 Start-Sleep -Milliseconds $this._waitTimeBetweenCallsMS
 
@@ -416,17 +593,25 @@ class FileApiService {
                 return $bytes
             }
             catch{
-                if( $_.Exception.Message -match "(429)"){
+                # when download fails due to spike arrest
+                # increase delay to try avoid spike arrest for next requests
+                # retry the chunk download
+                if( $_.Exception.Message -match "\(429\)"){
                     $this._waitTimeBetweenCallsMS += 100
-                    Write-Host "Spike arrest detected: Setting requestDelay to $($this._waitTimeBetweenCallsMS) msec."
-                    Write-Host "Waiting 60 seconds for spike arrest to clear"
-                    Start-Sleep -Seconds 60
+
+                    # wait 60 secs for spike arrest to clear
+                    $waitSeconds = 60
+
+                    $this._logger.LogInformation("Spike arrest detected: Setting requestDelay to $($this._waitTimeBetweenCallsMS) msec.")
+                    $this._logger.LogInformation("Waiting $($waitSeconds) seconds for spike arrest to clear")
+                    Start-Sleep -Seconds $waitSeconds
                 }
                 else {
-                    if($_.Exception.Message -match "(5..)") {
+                    # when download fails due to server error 5xx retry download max $maxretry (10) times
+                    if($_.Exception.Message -match "\(5..\)") {
                         $retry += 1
                         if( $retry -le $maxretry) {
-                            Write-Host "Downloading chunk $($chunkNumber): retry $($retry)"
+                            $this._logger.LogInformation("Downloading chunk $($chunkNumber): retry $($retry)")
                         } else { 
                             throw "$($_)"
                         }
@@ -438,17 +623,14 @@ class FileApiService {
             }
         }
 
-        throw "UploadFile aborted: should never come here"
-
+        throw "DownloadChunk aborted: should never come here"
     }
-
 }
 
 class FileApiClient {
     [string] $BaseUrl
     
     hidden [PSCustomObject] $_defaultHeaders
-    hidden [string] $_authorization
 
     FileApiClient (
         [string] $baseUrl,
@@ -456,16 +638,13 @@ class FileApiClient {
     ) {
         $this.BaseUrl = $baseUrl
         $this._defaultHeaders = @{
-            "Authorization"    = "Bearer $($token)";
-            }
-        $this._authorization = "Bearer $($token)";
+            "Authorization" = "Bearer $($token)";
+        }
     }
 
+    # list the available files in the File Api that conform to the filter
     [PSCustomObject] ListFiles([string] $role, [int] $pageIndex, [int] $pageSize, [string] $filter) {
         $headers = $this._defaultHeaders
-
-        $uri = "$($this.BaseUrl)/files?role=$($role)&pageIndex=$($pageIndex)&pageSize=$($pageSize)&`$filter=$($filter)&`$orderBy=uploadDate asc"
-        Write-Host "Uri: $($uri)"
 
         $response = Invoke-RestMethod `
             -Method "Get" `
@@ -475,8 +654,8 @@ class FileApiClient {
         return $response
     }
 
-
-    [PSCustomObject] DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadPath) {
+    # download the file in 1 request
+    [PSCustomObject] DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath) {
         $headers = $this._defaultHeaders
         $headers.Accept = "application/octet-stream"
 
@@ -484,12 +663,12 @@ class FileApiClient {
             -Method "Get" `
             -Uri "$($this.BaseUrl)/files/$($fileInfo.Id)?role=$($role)" `
             -Headers $headers `
-            -OutFile "$($downloadPath)\$($fileInfo.Name)"
+            -OutFile "$($downloadFilePath)"
 
         return $response
     }
 
-    [PSCustomObject] DownloadHeader([string] $role, [FileInfo] $fileInfo, [string] $downloadPath) {
+    [PSCustomObject] DownloadHeader([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath) {
         $headers = $this._defaultHeaders
         $headers.Accept = "application/octet-stream"
 
@@ -497,51 +676,60 @@ class FileApiClient {
             -Method "Head" `
             -Uri "$($this.BaseUrl)/files/$($fileInfo.Id)?role=$($role)" `
             -Headers $headers `
-            -OutFile "$($downloadPath)\$($fileInfo.Name)"
+            -OutFile "$($downloadFilePath)"
 
         return $response
+
     }
 
+    # download a chunk
+    # this method is not using the Invoke-RestMethod because there we can not add Range header (Powershell bug)
     [byte[]] DownloadChunk([string] $role, [FileInfo] $fileInfo, [int32] $chunkSize, [int]$chunkNumber) {
- #       $headers = $this._defaultHeaders
- #       $headers.Accept = "application/octet-stream"
-
-#        $headers.Range = "bytes=$($rangeStart)-$($rangeEnd)";
-
         $uri = "$($this.BaseUrl)/files/$($fileInfo.Id)?role=$($role)"
 
+        # create request and the proper headers
         $request = [System.Net.WebRequest]::Create($uri)
         $request.Method = "GET"
         $request.Headers.Add("Authorization", $this._defaultHeaders["Authorization"])
         $request.Accept = "application/octet-stream"
 
-        # add range header
+        # add range header (select which chunk/bytes to download)
         $rangeStart = [long] ($chunkNumber * $chunkSize)
         $rangeEnd = [long] $rangeStart + $chunkSize - 1
         $request.AddRange("bytes", $rangeStart, $rangeEnd)
 
-        $reader = New-Object System.IO.BinaryReader($request.GetResponse().GetResponseStream())
-        $response = $reader.ReadBytes($chunksize)
-
+        # download the bytes into a BinaryReader
+#        $reader = New-Object System.IO.BinaryReader($request.GetResponse().GetResponseStream())
+        $downloadStream = $request.GetResponse().GetResponseStream()
+        $reader = New-Object System.IO.BinaryReader($downloadStream)
+        $response = [byte[]] @()
+        try {
+            $response = $reader.ReadBytes($chunksize)
+        } finally {
+            $reader.Close()
+        }
         return $response
     }
 }
 
 class AuthenticationApiService {
+    hidden [Logger] $_logger
     hidden [AuthenticationApiClient] $_authenticationApiClient
 
-    AuthenticationApiService([AuthenticationApiClient] $authenticationApiClient) {
+    AuthenticationApiService([Logger] $logger, [AuthenticationApiClient] $authenticationApiClient) {
+        $this._logger = $logger
         $this._authenticationApiClient = $authenticationApiClient
     }
 
+    # request a new access token
     [string] NewToken([string] $clientId, [string] $clientSecret, [string] $tenantId) {
-        Write-Host "----"
-        Write-Host "Retrieving the authentication token."
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("Retrieving the authentication token.")
 
         $response = $this._authenticationApiClient.NewToken($clientId, $clientSecret, $tenantId)
         $token = $response.access_token
 
-        Write-Host "Authentication token retrieved."
+        $this._logger.LogInformation("Authentication token retrieved.")
 
         return $token
     }
@@ -554,6 +742,7 @@ class AuthenticationApiClient {
         $this._baseUrl = $baseUrl
     }
 
+     # Create and execute the request to get a new access token
     [PSCustomObject] NewToken([string] $clientId, [string] $clientSecret, [string] $tenantId) {
         $headers = @{
             "Content-Type"  = "application/x-www-form-urlencoded";
@@ -576,6 +765,7 @@ class AuthenticationApiClient {
     }
 }
 
+# helper class to validate parameter types
 class Validator {
     static [bool] IsUri([string] $testParameter) {
         try {
@@ -605,21 +795,99 @@ class Validator {
 
     static [bool] IsPath([string] $testParameter) {
         try {
-            $result = Test-Path $testParameter
-            return $result
+            $result = Test-Path $testParameter -IsValid
         }
         catch {
             return $false
         }
+        return $result
+    }
+}
+
+# class containing the Log functions
+class Logger {
+    hidden [bool] $_storeLogs
+    hidden [string] $_logPath
+    hidden [string] $_monPath
+    hidden [string] $_upDown
+
+    Logger([bool] $storeLogs, [string] $logsDirectory, [string] $monFile, [string] $upDownLoad) {
+        # this parameter is $true (store logs) or $false (do not store logs)
+        $this._storeLogs = $storeLogs
+
+        if ($this._storeLogs) {
+            # detailed log file created per day
+            $this._logPath = Join-Path $logsDirectory "download log - $(Get-Date -Format "yyyy-MM-dd").txt"
+            # only 1 monitor file created
+            $this._monPath = Join-Path $logsDirectory $monFile
+            # signals a download or upload record (easy if you use the same the Monitor File for both upload and download)
+            $this._upDown = $upDownLoad
+        
+            if (-not (Test-Path -Path $logsDirectory -PathType Container)) {
+                New-Item -ItemType Directory -Path $logsDirectory -Force
+            }
+        }
+    }
+
+    # Log Raw text in detail log (without any formatting)
+    [void] LogRaw([string] $text) {
+        Write-Host $text
+        if ($this._storeLogs) {
+            $text | Out-File $this._logPath -Encoding utf8 -Append -Force
+        }
+    }
+
+    # Log an INFO record in the detailed log file
+    [void] LogInformation([string] $text) {
+        $text = $this.GetFormattedDate() + " [Information] $($text)"
+        
+        Write-Host $text
+        if ($this._storeLogs) {
+            $text | Out-File $this._logPath -Encoding utf8 -Append -Force
+        }
+    }
+
+    # Log an Error record in the detailed log file
+    [void] LogError([string] $text) {
+        $text = $this.GetFormattedDate() + " [Error] $($text)"
+
+        Write-Host $text -ForegroundColor "Red"
+        if ($this._storeLogs) {
+            $text | Out-File $this._logPath -Encoding utf8 -Append -Force
+        }
+    }
+
+    # Log an INFO record in the monitor log file
+    [void] MonitorInformation([string] $text) {
+        $text = $this.GetFormattedDate() + " {0,-10} [INFO]  {1}" -f "[$($this._upDown)]", $($text)
+
+        if ($this._storeLogs) {
+            $text | Out-File $this._monPath -Encoding utf8 -Append -Force
+        }
+    }
+
+    # Log an ERROR record in the monitor log file
+    [void] MonitorError([string] $text) {
+        $text = $this.GetFormattedDate() + " {0,-10} [ERROR] {1}" -f "[$($this._upDown)]", $($text)
+
+        if ($this._storeLogs) {
+            $text | Out-File $this._monPath -Encoding utf8 -Append -Force
+        }
+    }
+
+    # the date format preceding each log record
+    [string] GetFormattedDate() {
+        return Get-Date -Format "dd-MM-yyyy HH:mm:ss"
     }
 }
 
 class Helper {
-    static [string] ConvertToUniqueFileName([string] $fileName) {
+    # make filename unique by adding a timestamp to the end of the filename keeping the extension
+    static [string] ConverToUniqueFileName([string] $fileName) {
         $fileNameInfo = [Helper]::GetFileNameInfo($fileName)
         $fileNameWithoutExtension = $fileNameInfo.Name
         $fileExtension = $fileNameInfo.Extension
-        $timestamp = Get-Date -Format FileDateTime
+        $timestamp = Get-Date -Format "yyyyMMddTHHmmssffffZ"
     
         $uniqueFileName = "$($fileNameWithoutExtension)_$($timestamp)$($fileExtension)"
         return $uniqueFileName
@@ -639,12 +907,16 @@ class Helper {
         return $fileNameInfo
     }
 
-    static [void] EndProgram() {
-        [Helper]::FinishProgram($false)
+    static [void] EndProgram([Logger] $logger) {
+        [Helper]::FinishProgram($false, $logger)
     }
 
-    static [void] EndProgramWithError([System.Management.Automation.ErrorRecord] $errorRecord, [string] $genericErrorMessage) {
-        Write-Host "ERROR - $($genericErrorMessage)" -ForegroundColor "Red"
+    static [void] EndProgramWithError([System.Management.Automation.ErrorRecord] $errorRecord, [string] $genericErrorMessage, [Logger] $logger) {
+        if (-not $logger) {
+            $logger = [Logger]::new($false, "")
+        }
+
+        $logger.LogError($genericErrorMessage)
 
         $errorMessage = "Unknown error."
         if ($errorRecord.ErrorDetails.Message) {
@@ -660,15 +932,21 @@ class Helper {
             $errorMessage = $errorRecord.Exception.message
         }
 
-        Write-Host "| Error message: $($errorMessage)" -ForegroundColor "Red"
-        Write-Host "| Error line in the script: $($errorRecord.InvocationInfo.ScriptLineNumber)" -ForegroundColor "Red"
+        $logger.LogError("| Error message: $($errorMessage)")
+        $logger.LogError("| Error line in the script: $($errorRecord.InvocationInfo.ScriptLineNumber)")
 
-        [Helper]::FinishProgram($true)
+        [Helper]::FinishProgram($true, $logger)
     }
 
-    hidden static [void] FinishProgram([bool] $finishWithError) {
-        Write-Host "----"
-        Write-Host "End of the example."
+    hidden static [void] FinishProgram([bool] $finishWithError, [Logger] $logger) {
+        if (-not $logger) {
+            $logger = [Logger]::new($false, "")
+        }
+
+        $logger.LogInformation("----")
+        $logger.LogInformation("End of the example.")
+
+        $logger.MonitorInformation("Download script ended")
 
         if ($finishWithError) {
             exit 1
@@ -686,6 +964,7 @@ class Helper {
 class Configuration {
     $Credentials = [ConfigurationSectionCredentials]::new()
     $Services = [ConfigurationSectionServices]::new()
+    $Logs = [ConfigurationSectionLogs]::new()
     $Download = [ConfigurationSectionDownload]::new()
 }
 
@@ -699,10 +978,15 @@ class ConfigurationSectionServices {
     [string] $AuthenticationTokenApiBaseUrl
 }
 
+class ConfigurationSectionLogs {
+    [bool] $Enabled
+    [string] $Path
+    [string] $MonitorFile
+}
+
 class ConfigurationSectionDownload {
     [string] $Role
     [string] $Path
-    [string] $TempFolder
     [bool] $EnsureUniqueNames
     [long] $ChunkSize
     [string] $Filter

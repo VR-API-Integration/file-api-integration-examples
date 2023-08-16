@@ -12,10 +12,17 @@
         <VismaConnectTenantId>EnterYourVismaConnectTenantId</VismaConnectTenantId>
     </Authentication>
 
+    <Logs>
+        <Enabled>true</Enabled>
+        <Path>EnterTheFolderPathWhereYouWantToStoreTheLogs (e.g. C:\Visma\File API\Ftaas.Examples\powershell\download\logs)</Path>
+		<MonitorFile>EnterTheFilenameWhereYouWantToStoreTheMonitorLogging (e.g. FileApi_Monitor.txt)</MonitorFile>
+	</Logs>
+
     <Download>
         <Role>subscriber</Role>
-        <Path>EnterTheFolderPathWhereYouWantToDownloadTheFilesTo (e.g. C:\Visma\File API\Ftaas.Examples\powershell\VismaDeveloperPortal\download\output)</Path>
+        <Path>EnterTheFolderPathWhereYouWantToDownloadTheFilesTo (e.g. C:\Visma\File API\Ftaas.Examples\powershell\download\output)</Path>
         <EnsureUniqueNames>true</EnsureUniqueNames>
+   		<ChunkSize>100</ChunkSize>
 
         <!-- Here you can find several examples for filtering the files.
         In order to use any of the filters, just uncomment the desired <Filter> line and comment the rest.
@@ -27,11 +34,11 @@
         <!-- Files already downloaded. -->
         <!-- <Filter>status eq 'downloaded'</Filter> -->
 
-        <!-- Files already downloaded that have the file type 7100. -->
-        <!-- <Filter>status eq 'downloaded' and businessType eq 7100</Filter> -->
+        <!-- Files already downloaded that have the file type 8003. -->
+        <!-- <Filter>status eq 'downloaded' and businessType eq 8003</Filter> -->
 
-        <!-- Files downloaded and not downloaded (all) that have the file type 7100 or 7101. -->
-        <!-- <Filter>status eq 'all' and (businessType eq 7100 or businessType eq 7101)</Filter> -->
+        <!-- Files downloaded and not downloaded (all) that have the file type 8003 or 7101. -->
+        <!-- <Filter>status eq 'all' and (businessType eq 8003 or businessType eq 7101)</Filter> -->
 
         <!-- Files uploaded after the day 2022-02-15 at 16:42:30. -->
         <!-- <Filter>uploadDate gt 2022-02-15T16:42:30.000Z</Filter> -->
@@ -39,11 +46,11 @@
         <!-- Files uploaded after the day 2022-02-15 at 16:42:30 and before the day 2022-06-10 at 00:00:00. -->
         <!-- <Filter>uploadDate gt 2022-02-15T16:42:30.000Z and uploadDate lt 2022-06-10T00:00:00.000Z</Filter> -->
 
-        <!-- Files of the file type 7100. -->
-        <!-- <Filter>businessType eq 7100</Filter> -->
+        <!-- Files of the file type 8003. -->
+        <!-- <Filter>businessType eq 8003</Filter> -->
 
-        <!-- Files of the file type 7100 or 7101. -->
-        <!-- <Filter>businessType eq 7100 or businessType eq 7101</Filter> -->
+        <!-- Files of the file type 8003. -->
+        <!-- <Filter>businessType eq 8003 or businessType eq 7101</Filter> -->
 
         <!-- Files with names that start with 'employee_profile'. -->
         <!-- <Filter>startsWith(FileName, 'employee_profile')</Filter> -->
