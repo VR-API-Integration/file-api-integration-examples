@@ -15,6 +15,7 @@
     <Logs>
         <Enabled>true</Enabled>
         <Path>EnterTheFolderPathWhereYouWantToStoreTheLogs (e.g. C:\Visma\File API\Ftaas.Examples\powershell\upload\logs)</Path>
+		<MonitorFile>EnterTheFilenameWhereYouWantToStoreTheMonitorLogging (e.g. FileApi_Monitor.txt)</MonitorFile>
     </Logs>
 
     <Upload>

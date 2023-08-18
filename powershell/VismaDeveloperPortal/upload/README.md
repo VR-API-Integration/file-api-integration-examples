@@ -108,16 +108,28 @@ Inside the **config.xml** file you will find these parameters:
 > Indicates if you want to store the logs in your machine.
 > 
 > Must be set to any of these values:  
-> **· false:** the logs will only be shown in the console.  
-> **· true:** the logs will be shown in the console and will be stored in your machine.
+> **. false:** the logs will only be shown in the console.  
+> **. true:** the logs will be shown in the console and will be stored in your machine.
 
 <br/>
 
 **`Path`**
-> Full path of the directory where the log files will be stored.  
+> Full path of the directory where the log files will be stored.<br/>
+> One detailed logfile will be created per day.  
 > If the attribute **`Logs`**>**`Enabled`** is set to **`false`**, this attribute will do nothing.
 > 
 > **Example:** C:\Visma\File API\Ftaas.Examples\powershell\upload\logs
+
+<br/>
+
+**`MonitorFile`**
+> Filename of the Monitor logfile.<br/>
+> This file will contain only the most essential messages.<br/>
+> Suitable for easy/automated error checking.<br/>
+> This file will be stored in the directory where the logs are stored. <br/>
+> If the attribute **`Logs`**>**`Enabled`** is set to **`false`**, this attribute will do nothing.
+> 
+> **Example:** FileApi_Monitor.txt
 
 ### Attributes of the `Upload` element
 
@@ -143,7 +155,7 @@ Inside the **config.xml** file you will find these parameters:
 <br/>
 
 **`ArchivePath`**
-> Full path of the directory where sussessfully uploaded files will be archived to.
+> Full path of the directory where successfully uploaded files will be archived to.
 >
 > **Example:** C:\Visma\File API\Ftaas.Examples\powershell\upload\archive
 
@@ -176,7 +188,8 @@ Inside the **config.xml** file you will find these parameters:
     <Logs>
         <Enabled>true</Enabled>
         <Path>C:\Visma\File API\Ftaas.Examples\powershell\upload\logs</Path>
-    </Logs>
+        <MonitorFile>FileApi_Monitor.txt</MonitorFile>
+   </Logs>
 
     <Upload>
         <BusinessTypeId>9890988</BusinessTypeId>

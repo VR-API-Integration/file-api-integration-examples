@@ -74,7 +74,7 @@ Inside the **config.xml** file you will find these parameters:
 ### Attributes of the `Credentials` element
 
 **`Path`**
-> XML file path where the credentials will be storaged.  
+> XML file path where the credentials will be stored.  
 > :warning: It's important that the file you put in the path has an .xml extension, otherwise the example will not work properly.
 > 
 > **Example:** C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml
@@ -112,10 +112,22 @@ Inside the **config.xml** file you will find these parameters:
 <br/>
 
 **`Path`**
-> Full path of the directory where the log files will be stored.  
+> Full path of the directory where the log files will be stored.<br/>
+> One detailed logfile will be created per day.<br/>
 > If the attribute **`Logs`**>**`Enabled`** is set to **`false`**, this attribute will do nothing.
 > 
 > **Example:** C:\Visma\File API\Ftaas.Examples\powershell\download\logs
+
+<br/>
+
+**`MonitorFile`**
+> Filename of the Monitor logfile.<br/>
+> This file will contain only the most essential messages.<br/>
+> Suitable for easy/automated error checking.<br/>
+> This file will be stored in the directory where the logs are stored.<br/>
+> If the attribute **`Logs`**>**`Enabled`** is set to **`false`**, this attribute will do nothing.
+> 
+> **Example:** FileApi_Monitor.txt
 
 ### Attributes of the `Download` element
 
@@ -173,13 +185,14 @@ Inside the **config.xml** file you will find these parameters:
     <Logs>
         <Enabled>true</Enabled>
         <Path>C:\Visma\File API\Ftaas.Examples\powershell\download\logs</Path>
+        <MonitorFile>FileApi_Monitor.txt</MonitorFile>
     </Logs>
 
     <Download>
         <Role>subscriber</Role>
         <Path>C:\Visma\File API\Ftaas.Examples\powershell\download\output</Path>
         <EnsureUniqueNames>true</EnsureUniqueNames>
-        <Filter>startsWith(FileName, 'employee_profile') and uploadDate gt 2022-02-08T11:02:00Z</Filter>
+        <Filter>startsWith(FileName, 'employee_profile') and uploadDate gt 2023-08-08T11:02:00Z</Filter>
     </Download>
 </Configuration>
 ```
