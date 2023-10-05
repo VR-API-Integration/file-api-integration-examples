@@ -913,7 +913,7 @@ class Helper {
 
     static [void] EndProgramWithError([System.Management.Automation.ErrorRecord] $errorRecord, [string] $genericErrorMessage, [Logger] $logger) {
         if (-not $logger) {
-            $logger = [Logger]::new($false, "")
+            $logger = [Logger]::new($false, "", "", "")
         }
 
         $logger.LogError($genericErrorMessage)
@@ -940,7 +940,7 @@ class Helper {
 
     hidden static [void] FinishProgram([bool] $finishWithError, [Logger] $logger) {
         if (-not $logger) {
-            $logger = [Logger]::new($false, "")
+            $logger = [Logger]::new($false, "", "", "")
         }
 
         $logger.LogInformation("----")
