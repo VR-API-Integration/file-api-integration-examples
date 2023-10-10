@@ -1,4 +1,8 @@
-# File API Update 2023-08
+# PowerShell update 2023-10
+
+Fix an issue when the logger configuration is invalid, the script finishes the execution with an error.
+
+# PowerShell update 2023-08
 
 New functionality and improvements in Powershell Examples
 
@@ -18,7 +22,7 @@ A new section has been added in the configuration of the examples to configure t
 
 Please follow the steps below to activate the logs:
 
-1. Download the latest version of powershell examples [here](https://github.com/VR-API-Integration/file-api-integration-examples)
+1. Download the latest version of Powershell examples [here](https://github.com/VR-API-Integration/file-api-integration-examples)
 2. Edit the configuration settings: **'Logs'** - **'Enabled'** with the value **'true'**
 3. Edit the configuration settings: **'Logs'** - **'Path'** with the local folder where to store the detailed logs.
 4. Edit the configuration settings: **'Logs'** - **'MonitorFile'** with the filename where you want to store the monitor logs. The MonitorFile is stored along the detailed logs.
@@ -28,7 +32,7 @@ The monitor file is a single file that will contain the minimum of records neede
 This file is suitable for checking regularly by an automated error checking process.  
 The detailed logfile can provide more information about the possible cause of errors.  
 
-See additional details in the Readme of powershell examples  
+See additional details in the Readme of PowerShell examples  
 [Readme Upload example](https://github.com/VR-API-Integration/file-api-integration-examples/blob/main/powershell/VismaDeveloperPortal/upload/README.md)  
 [Readme Download example](https://github.com/VR-API-Integration/file-api-integration-examples/blob/main/powershell/VismaDeveloperPortal/download/README.md)   
 
@@ -41,7 +45,7 @@ Recommended chunk size for uploads is 4MB.
 
 Please follow the steps below to upload files by chunks:
 
-1. Download the last version of powershell examples [here](https://github.com/VR-API-Integration/file-api-integration-examples)
+1. Download the last version of PowerShell examples [here](https://github.com/VR-API-Integration/file-api-integration-examples)
 2. Edit the configuration settings: **'Upload'** - **'ChunkSize'** with the value **'4'**
 
 ![Upload ChunkSize](images/imageChunks.png)
@@ -58,7 +62,7 @@ Recommended chunk size for downloads is 100MB
 
 Please follow the below steps to download the files by chunks:
 
-1. Download the last version of powershell examples [here](https://github.com/VR-API-Integration/file-api-integration-examples) 
+1. Download the last version of PowerShell examples [here](https://github.com/VR-API-Integration/file-api-integration-examples) 
 2. Edit the configuration settings: **'Download'** - **'ChunkSize'** with the value **'100'**
 
 See additional details in the [Readme](https://github.com/VR-API-Integration/file-api-integration-examples/blob/main/powershell/VismaDeveloperPortal/download/README.md) of the powershell example
