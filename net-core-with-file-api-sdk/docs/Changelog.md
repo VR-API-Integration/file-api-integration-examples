@@ -1,6 +1,7 @@
 # Changelog 
 Date | Version Changes 
 --- | --- 
+2024-01-08| v2.1.0          VRFTR-5659: Remove unused dependencies  https://jira.visma.com/browse/VRFTR-5659
 2023-02-20| v2.0.0          vrftr-6037 Rename Delete method.  Previous DeleteAsync method has been renamed to SetFileToDeletedAsync to avoid misunderstandings, as it doesn't delete files, it marks the file as 'deleted' for a subscriber.
 2023-02-03| v1.22.0         Add deleted and deletedDate fields to list response.
 2023-02-02| v1.21.0         Add subscriber delete documentation to the examples.
