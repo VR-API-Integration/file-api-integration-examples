@@ -38,6 +38,18 @@ catch {
 
 #endregion Log configuration
 
+#region Network Settings
+
+   #pick defaults for proxy;
+   [System.Net.WebRequest]::DefaultWebProxy = [System.Net.WebRequest]::GetSystemWebProxy()
+   [System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+
+   #set TLS1.2 as security Protocol
+   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+#endregion Network Settings
+
+
 $logger.LogRaw("")
 $logger.LogInformation("=============================================================")
 $logger.LogInformation("File API integration example: Upload files from a directory.")

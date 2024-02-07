@@ -399,7 +399,7 @@ class FileApiService {
         $pageIndex = 0
         $pageSize = 21
         $isLastPage = $false
-        $filesInfo = @()
+        $filesInfo = [FileInfo[]] @()
 
         # retrieve (possible) multiple pages
         do {
@@ -440,7 +440,7 @@ class FileApiService {
         # download each file in the list
         foreach ($fileInfo in $filesInfo) {
             $this._logger.LogInformation("----")
-            $this._logger.LogInformation("Downloading file $($downloadedFilesCount + 1)/$($filesInfo.Count).")
+            $this._logger.LogInformation("Downloading file $($downloadedFilesCount + 1 + $failedFiles.Length)/$($filesInfo.Count).")
             $this._logger.LogInformation("| ID  : $($fileInfo.Id)")
             $this._logger.LogInformation("| Name: $($fileInfo.Name)")
             $this._logger.LogInformation("| Size: $($fileInfo.Size)")
@@ -457,18 +457,18 @@ class FileApiService {
             }
 
             try{
-                $this._logger.MonitorInformation("File $($fileinfo.Name) is downloading.")
+                $this._logger.MonitorInformation("File $($fileInfo.Name) is downloading.")
 
                 $this.DownloadFile($this._role, $fileInfo, $path, $ensureUniqueNames)
                 $downloadedFilesCount++
                 
-                $this._logger.LogInformation("The file $($fileinfo.Name) was downloaded successfully.")
-                $this._logger.MonitorInformation("File $($fileinfo.Name) was downloaded successfully.")
+                $this._logger.LogInformation("The file $($fileInfo.Name) was downloaded successfully.")
+                $this._logger.MonitorInformation("File $($fileInfo.Name) was downloaded successfully.")
             } catch {
                 $failedFiles += $fileinfo
-                $this._logger.LogError("The file $($fileinfo.Name) failed.")
+                $this._logger.LogError("The file $($fileInfo.Name) failed.")
                 $this._logger.LogError("Error: $($_)")
-                $this._logger.MonitorError("Failed download $($fileinfo.Name) : $($_)")
+                $this._logger.MonitorError("Failed download $($fileInfo.Name) : $($_)")
             }
         }
 
@@ -496,17 +496,28 @@ class FileApiService {
         # Download the file with a .partial extension
         # Rename it when succesfully downloaded
 
-        $destFileName = "$($downloadPath)\$($fileinfo.Name)"
+        $destFileName = "$($downloadPath)\$($fileInfo.Name)"
         $tempFileName = "$($destFileName)$($this._partial)"
 
         # if the file is smaller than the ChunkSize --> download it in 1 request.
-        if($fileinfo.Size -le $this._chunkSize) {
-            $result = $this.DownloadFileInOneGo($this._role, $fileInfo, $tempFileName)
+        if($fileInfo.Size -le $this._chunkSize) {
+            try {
+                $filestream = New-Object IO.FileStream $tempFileName ,'Create','Write','Read'
+
+                $bytes = $this.DownloadFileInOneGo($this._role, $fileInfo, $tempFileName)
+
+                $filestream.Write($bytes, 0, $bytes.Length)
+            } catch{
+                throw "$($_)"
+            }
+            finally {
+                $filestream.Close()
+            }
         } else {
             # download the file in multiple chunks
             [long] $fileBytesRead = 0
             [long] $chunkNumber = 0
-            [int] $totalchunks = [math]::ceiling($fileinfo.Size / $this._chunkSize)
+            [int] $totalchunks = [math]::ceiling($fileInfo.Size / $this._chunkSize)
 
             $this._logger.LogInformation("Downloading Headers")
             $result = $this._fileApiClient.DownloadHeader($this._role, $fileInfo, $this._tempFolder)
@@ -514,7 +525,7 @@ class FileApiService {
             $filestream = New-Object IO.FileStream $tempFileName ,'Append','Write','Read'
             try {
                 # download chunks until all bytes are read
-                while ($fileBytesRead -lt $fileinfo.Size){
+                while ($fileBytesRead -lt $fileInfo.Size){
                     $this._logger.LogInformation("Downloading Chunk $($chunkNumber + 1) / $($totalchunks)")
 
                     $bytes = $this.DownloadChunk($this._role, $fileInfo, $this._chunkSize, $chunkNumber)
@@ -539,7 +550,7 @@ class FileApiService {
         Move-Item -Path $tempFileName -Destination $destFileName -Force
     }
 
-    [PSCustomObject] DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath) {
+    [byte[]]  DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath) {
         [int]$maxretry = 10
         [int]$retry = 0
 
@@ -547,9 +558,9 @@ class FileApiService {
             try{
                 Start-Sleep -Milliseconds $this._waitTimeBetweenCallsMS
 
-                $result = $this._fileApiClient.DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath)
+                $bytes = $this._fileApiClient.DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath)
                 
-                return $result
+                return $bytes
             }
             catch{
                 # when download fails due to spike arrest
@@ -655,15 +666,24 @@ class FileApiClient {
     }
 
     # download the file in 1 request
-    [PSCustomObject] DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath) {
-        $headers = $this._defaultHeaders
-        $headers.Accept = "application/octet-stream"
+     [byte[]] DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath) {
+        $uri = "$($this.BaseUrl)/files/$($fileInfo.Id)?role=$($role)"
 
-        $response = Invoke-RestMethod `
-            -Method "Get" `
-            -Uri "$($this.BaseUrl)/files/$($fileInfo.Id)?role=$($role)" `
-            -Headers $headers `
-            -OutFile "$($downloadFilePath)"
+        # create request and the proper headers
+        $request = [System.Net.WebRequest]::Create($uri)
+        $request.Method = "GET"
+        $request.Headers.Add("Authorization", $this._defaultHeaders["Authorization"])
+        $request.Accept = "application/octet-stream"
+
+        # download the bytes into a BinaryReader
+        $downloadStream = $request.GetResponse().GetResponseStream()
+        $reader = New-Object System.IO.BinaryReader($downloadStream)
+        $response = [byte[]] @()
+        try {
+            $response = $reader.ReadBytes($fileInfo.Size)
+        } finally {
+            $reader.Close()
+        }
 
         return $response
     }
@@ -699,7 +719,6 @@ class FileApiClient {
         $request.AddRange("bytes", $rangeStart, $rangeEnd)
 
         # download the bytes into a BinaryReader
-#        $reader = New-Object System.IO.BinaryReader($request.GetResponse().GetResponseStream())
         $downloadStream = $request.GetResponse().GetResponseStream()
         $reader = New-Object System.IO.BinaryReader($downloadStream)
         $response = [byte[]] @()
