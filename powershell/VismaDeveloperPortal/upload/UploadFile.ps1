@@ -36,20 +36,6 @@ catch {
 
 [Logger] $logger = [Logger]::new($logConfig.Enabled, $logConfig.Path)
 
-#endregion Log configuration
-
-#region Network Settings
-
-   #pick defaults for proxy;
-   [System.Net.WebRequest]::DefaultWebProxy = [System.Net.WebRequest]::GetSystemWebProxy()
-   [System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
-
-   #set TLS1.2 as security Protocol
-   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
-#endregion Network Settings
-
-
 $logger.LogRaw("")
 $logger.LogInformation("=============================================================")
 $logger.LogInformation("File API integration example: Upload files from a directory.")
@@ -67,6 +53,19 @@ catch {
 }
 
 #endregion Rest of the configuration
+
+#endregion Log configuration
+
+#region Network settings
+
+# Pick defaults for proxy
+[System.Net.WebRequest]::DefaultWebProxy = [System.Net.WebRequest]::GetSystemWebProxy()
+[System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+
+# Set TLS1.2 as security Protocol
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+#endregion Network settings
 
 #region Retrieve/Create credentials
 
