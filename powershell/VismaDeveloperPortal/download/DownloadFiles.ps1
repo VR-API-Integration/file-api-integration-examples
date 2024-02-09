@@ -555,11 +555,11 @@ class FileApiService {
         Move-Item -Path $tempFileName -Destination $destFileName -Force
     }
 
-    [byte[]]  DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath) {
+    [byte[]] DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath) {
         [int]$maxretry = 10
         [int]$retry = 0
 
-        while(1 -eq 1) {
+        while($true) {
             try{
                 Start-Sleep -Milliseconds $this._waitTimeBetweenCallsMS
 
@@ -704,7 +704,6 @@ class FileApiClient {
             -OutFile "$($downloadFilePath)"
 
         return $response
-
     }
 
     # download a chunk
