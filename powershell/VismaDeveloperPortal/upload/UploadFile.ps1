@@ -19,6 +19,8 @@ Param(
 )
 
 $ErrorActionPreference = "Stop"
+$scriptMajorVersion = 1
+$scriptMinorVersion = 22
 
 # The default value of this parameter is set here because $PSScriptRoot is empty if used directly in Param() through PowerShell ISE.
 if (-not $_configPath) {
@@ -41,8 +43,10 @@ $logger.LogInformation("========================================================
 $logger.LogInformation("File API integration example: Upload files from a directory.")
 $logger.LogInformation("=============================================================")
 $logger.LogInformation("(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')")
-$logger.LogInformation("PowerShell version: $($global:PSVersionTable.PSVersion)")
-[Helper]::LogWindowsVersion($logger)
+$logger.LogInformation("Versions:")
+$logger.LogInformation("| Script: $($scriptMajorVersion).$($scriptMinorVersion).")
+$logger.LogInformation("| PowerShell: $($global:PSVersionTable.PSVersion).")
+$logger.LogInformation("| Windows: $(if (($env:OS).Contains("Windows")) { [Helper]::RetrieveWindowsVersion() } else { "Unknown OS system detected" }).")
 
 #region Rest of the configuration
 
@@ -713,14 +717,13 @@ class Logger {
 }
 
 class Helper {
-    static [void] LogWindowsVersion([Logger] $logger) {
+    static [string] RetrieveWindowsVersion() {
         if (!($env:OS).Contains("Windows")) {
-            $logger.LogInformation("The script is running on an operating system other than Windows.")
-            return
+            return $null
         }
 
         $WindowsInformation = Get-CimInstance Win32_OperatingSystem | Select-Object Caption, OSArchitecture, Version
-        $logger.LogInformation("Windows version: $($WindowsInformation.Caption) ($($WindowsInformation.OSArchitecture)) $($WindowsInformation.Version)")
+        return "$($WindowsInformation.Caption) ($($WindowsInformation.OSArchitecture)) $($WindowsInformation.Version)"
     }
 
     static [void] ArchiveFile([string] $archivePath, [string] $filename, [Logger] $logger) {
