@@ -45,6 +45,7 @@ $logger.LogInformation("File API integration example: Download files.")
 $logger.LogInformation("==============================================")
 $logger.LogInformation("(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')")
 $logger.LogInformation("PowerShell version: $($global:PSVersionTable.PSVersion)")
+[Helper]::LogWindowsVersion($logger)
 
 $logger.MonitorInformation("Download script started")
 
@@ -60,16 +61,16 @@ catch {
 
 #endregion Rest of the configuration
 
-#region Network Settings
+#region Network settings
 
-   #pick defaults for proxy;
-   [System.Net.WebRequest]::DefaultWebProxy = [System.Net.WebRequest]::GetSystemWebProxy()
-   [System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+# Pick defaults for proxy
+[System.Net.WebRequest]::DefaultWebProxy = [System.Net.WebRequest]::GetSystemWebProxy()
+[System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
 
-   #set TLS1.2 as security Protocol
-   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+# Set TLS1.2 as security Protocol
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-#endregion Network Settings
+#endregion Network settings
 
 #region Retrieve/Create credentials
 
@@ -901,6 +902,16 @@ class Logger {
 }
 
 class Helper {
+    static [void] LogWindowsVersion([Logger] $logger) {
+        if (!($env:OS).Contains("Windows")) {
+            $logger.LogInformation("The script is running on an operating system other than Windows.")
+            return
+        }
+
+        $WindowsInformation = Get-CimInstance Win32_OperatingSystem | Select-Object Caption, OSArchitecture, Version
+        $logger.LogInformation("Windows version: $($WindowsInformation.Caption) ($($WindowsInformation.OSArchitecture)) $($WindowsInformation.Version)")
+    }
+
     # make filename unique by adding a timestamp to the end of the filename keeping the extension
     static [string] ConverToUniqueFileName([string] $fileName) {
         $fileNameInfo = [Helper]::GetFileNameInfo($fileName)

@@ -42,6 +42,7 @@ $logger.LogInformation("File API integration example: Upload files from a direct
 $logger.LogInformation("=============================================================")
 $logger.LogInformation("(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')")
 $logger.LogInformation("PowerShell version: $($global:PSVersionTable.PSVersion)")
+[Helper]::LogWindowsVersion($logger)
 
 #region Rest of the configuration
 
@@ -712,6 +713,16 @@ class Logger {
 }
 
 class Helper {
+    static [void] LogWindowsVersion([Logger] $logger) {
+        if (!($env:OS).Contains("Windows")) {
+            $logger.LogInformation("The script is running on an operating system other than Windows.")
+            return
+        }
+
+        $WindowsInformation = Get-CimInstance Win32_OperatingSystem | Select-Object Caption, OSArchitecture, Version
+        $logger.LogInformation("Windows version: $($WindowsInformation.Caption) ($($WindowsInformation.OSArchitecture)) $($WindowsInformation.Version)")
+    }
+
     static [void] ArchiveFile([string] $archivePath, [string] $filename, [Logger] $logger) {
         if (-not $logger) {
             $logger = [Logger]::new($false, "")
