@@ -4,9 +4,9 @@ A collection of examples to upload files with the File API using **PowerShell**.
 
 ## Prerequisites
 
+- Minimum PowerShell version required: 5.1.
+- Minimum .NET version required: 4.8.
 - To run the script you need administrator privileges.
-- The script is prepared for PowerShell version 5.1 or above. With lower versions it might not work properly.
-- The script is prepared for .NET version 4.8 or above. With lower versions it might not work properly.
 - Files to be uploaded cannot be bigger than 10 GB.
 - Chunksize is limited to 100 MB (4 MB is suggested as most efficient)
 
