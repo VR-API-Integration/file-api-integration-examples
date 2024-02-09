@@ -5,7 +5,8 @@ A collection of examples to download files with the File API using **PowerShell*
 ## Prerequisites
 
 - To run the script you need administrator privileges.
-- The script was prepared for PowerShell version 5.1 or above. With lower versions it might not work properly.
+- The script is prepared for PowerShell version 5.1 or above. With lower versions it might not work properly.
+- The script is prepared for .NET version 4.8 or above. With lower versions it might not work properly.
 - Files to be downloaded cannot be bigger than 2 GB.
 
 ## Getting Started 
