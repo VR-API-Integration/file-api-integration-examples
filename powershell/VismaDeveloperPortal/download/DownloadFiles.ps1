@@ -19,6 +19,8 @@ Param(
 )
 
 $ErrorActionPreference = "Stop"
+$scriptMajorVersion = 1
+$scriptMinorVersion = 22
 
 # The default value of this parameter is set here because $PSScriptRoot is empty if used directly in Param() through PowerShell ISE.
 if (-not $_configPath) {
@@ -44,7 +46,14 @@ $logger.LogInformation("==============================================")
 $logger.LogInformation("File API integration example: Download files.")
 $logger.LogInformation("==============================================")
 $logger.LogInformation("(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')")
-$logger.LogInformation("PowerShell version: $($global:PSVersionTable.PSVersion)")
+$logger.LogInformation("Versions:")
+$logger.LogInformation("| Script     : $($scriptMajorVersion).$($scriptMinorVersion)")
+$logger.LogInformation("| PowerShell : $($global:PSVersionTable.PSVersion)")
+$logger.LogInformation("| Windows    : $(if (($env:OS).Contains("Windows")) { [Helper]::RetrieveWindowsVersion() } else { "Unknown OS system detected" })")
+$logger.LogInformation("| NET version: $([Helper]::GetDotNetFrameworkVersion().Version)")
+
+
+
 
 $logger.MonitorInformation("Download script started")
 
@@ -60,16 +69,16 @@ catch {
 
 #endregion Rest of the configuration
 
-#region Network Settings
+#region Network settings
 
-   #pick defaults for proxy;
-   [System.Net.WebRequest]::DefaultWebProxy = [System.Net.WebRequest]::GetSystemWebProxy()
-   [System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+# Pick defaults for proxy
+[System.Net.WebRequest]::DefaultWebProxy = [System.Net.WebRequest]::GetSystemWebProxy()
+[System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
 
-   #set TLS1.2 as security Protocol
-   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+# Set TLS1.2 as security Protocol
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-#endregion Network Settings
+#endregion Network settings
 
 #region Retrieve/Create credentials
 
@@ -399,7 +408,7 @@ class FileApiService {
         $pageIndex = 0
         $pageSize = 21
         $isLastPage = $false
-        $filesInfo = @()
+        $filesInfo = [FileInfo[]] @()
 
         # retrieve (possible) multiple pages
         do {
@@ -440,7 +449,7 @@ class FileApiService {
         # download each file in the list
         foreach ($fileInfo in $filesInfo) {
             $this._logger.LogInformation("----")
-            $this._logger.LogInformation("Downloading file $($downloadedFilesCount + 1)/$($filesInfo.Count).")
+            $this._logger.LogInformation("Downloading file $($downloadedFilesCount + 1 + $failedFiles.Length)/$($filesInfo.Count).")
             $this._logger.LogInformation("| ID  : $($fileInfo.Id)")
             $this._logger.LogInformation("| Name: $($fileInfo.Name)")
             $this._logger.LogInformation("| Size: $($fileInfo.Size)")
@@ -457,18 +466,18 @@ class FileApiService {
             }
 
             try{
-                $this._logger.MonitorInformation("File $($fileinfo.Name) is downloading.")
+                $this._logger.MonitorInformation("File $($fileInfo.Name) is downloading.")
 
                 $this.DownloadFile($this._role, $fileInfo, $path, $ensureUniqueNames)
                 $downloadedFilesCount++
                 
-                $this._logger.LogInformation("The file $($fileinfo.Name) was downloaded successfully.")
-                $this._logger.MonitorInformation("File $($fileinfo.Name) was downloaded successfully.")
+                $this._logger.LogInformation("The file $($fileInfo.Name) was downloaded successfully.")
+                $this._logger.MonitorInformation("File $($fileInfo.Name) was downloaded successfully.")
             } catch {
                 $failedFiles += $fileinfo
-                $this._logger.LogError("The file $($fileinfo.Name) failed.")
+                $this._logger.LogError("The file $($fileInfo.Name) failed.")
                 $this._logger.LogError("Error: $($_)")
-                $this._logger.MonitorError("Failed download $($fileinfo.Name) : $($_)")
+                $this._logger.MonitorError("Failed download $($fileInfo.Name) : $($_)")
             }
         }
 
@@ -496,17 +505,28 @@ class FileApiService {
         # Download the file with a .partial extension
         # Rename it when succesfully downloaded
 
-        $destFileName = "$($downloadPath)\$($fileinfo.Name)"
+        $destFileName = "$($downloadPath)\$($fileInfo.Name)"
         $tempFileName = "$($destFileName)$($this._partial)"
 
         # if the file is smaller than the ChunkSize --> download it in 1 request.
-        if($fileinfo.Size -le $this._chunkSize) {
-            $result = $this.DownloadFileInOneGo($this._role, $fileInfo, $tempFileName)
+        if($fileInfo.Size -le $this._chunkSize) {
+            try {
+                $filestream = New-Object IO.FileStream $tempFileName ,'Create','Write','Read'
+
+                $bytes = $this.DownloadFileInOneGo($this._role, $fileInfo, $tempFileName)
+
+                $filestream.Write($bytes, 0, $bytes.Length)
+            } catch{
+                throw "$($_)"
+            }
+            finally {
+                $filestream.Close()
+            }
         } else {
             # download the file in multiple chunks
             [long] $fileBytesRead = 0
             [long] $chunkNumber = 0
-            [int] $totalchunks = [math]::ceiling($fileinfo.Size / $this._chunkSize)
+            [int] $totalchunks = [math]::ceiling($fileInfo.Size / $this._chunkSize)
 
             $this._logger.LogInformation("Downloading Headers")
             $result = $this._fileApiClient.DownloadHeader($this._role, $fileInfo, $this._tempFolder)
@@ -514,7 +534,7 @@ class FileApiService {
             $filestream = New-Object IO.FileStream $tempFileName ,'Append','Write','Read'
             try {
                 # download chunks until all bytes are read
-                while ($fileBytesRead -lt $fileinfo.Size){
+                while ($fileBytesRead -lt $fileInfo.Size){
                     $this._logger.LogInformation("Downloading Chunk $($chunkNumber + 1) / $($totalchunks)")
 
                     $bytes = $this.DownloadChunk($this._role, $fileInfo, $this._chunkSize, $chunkNumber)
@@ -539,17 +559,17 @@ class FileApiService {
         Move-Item -Path $tempFileName -Destination $destFileName -Force
     }
 
-    [PSCustomObject] DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath) {
+    [byte[]] DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath) {
         [int]$maxretry = 10
         [int]$retry = 0
 
-        while(1 -eq 1) {
+        while($true) {
             try{
                 Start-Sleep -Milliseconds $this._waitTimeBetweenCallsMS
 
-                $result = $this._fileApiClient.DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath)
+                $bytes = $this._fileApiClient.DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath)
                 
-                return $result
+                return $bytes
             }
             catch{
                 # when download fails due to spike arrest
@@ -655,15 +675,24 @@ class FileApiClient {
     }
 
     # download the file in 1 request
-    [PSCustomObject] DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath) {
-        $headers = $this._defaultHeaders
-        $headers.Accept = "application/octet-stream"
+     [byte[]] DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath) {
+        $uri = "$($this.BaseUrl)/files/$($fileInfo.Id)?role=$($role)"
 
-        $response = Invoke-RestMethod `
-            -Method "Get" `
-            -Uri "$($this.BaseUrl)/files/$($fileInfo.Id)?role=$($role)" `
-            -Headers $headers `
-            -OutFile "$($downloadFilePath)"
+        # create request and the proper headers
+        $request = [System.Net.WebRequest]::Create($uri)
+        $request.Method = "GET"
+        $request.Headers.Add("Authorization", $this._defaultHeaders["Authorization"])
+        $request.Accept = "application/octet-stream"
+
+        # download the bytes into a BinaryReader
+        $downloadStream = $request.GetResponse().GetResponseStream()
+        $reader = New-Object System.IO.BinaryReader($downloadStream)
+        $response = [byte[]] @()
+        try {
+            $response = $reader.ReadBytes($fileInfo.Size)
+        } finally {
+            $reader.Close()
+        }
 
         return $response
     }
@@ -679,7 +708,6 @@ class FileApiClient {
             -OutFile "$($downloadFilePath)"
 
         return $response
-
     }
 
     # download a chunk
@@ -699,7 +727,6 @@ class FileApiClient {
         $request.AddRange("bytes", $rangeStart, $rangeEnd)
 
         # download the bytes into a BinaryReader
-#        $reader = New-Object System.IO.BinaryReader($request.GetResponse().GetResponseStream())
         $downloadStream = $request.GetResponse().GetResponseStream()
         $reader = New-Object System.IO.BinaryReader($downloadStream)
         $response = [byte[]] @()
@@ -882,6 +909,15 @@ class Logger {
 }
 
 class Helper {
+    static [string] RetrieveWindowsVersion() {
+        if (!($env:OS).Contains("Windows")) {
+            return $null
+        }
+
+        $WindowsInformation = Get-CimInstance Win32_OperatingSystem | Select-Object Caption, OSArchitecture, Version
+        return "$($WindowsInformation.Caption) ($($WindowsInformation.OSArchitecture)) $($WindowsInformation.Version)"
+    }
+
     # make filename unique by adding a timestamp to the end of the filename keeping the extension
     static [string] ConverToUniqueFileName([string] $fileName) {
         $fileNameInfo = [Helper]::GetFileNameInfo($fileName)
@@ -954,6 +990,62 @@ class Helper {
         else {
             exit
         }
+    }
+
+    static [PSCustomObject] GetDotNetFrameworkVersion()
+    {
+        [string]$ComputerName = $env:COMPUTERNAME
+
+        $dotNet4Registry = 'SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full'
+        $dotNet4Builds = @{
+            '30319'  = @{ Version = [System.Version]'4.0'                                                     }
+            '378389' = @{ Version = [System.Version]'4.5'                                                     }
+            '378675' = @{ Version = [System.Version]'4.5.1'   ; Comment = '(8.1/2012R2)'                      }
+            '378758' = @{ Version = [System.Version]'4.5.1'   ; Comment = '(8/7 SP1/Vista SP2)'               }
+            '379893' = @{ Version = [System.Version]'4.5.2'                                                   }
+            '380042' = @{ Version = [System.Version]'4.5'     ; Comment = 'and later with KB3168275 rollup'   }
+            '393295' = @{ Version = [System.Version]'4.6'     ; Comment = '(Windows 10)'                      }
+            '393297' = @{ Version = [System.Version]'4.6'     ; Comment = '(NON Windows 10)'                  }
+            '394254' = @{ Version = [System.Version]'4.6.1'   ; Comment = '(Windows 10)'                      }
+            '394271' = @{ Version = [System.Version]'4.6.1'   ; Comment = '(NON Windows 10)'                  }
+            '394802' = @{ Version = [System.Version]'4.6.2'   ; Comment = '(Windows 10 Anniversary Update)'   }
+            '394806' = @{ Version = [System.Version]'4.6.2'   ; Comment = '(NON Windows 10)'                  }
+            '460798' = @{ Version = [System.Version]'4.7'     ; Comment = '(Windows 10 Creators Update)'      }
+            '460805' = @{ Version = [System.Version]'4.7'     ; Comment = '(NON Windows 10)'                  }
+            '461308' = @{ Version = [System.Version]'4.7.1'   ; Comment = '(Windows 10 Fall Creators Update)' }
+            '461310' = @{ Version = [System.Version]'4.7.1'   ; Comment = '(NON Windows 10)'                  }
+            '461808' = @{ Version = [System.Version]'4.7.2'   ;                                               }
+            '461814' = @{ Version = [System.Version]'4.7.2'   ;                                               }
+            '528040' = @{ Version = [System.Version]'4.8'     ;                                               }
+            '528372' = @{ Version = [System.Version]'4.8'     ;                                               }
+            '528449' = @{ Version = [System.Version]'4.8'     ;                                               }
+            '528049' = @{ Version = [System.Version]'4.8'     ;                                               }
+            '533320' = @{ Version = [System.Version]'4.8.1'   ;                                               }
+            '533325' = @{ Version = [System.Version]'4.8.1'   ;                                               }
+        }
+
+        if($regKey = [Microsoft.Win32.RegistryKey]::OpenRemoteBaseKey('LocalMachine', $ComputerName))
+        {
+            if ($net4RegKey = $regKey.OpenSubKey("$dotNet4Registry"))
+            {
+                if(-not ($net4Release = $net4RegKey.GetValue('Release')))
+                {
+                    $net4Release = 30319
+                }
+                return New-Object -TypeName PSCustomObject -Property ([ordered]@{
+                        ComputerName = $ComputerName
+                        Build = $net4Release
+                        Version = $dotNet4Builds["$net4Release"].Version
+                        Comment = $dotNet4Builds["$net4Release"].Comment
+                })
+            }
+        }
+        return New-Object -TypeName PSCustomObject -Property (@{
+                        ComputerName = $ComputerName
+                        Build = "Unknown"
+                        Version = "Unknown"
+                        Comment = "Unknown"
+                })
     }
 }
 

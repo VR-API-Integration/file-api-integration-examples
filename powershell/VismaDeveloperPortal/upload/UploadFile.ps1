@@ -19,6 +19,8 @@ Param(
 )
 
 $ErrorActionPreference = "Stop"
+$scriptMajorVersion = 1
+$scriptMinorVersion = 22
 
 # The default value of this parameter is set here because $PSScriptRoot is empty if used directly in Param() through PowerShell ISE.
 if (-not $_configPath) {
@@ -36,14 +38,17 @@ catch {
 
 [Logger] $logger = [Logger]::new($logConfig.Enabled, $logConfig.Path)
 
-#endregion Log configuration
-
 $logger.LogRaw("")
 $logger.LogInformation("=============================================================")
 $logger.LogInformation("File API integration example: Upload files from a directory.")
 $logger.LogInformation("=============================================================")
 $logger.LogInformation("(you can stop the script at any moment by pressing the buttons 'CTRL'+'C')")
-$logger.LogInformation("PowerShell version: $($global:PSVersionTable.PSVersion)")
+$logger.LogInformation("Versions:")
+$logger.LogInformation("| Script     : $($scriptMajorVersion).$($scriptMinorVersion).")
+$logger.LogInformation("| PowerShell : $($global:PSVersionTable.PSVersion).")
+$logger.LogInformation("| Windows    : $(if (($env:OS).Contains("Windows")) { [Helper]::RetrieveWindowsVersion() } else { "Unknown OS system detected" }).")
+$logger.LogInformation("| NET version: $([Helper]::GetDotNetFrameworkVersion().Version)")
+
 
 #region Rest of the configuration
 
@@ -55,6 +60,19 @@ catch {
 }
 
 #endregion Rest of the configuration
+
+#endregion Log configuration
+
+#region Network settings
+
+# Pick defaults for proxy
+[System.Net.WebRequest]::DefaultWebProxy = [System.Net.WebRequest]::GetSystemWebProxy()
+[System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+
+# Set TLS1.2 as security Protocol
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+#endregion Network settings
 
 #region Retrieve/Create credentials
 
@@ -701,6 +719,15 @@ class Logger {
 }
 
 class Helper {
+    static [string] RetrieveWindowsVersion() {
+        if (!($env:OS).Contains("Windows")) {
+            return $null
+        }
+
+        $WindowsInformation = Get-CimInstance Win32_OperatingSystem | Select-Object Caption, OSArchitecture, Version
+        return "$($WindowsInformation.Caption) ($($WindowsInformation.OSArchitecture)) $($WindowsInformation.Version)"
+    }
+
     static [void] ArchiveFile([string] $archivePath, [string] $filename, [Logger] $logger) {
         if (-not $logger) {
             $logger = [Logger]::new($false, "")
@@ -825,6 +852,63 @@ class Helper {
             exit
         }
     }
+
+    static [PSCustomObject] GetDotNetFrameworkVersion()
+    {
+        [string]$ComputerName = $env:COMPUTERNAME
+
+        $dotNet4Registry = 'SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full'
+        $dotNet4Builds = @{
+            '30319'  = @{ Version = [System.Version]'4.0'                                                     }
+            '378389' = @{ Version = [System.Version]'4.5'                                                     }
+            '378675' = @{ Version = [System.Version]'4.5.1'   ; Comment = '(8.1/2012R2)'                      }
+            '378758' = @{ Version = [System.Version]'4.5.1'   ; Comment = '(8/7 SP1/Vista SP2)'               }
+            '379893' = @{ Version = [System.Version]'4.5.2'                                                   }
+            '380042' = @{ Version = [System.Version]'4.5'     ; Comment = 'and later with KB3168275 rollup'   }
+            '393295' = @{ Version = [System.Version]'4.6'     ; Comment = '(Windows 10)'                      }
+            '393297' = @{ Version = [System.Version]'4.6'     ; Comment = '(NON Windows 10)'                  }
+            '394254' = @{ Version = [System.Version]'4.6.1'   ; Comment = '(Windows 10)'                      }
+            '394271' = @{ Version = [System.Version]'4.6.1'   ; Comment = '(NON Windows 10)'                  }
+            '394802' = @{ Version = [System.Version]'4.6.2'   ; Comment = '(Windows 10 Anniversary Update)'   }
+            '394806' = @{ Version = [System.Version]'4.6.2'   ; Comment = '(NON Windows 10)'                  }
+            '460798' = @{ Version = [System.Version]'4.7'     ; Comment = '(Windows 10 Creators Update)'      }
+            '460805' = @{ Version = [System.Version]'4.7'     ; Comment = '(NON Windows 10)'                  }
+            '461308' = @{ Version = [System.Version]'4.7.1'   ; Comment = '(Windows 10 Fall Creators Update)' }
+            '461310' = @{ Version = [System.Version]'4.7.1'   ; Comment = '(NON Windows 10)'                  }
+            '461808' = @{ Version = [System.Version]'4.7.2'   ;                                               }
+            '461814' = @{ Version = [System.Version]'4.7.2'   ;                                               }
+            '528040' = @{ Version = [System.Version]'4.8'     ;                                               }
+            '528372' = @{ Version = [System.Version]'4.8'     ;                                               }
+            '528449' = @{ Version = [System.Version]'4.8'     ;                                               }
+            '528049' = @{ Version = [System.Version]'4.8'     ;                                               }
+            '533320' = @{ Version = [System.Version]'4.8.1'   ;                                               }
+            '533325' = @{ Version = [System.Version]'4.8.1'   ;                                               }
+        }
+
+        if($regKey = [Microsoft.Win32.RegistryKey]::OpenRemoteBaseKey('LocalMachine', $ComputerName))
+        {
+            if ($net4RegKey = $regKey.OpenSubKey("$dotNet4Registry"))
+            {
+                if(-not ($net4Release = $net4RegKey.GetValue('Release')))
+                {
+                    $net4Release = 30319
+                }
+                return New-Object -TypeName PSCustomObject -Property ([ordered]@{
+                        ComputerName = $ComputerName
+                        Build = $net4Release
+                        Version = $dotNet4Builds["$net4Release"].Version
+                        Comment = $dotNet4Builds["$net4Release"].Comment
+                })
+            }
+        }
+        return New-Object -TypeName PSCustomObject -Property (@{
+                        ComputerName = $ComputerName
+                        Build = "Unknown"
+                        Version = "Unknown"
+                        Comment = "Unknown"
+                })
+    }
+
 }
 
 #endregion Helper classes
