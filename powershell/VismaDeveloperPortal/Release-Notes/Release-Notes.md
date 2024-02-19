@@ -1,3 +1,10 @@
+# Powershell update 2024-02 version 1.22
+
+1. Update the READMEs to show the minimal .NET version required (4.8).
+2. Improve the download process.
+3. Force the usage of TLS 1.2 in the upload script (in the download one it was already forced).
+4. Show the script, PowerShell, Windows and .NET versions in the logs.
+
 # PowerShell update 2023-10
 
 Fix an issue when the logger configuration is invalid, the script finishes the execution with an error.
