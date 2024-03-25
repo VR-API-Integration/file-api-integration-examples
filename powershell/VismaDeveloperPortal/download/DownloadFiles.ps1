@@ -20,7 +20,7 @@ Param(
 
 $ErrorActionPreference = "Stop"
 $scriptMajorVersion = 1
-$scriptMinorVersion = 22
+$scriptMinorVersion = 23
 
 # The default value of this parameter is set here because $PSScriptRoot is empty if used directly in Param() through PowerShell ISE.
 if (-not $_configPath) {

@@ -20,7 +20,7 @@ Param(
 
 $ErrorActionPreference = "Stop"
 $scriptMajorVersion = 1
-$scriptMinorVersion = 22
+$scriptMinorVersion = 23
 
 # The default value of this parameter is set here because $PSScriptRoot is empty if used directly in Param() through PowerShell ISE.
 if (-not $_configPath) {
@@ -36,7 +36,7 @@ catch {
     [Helper]::EndProgramWithError($_, "Failure retrieving the logger configuration. Tip: see the README.MD to check the format of the parameters.", $null)
 }
 
-[Logger] $logger = [Logger]::new($logConfig.Enabled, $logConfig.Path)
+[Logger] $logger = [Logger]::new($logConfig.Enabled, $logConfig.Path, $logConfig.MonitorFile, "UPLOAD")
 
 $logger.LogRaw("")
 $logger.LogInformation("=============================================================")
@@ -49,6 +49,7 @@ $logger.LogInformation("| PowerShell : $($global:PSVersionTable.PSVersion).")
 $logger.LogInformation("| Windows    : $(if (($env:OS).Contains("Windows")) { [Helper]::RetrieveWindowsVersion() } else { "Unknown OS system detected" }).")
 $logger.LogInformation("| NET version: $([Helper]::GetDotNetFrameworkVersion().Version)")
 
+$logger.MonitorInformation("Upload script started with config $($(Split-Path -Path $_configPath -Leaf))")
 
 #region Rest of the configuration
 
@@ -56,6 +57,7 @@ try {
     $config = [ConfigurationManager]::GetConfiguration($_configPath)
 }
 catch {
+    $logger.MonitorError("Failure reading the configuration file")
     [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.", $logger)
 }
 
@@ -88,6 +90,7 @@ try {
     }
 }
 catch {
+    $logger.MonitorError("Failure retrieving the credentials")
     [Helper]::EndProgramWithError($_, "Failure retrieving the credentials.", $logger)
 }
 
@@ -102,6 +105,7 @@ try {
     $token = $authenticationApiService.NewToken($credentials.ClientId, $credentials.ClientSecret, $credentials.TenantId)
 }
 catch {
+    $logger.MonitorError("Failure retrieving the authentication token")
     [Helper]::EndProgramWithError($_, "Failure retrieving the authentication token.", $logger)
 }
 
@@ -116,7 +120,8 @@ try {
     $fileApiService.UploadAndArchiveFiles($config.Upload.Path, $config.Upload.Filter, $config.Upload.ArchivePath)
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure uploading the files.", $logger)
+    $logger.MonitorError("Failure uploading files : $($_)")
+    [Helper]::EndProgramWithError($_, "Failure uploading the file(s).", $logger)
 }
 
 #endregion Upload directory contents
@@ -139,10 +144,13 @@ class ConfigurationManager {
 
         $enableLogs = $config.Logs.Enabled
         $logsPath = $config.Logs.Path
+        $monitorFile = $config.Logs.MonitorFile
+
 
         $missingConfiguration = @()
         if ([string]::IsNullOrEmpty($enableLogs)) { $missingConfiguration += "Logs.Enabled" }
         if ([string]::IsNullOrEmpty($logsPath)) { $missingConfiguration += "Logs.Path" }
+        if ([string]::IsNullOrEmpty($monitorFile)) { $missingConfiguration += "Logs.MonitorFile" }
 
         if ($missingConfiguration.Count -gt 0) {
             throw "Missing parameters: $($missingConfiguration -Join ", ")"
@@ -159,6 +167,7 @@ class ConfigurationManager {
         $logConfiguration = [ConfigurationSectionLogs]::new()
         $logConfiguration.Enabled = [System.Convert]::ToBoolean($enableLogs)
         $logConfiguration.Path = $logsPath
+        $logConfiguration.MonitorFile = $monitorFile
 
         return $logConfiguration
     }
@@ -365,6 +374,7 @@ class FileApiService {
         $filesToUploadInfo = Get-ChildItem -Path $uploadPath -Filter $mask
 
         $this._logger.LogInformation("$($filesToUploadInfo.Length) files found.")
+        $this._logger.MonitorInformation("Uploading $($filesToUploadInfo.Length) files.")
 
         $uploadedFilesCount = 0
         foreach ($fullFilenameToUpload in $filesToUploadInfo.FullName) {
@@ -384,6 +394,7 @@ class FileApiService {
         $this._logger.LogInformation("Uploading the file:")
         $this._logger.LogInformation("| File: $($(Split-Path -Path $filenameToUpload -Leaf))")
         $this._logger.LogInformation("| Business type: $($this._businessTypeId)")
+        $this._logger.MonitorInformation("File $($(Split-Path -Path $filenameToUpload -Leaf)) is uploading")
 
         $this._logger.LogInformation("Uploading chunk #1.")
 
@@ -398,6 +409,7 @@ class FileApiService {
         }
 
         $this._logger.LogInformation("The file was uploaded.")
+        $this._logger.MonitorInformation("File $($(Split-Path -Path $filenameToUpload -Leaf)) was uploaded successfully")
     }
 
     hidden [PSCustomObject] UploadFirstRequest([string] $filenameToUpload) {
@@ -679,18 +691,26 @@ class Validator {
 class Logger {
     hidden [bool] $_storeLogs
     hidden [string] $_logPath
+    hidden [string] $_monPath
+    hidden [string] $_upDown
 
-    Logger([bool] $storeLogs, [string] $logsDirectory) {
-        $this._storeLogs = $storeLogs
+Logger([bool] $storeLogs, [string] $logsDirectory, [string] $monFile, [string] $upDownLoad) {
+    # this parameter is $true (store logs) or $false (do not store logs)
+    $this._storeLogs = $storeLogs
 
-        if ($this._storeLogs) {
-            $this._logPath = Join-Path $logsDirectory "upload log - $(Get-Date -Format "yyyy-MM-dd").txt"
-
-            if (-not (Test-Path -Path $logsDirectory -PathType Container)) {
-                New-Item -ItemType Directory -Path $logsDirectory -Force
-            }
+    if ($this._storeLogs) {
+        # detailed log file created per day
+        $this._logPath = Join-Path $logsDirectory "download log - $(Get-Date -Format "yyyy-MM-dd").txt"
+        # only 1 monitor file created
+        $this._monPath = Join-Path $logsDirectory $monFile
+        # signals a download or upload record (easy if you use the same the Monitor File for both upload and download)
+        $this._upDown = $upDownLoad
+    
+        if (-not (Test-Path -Path $logsDirectory -PathType Container)) {
+            New-Item -ItemType Directory -Path $logsDirectory -Force
         }
     }
+}
 
     [void] LogRaw([string] $text) {
         Write-Host $text
@@ -715,6 +735,29 @@ class Logger {
         if ($this._storeLogs) {
             $text | Out-File $this._logPath -Encoding utf8 -Append -Force
         }
+    }
+
+    # Log an INFO record in the monitor log file
+    [void] MonitorInformation([string] $text) {
+        $text = $this.GetFormattedDate() + " {0,-10} [INFO]  {1}" -f "[$($this._upDown)]", $($text)
+
+        if ($this._storeLogs) {
+            $text | Out-File $this._monPath -Encoding utf8 -Append -Force
+        }
+    }
+
+    # Log an ERROR record in the monitor log file
+    [void] MonitorError([string] $text) {
+        $text = $this.GetFormattedDate() + " {0,-10} [ERROR] {1}" -f "[$($this._upDown)]", $($text)
+
+        if ($this._storeLogs) {
+            $text | Out-File $this._monPath -Encoding utf8 -Append -Force
+        }
+    }
+
+    # the date format preceding each log record
+    [string] GetFormattedDate() {
+        return Get-Date -Format "dd-MM-yyyy HH:mm:ss"
     }
 }
 
@@ -755,9 +798,11 @@ class Helper {
         try {
             Move-Item $filename -Destination $archiveFilePath
             $logger.logInformation("The file was archived.")
+            $logger.MonitorInformation("File $($(Split-Path -Path $filename -Leaf)) was archived")
         }
         catch {
             $logger.LogError("The file was not archived.")
+            $logger.MonitorError("File $($(Split-Path -Path $filename -Leaf)) could not be archived")
             throw $_
         }
     }
@@ -844,6 +889,8 @@ class Helper {
 
         $logger.LogInformation("----")
         $logger.LogInformation("End of the example.")
+
+        $logger.MonitorInformation("Upload script ended")
 
         if ($finishWithError) {
             exit 1
@@ -935,6 +982,7 @@ class ConfigurationSectionServices {
 class ConfigurationSectionLogs {
     [bool] $Enabled
     [string] $Path
+    [string] $MonitorFile
 }
 
 class ConfigurationSectionUpload {
