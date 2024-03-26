@@ -1,7 +1,12 @@
+# PowerShell update 2024-03 version 1.24
+
+Fix an issue where the upload examples were creating the log files with a wrong name.
+
 # PowerShell update 2024-03 version 1.23
-1. Include the monitor file in the Upload examples (it was already in place in the Download examples).
+
+1. Include the monitor file in the upload examples (it was already in place in the download examples).
 2. Ensure the removal of all the temporary files created by the examples.
-3. Fix a bug where the amount of files to upload was shown incorrectly when only one file was available to upload.
+3. Fix an issue where the amount of files to upload was shown incorrectly when only one file was available to upload.
 
 The monitor file is a single file that will contain the minimum of records needed to determine if the script runs successfully and errors can be easily detected.  
 This file is suitable for checking regularly by an automated error checking process.  
@@ -19,14 +24,14 @@ Fix an issue when the logger configuration is invalid, the script finishes the e
 
 # PowerShell update 2023-08
 
-New functionality and improvements in Powershell Examples
+New functionality and improvements in PowerShell Examples.
 
-1. Support for logfiles
-2. Upload by chunks extends upload filesize limit from 100MB to 10GB
-3. Download by chunks extends download filesize limit from 2GB to 10GB
-4. Improved reliability
-5. Added default Proxy settings detection
-6. Added comments
+1. Support for logfiles.
+2. Upload by chunks extends upload file size limit from 100 MB to 10 GB.
+3. Download by chunks extends download file size limit from 2 GB to 10 GB.
+4. Improved reliability.
+5. Added default Proxy settings detection.
+6. Added comments.
 
 
 ## Configure logs in upload and download examples
@@ -37,8 +42,8 @@ A new section has been added in the configuration of the examples to configure t
 
 Please follow the steps below to activate the logs:
 
-1. Download the latest version of Powershell examples [here](https://github.com/VR-API-Integration/file-api-integration-examples)
-2. Edit the configuration settings: **'Logs'** - **'Enabled'** with the value **'true'**
+1. Download the latest version of Powershell examples [here](https://github.com/VR-API-Integration/file-api-integration-examples).
+2. Edit the configuration settings: **'Logs'** - **'Enabled'** with the value **'true'**.
 3. Edit the configuration settings: **'Logs'** - **'Path'** with the local folder where to store the detailed logs.
 4. Edit the configuration settings: **'Logs'** - **'MonitorFile'** with the filename where you want to store the monitor logs. The MonitorFile is stored along the detailed logs.
 
@@ -60,27 +65,27 @@ Recommended chunk size for uploads is 4MB.
 
 Please follow the steps below to upload files by chunks:
 
-1. Download the last version of PowerShell examples [here](https://github.com/VR-API-Integration/file-api-integration-examples)
-2. Edit the configuration settings: **'Upload'** - **'ChunkSize'** with the value **'4'**
+1. Download the last version of PowerShell examples [here](https://github.com/VR-API-Integration/file-api-integration-examples).
+2. Edit the configuration settings: **'Upload'** - **'ChunkSize'** with the value **'4'**.
 
 ![Upload ChunkSize](images/imageChunks.png)
 
-See additional details in the [Readme](https://github.com/VR-API-Integration/file-api-integration-examples/blob/main/powershell/upload/README.md) of powershell upload example
+See additional details in the [Readme](https://github.com/VR-API-Integration/file-api-integration-examples/blob/main/powershell/upload/README.md) of powershell upload example.
 
 
 ## Improve the download example to download files by chunks
 
 Improvements have been made in the download example to download files by chunks.  
-With this new functionality, the file size limit for downloading files has been extended from 2GB to 10GB.  
+With this new functionality, the file size limit for downloading files has been extended from 2 GB to 10 GB.  
 A new field (`<ChunkSize>`) has been added in the configuration of the example to define the chunk size (MB).  
-Recommended chunk size for downloads is 100MB  
+Recommended chunk size for downloads is 100 MB  
 
 Please follow the below steps to download the files by chunks:
 
-1. Download the last version of PowerShell examples [here](https://github.com/VR-API-Integration/file-api-integration-examples) 
-2. Edit the configuration settings: **'Download'** - **'ChunkSize'** with the value **'100'**
+1. Download the last version of PowerShell examples [here](https://github.com/VR-API-Integration/file-api-integration-examples) .
+2. Edit the configuration settings: **'Download'** - **'ChunkSize'** with the value **'100'**.
 
-See additional details in the [Readme](https://github.com/VR-API-Integration/file-api-integration-examples/blob/main/powershell/download/README.md) of the powershell example
+See additional details in the [Readme](https://github.com/VR-API-Integration/file-api-integration-examples/blob/main/powershell/download/README.md) of the powershell example.
 
 ## Reliability
 
