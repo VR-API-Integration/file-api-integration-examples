@@ -903,7 +903,7 @@ class Helper {
 
             foreach ($existingTemporaryResourcePath in $existingtemporaryResourcesPaths) {
                 $logger.LogInformation("| Path: $($existingTemporaryResourcePath)")
-                $logger.MonitorInformation("Path $($existingTemporaryResourcePath) was deleted")
+                $logger.MonitorInformation("Resource $($existingTemporaryResourcePath) was deleted")
 
                 Remove-Item -Force -Path $existingTemporaryResourcePath
             }
