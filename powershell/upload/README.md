@@ -14,7 +14,7 @@ A collection of examples to upload files with the File API using **PowerShell**.
 
 Download the **file-api-integration-examples** repository.
 
-Inside the **powershell\VismaDeveloperPortal\upload** folder you can find these files:
+Inside the **powershell\upload** folder you can find these files:
 
 - **UploadFile.ps1**: Script example to upload specified files.
 - **config.xml**: Configuration of the **UploadFile.ps1** script.
