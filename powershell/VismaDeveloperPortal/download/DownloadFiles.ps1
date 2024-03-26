@@ -27,6 +27,9 @@ if (-not $_configPath) {
     $_configPath = "$($PSScriptRoot)\config.xml"
 }
 
+# Place in this variable the paths of all the resources which you want to ensure their removal after each execution.
+$script:temporaryResourcesPaths = @()
+
 #region Log configuration
 #try reading <Logs> configuration first so that we are able to log other possible errors in the configuration
 
@@ -475,6 +478,7 @@ class FileApiService {
                 $this._logger.MonitorInformation("File $($fileInfo.Name) was downloaded successfully.")
             } catch {
                 $failedFiles += $fileinfo
+
                 $this._logger.LogError("The file $($fileInfo.Name) failed.")
                 $this._logger.LogError("Error: $($_)")
                 $this._logger.MonitorError("Failed download $($fileInfo.Name) : $($_)")
@@ -511,10 +515,11 @@ class FileApiService {
         # if the file is smaller than the ChunkSize --> download it in 1 request.
         if($fileInfo.Size -le $this._chunkSize) {
             try {
+                $script:temporaryResourcesPaths += $tempFileName
                 $filestream = New-Object IO.FileStream $tempFileName ,'Create','Write','Read'
 
                 $bytes = $this.DownloadFileInOneGo($this._role, $fileInfo, $tempFileName)
-
+                
                 $filestream.Write($bytes, 0, $bytes.Length)
             } catch{
                 throw "$($_)"
@@ -531,6 +536,7 @@ class FileApiService {
             $this._logger.LogInformation("Downloading Headers")
             $this._fileApiClient.DownloadHeader($this._role, $fileInfo, $this._tempFolder)
 
+            $script:temporaryResourcesPaths += $tempFileName
             $filestream = New-Object IO.FileStream $tempFileName ,'Append','Write','Read'
             try {
                 # download chunks until all bytes are read
@@ -978,6 +984,21 @@ class Helper {
         if (-not $logger) {
             $logger = [Logger]::new($false, "", "", "")
         }
+
+        # Clean up all the temporary resources that weren't removed during the execution.
+        $existingtemporaryResourcesPaths = $script:temporaryResourcesPaths | Where-Object { Test-Path $_ } | Select-Object -Unique
+        if ($existingtemporaryResourcesPaths) {
+            $logger.LogInformation("----")
+            $logger.LogInformation("Deleting temporary resources:")
+
+            foreach ($existingTemporaryResourcePath in $existingtemporaryResourcesPaths) {
+                $logger.LogInformation("| Path: $($existingTemporaryResourcePath)")
+                $logger.MonitorInformation("Resource $($existingTemporaryResourcePath) was deleted")
+
+                Remove-Item -Force -Path $existingTemporaryResourcePath
+            }
+        }
+        $script:temporaryResourcesPaths = @()
 
         $logger.LogInformation("----")
         $logger.LogInformation("End of the example.")
