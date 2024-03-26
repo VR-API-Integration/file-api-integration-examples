@@ -6,7 +6,7 @@
 The monitor file is a single file that will contain the minimum of records needed to determine if the script runs successfully and errors can be easily detected.  
 This file is suitable for checking regularly by an automated error checking process.  
 
-# Powershell update 2024-02 version 1.22
+# PowerShell update 2024-02 version 1.22
 
 1. Update the READMEs to show the minimal .NET version required (4.8).
 2. Improve the download process.
