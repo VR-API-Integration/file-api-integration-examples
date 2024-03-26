@@ -27,6 +27,9 @@ if (-not $_configPath) {
     $_configPath = "$($PSScriptRoot)\config.xml"
 }
 
+# Place in this variable the paths of all the resources which you want to ensure their removal after each execution.
+$script:temporaryResourcesPaths = @()
+
 #region Log configuration
 
 try {
@@ -458,6 +461,11 @@ class FileApiService {
             $footerFilePath = "$($folderPath)\$($footerFilename)"
             $footerContent = "`r`n--$($this._boundary)--"
 
+            $script:temporaryResourcesPaths += Join-Path $folderPath $headerFilename
+            $script:temporaryResourcesPaths += Join-Path $folderPath $footerFilename
+            $script:temporaryResourcesPaths += $chunkPath
+            $script:temporaryResourcesPaths += $createdFilePath
+
             New-Item -Path $folderPath -Name $headerFilename -Value $headerContent
             New-Item -Path $folderPath -Name $footerFilename -Value $footerContent
 
@@ -886,6 +894,21 @@ class Helper {
         if (-not $logger) {
             $logger = [Logger]::new($false, "")
         }
+
+        # Clean up all the temporary resources that weren't removed during the execution.
+        $existingtemporaryResourcesPaths = $script:temporaryResourcesPaths | Where-Object { Test-Path $_ }
+        if ($existingtemporaryResourcesPaths) {
+            $logger.LogInformation("----")
+            $logger.LogInformation("Deleting temporary resources:")
+
+            foreach ($existingTemporaryResourcePath in $existingtemporaryResourcesPaths) {
+                $logger.LogInformation("| Path: $($existingTemporaryResourcePath)")
+                $logger.MonitorInformation("Path $($existingTemporaryResourcePath) was deleted")
+
+                Remove-Item -Force -Path $existingTemporaryResourcePath
+            }
+        }
+        $script:temporaryResourcesPaths = @()
 
         $logger.LogInformation("----")
         $logger.LogInformation("End of the example.")
