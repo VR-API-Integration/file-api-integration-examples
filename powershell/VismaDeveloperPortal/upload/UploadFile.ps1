@@ -491,7 +491,7 @@ class FileApiService {
         $createdChunkPath = "$($folderPath)\$([Helper]::ConvertToUniqueFilename("Chunk_$($chunkNumber).bin"))"
         [byte[]]$bytes = new-object Byte[] $chunkSize
         $fileStream = New-Object System.IO.FileStream($contentFilePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read)
-        $binaryReader = New-Object System.IO.BinaryReader( $fileStream)
+        $binaryReader = New-Object System.IO.BinaryReader($fileStream)
         $binaryReader.BaseStream.Seek($chunkNumber * $chunkSize, [System.IO.SeekOrigin]::Begin)
         $bytes = $binaryReader.ReadBytes($chunkSize) 
        
@@ -502,6 +502,8 @@ class FileApiService {
         }
 
         $binaryReader.Dispose()
+
+        $script:temporaryResourcesPaths += $createdChunkPath
 
         # The way of encoding the bytes changed in the version 6.0.0. See the following link for more information:
         # https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/set-content?view=powershell-7.3#parameters
@@ -523,7 +525,7 @@ class FileApiService {
             try {
                 Start-Sleep -Milliseconds $this._uploadDelay
 
-                $result = $this._fileApiClient.UploadFile($filePath, $contentType, $token, $chunkNumber, $close )
+                $result = $this._fileApiClient.UploadFile($filePath, $contentType, $token, $chunkNumber, $close)
 
                 if (-not [string]::IsNullOrEmpty($filePath) -and (Test-Path $filePath)) {
                     Remove-Item -Force -Path $filePath
@@ -896,7 +898,7 @@ class Helper {
         }
 
         # Clean up all the temporary resources that weren't removed during the execution.
-        $existingtemporaryResourcesPaths = $script:temporaryResourcesPaths | Where-Object { Test-Path $_ }
+        $existingtemporaryResourcesPaths = $script:temporaryResourcesPaths | Where-Object { Test-Path $_ } | Select-Object -Unique
         if ($existingtemporaryResourcesPaths) {
             $logger.LogInformation("----")
             $logger.LogInformation("Deleting temporary resources:")
