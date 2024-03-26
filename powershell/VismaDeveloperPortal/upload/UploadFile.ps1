@@ -376,8 +376,8 @@ class FileApiService {
     
         $filesToUploadInfo = Get-ChildItem -Path $uploadPath -Filter $mask
 
-        $this._logger.LogInformation("$($filesToUploadInfo.Length) files found.")
-        $this._logger.MonitorInformation("Uploading $($filesToUploadInfo.Length) files.")
+        $this._logger.LogInformation("$($filesToUploadInfo.Count) file(s) found.")
+        $this._logger.MonitorInformation("Uploading $($filesToUploadInfo.Count) file(s).")
 
         $uploadedFilesCount = 0
         foreach ($fullFilenameToUpload in $filesToUploadInfo.FullName) {
