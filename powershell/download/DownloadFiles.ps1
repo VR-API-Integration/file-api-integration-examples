@@ -20,12 +20,15 @@ Param(
 
 $ErrorActionPreference = "Stop"
 $scriptMajorVersion = 1
-$scriptMinorVersion = 22
+$scriptMinorVersion = 23
 
 # The default value of this parameter is set here because $PSScriptRoot is empty if used directly in Param() through PowerShell ISE.
 if (-not $_configPath) {
     $_configPath = "$($PSScriptRoot)\config.xml"
 }
+
+# Place in this variable the paths of all the resources which you want to ensure their removal after each execution.
+$script:temporaryResourcesPaths = @()
 
 #region Log configuration
 #try reading <Logs> configuration first so that we are able to log other possible errors in the configuration
@@ -449,7 +452,7 @@ class FileApiService {
         # download each file in the list
         foreach ($fileInfo in $filesInfo) {
             $this._logger.LogInformation("----")
-            $this._logger.LogInformation("Downloading file $($downloadedFilesCount + 1 + $failedFiles.Length)/$($filesInfo.Count).")
+            $this._logger.LogInformation("Downloading file $($downloadedFilesCount + 1 + $failedFiles.Count)/$($filesInfo.Count).")
             $this._logger.LogInformation("| ID  : $($fileInfo.Id)")
             $this._logger.LogInformation("| Name: $($fileInfo.Name)")
             $this._logger.LogInformation("| Size: $($fileInfo.Size)")
@@ -475,6 +478,7 @@ class FileApiService {
                 $this._logger.MonitorInformation("File $($fileInfo.Name) was downloaded successfully.")
             } catch {
                 $failedFiles += $fileinfo
+
                 $this._logger.LogError("The file $($fileInfo.Name) failed.")
                 $this._logger.LogError("Error: $($_)")
                 $this._logger.MonitorError("Failed download $($fileInfo.Name) : $($_)")
@@ -484,12 +488,12 @@ class FileApiService {
         $this._logger.LogInformation("----")
 
         # log summary
-        if( $failedFiles.Length -eq 0) {
+        if($failedFiles.Count -eq 0) {
             $this._logger.LogInformation("All files were downloaded.")
         } else {
-            $this._logger.LogInformation("$($downloadedFilesCount) of $($filesInfo.Length) files were downloaded")
-            $this._logger.LogInformation("The following files failed ($($failedFiles.Length)):")
-            foreach( $fileinfo in $failedFiles){
+            $this._logger.LogInformation("$($downloadedFilesCount) of $($filesInfo.Count) files were downloaded")
+            $this._logger.LogInformation("The following files failed ($($failedFiles.Count)):")
+            foreach($fileinfo in $failedFiles){
                 $this._logger.LogInformation("$($fileinfo.Name)")
 
                 $partialFileName = "$($path)\$($fileinfo.Name)$($this._partial)"
@@ -511,10 +515,11 @@ class FileApiService {
         # if the file is smaller than the ChunkSize --> download it in 1 request.
         if($fileInfo.Size -le $this._chunkSize) {
             try {
+                $script:temporaryResourcesPaths += $tempFileName
                 $filestream = New-Object IO.FileStream $tempFileName ,'Create','Write','Read'
 
                 $bytes = $this.DownloadFileInOneGo($this._role, $fileInfo, $tempFileName)
-
+                
                 $filestream.Write($bytes, 0, $bytes.Length)
             } catch{
                 throw "$($_)"
@@ -529,8 +534,9 @@ class FileApiService {
             [int] $totalchunks = [math]::ceiling($fileInfo.Size / $this._chunkSize)
 
             $this._logger.LogInformation("Downloading Headers")
-            $result = $this._fileApiClient.DownloadHeader($this._role, $fileInfo, $this._tempFolder)
+            $this._fileApiClient.DownloadHeader($this._role, $fileInfo, $this._tempFolder)
 
+            $script:temporaryResourcesPaths += $tempFileName
             $filestream = New-Object IO.FileStream $tempFileName ,'Append','Write','Read'
             try {
                 # download chunks until all bytes are read
@@ -575,7 +581,7 @@ class FileApiService {
                 # when download fails due to spike arrest
                 # increase delay to try avoid spike arrest for next requests
                 # retry the download
-                if( $_.Exception.Message -match "\(429\)"){
+                if($_.Exception.Message -match "\(429\)"){
                     $this._waitTimeBetweenCallsMS += 100
                     $this._logger.LogInformation("Spike arrest detected: Setting requestDelay to $($this._waitTimeBetweenCallsMS) msec.")
                     $this._logger.LogInformation("Waiting 60 seconds for spike arrest to clear")
@@ -585,7 +591,7 @@ class FileApiService {
                     # when download fails due to server error 5xx retry download max $maxretry (10) times
                     if($_.Exception.Message -match "\(5..\)") {
                         $retry += 1
-                        if( $retry -le $maxretry) {
+                        if($retry -le $maxretry) {
                             $this._logger.LogInformation("Downloading file $($fileInfo.Name): retry $($retry)")
                         } else { 
                             throw "$($_)"
@@ -616,7 +622,7 @@ class FileApiService {
                 # when download fails due to spike arrest
                 # increase delay to try avoid spike arrest for next requests
                 # retry the chunk download
-                if( $_.Exception.Message -match "\(429\)"){
+                if($_.Exception.Message -match "\(429\)"){
                     $this._waitTimeBetweenCallsMS += 100
 
                     # wait 60 secs for spike arrest to clear
@@ -630,7 +636,7 @@ class FileApiService {
                     # when download fails due to server error 5xx retry download max $maxretry (10) times
                     if($_.Exception.Message -match "\(5..\)") {
                         $retry += 1
-                        if( $retry -le $maxretry) {
+                        if($retry -le $maxretry) {
                             $this._logger.LogInformation("Downloading chunk $($chunkNumber): retry $($retry)")
                         } else { 
                             throw "$($_)"
@@ -978,6 +984,21 @@ class Helper {
         if (-not $logger) {
             $logger = [Logger]::new($false, "", "", "")
         }
+
+        # Clean up all the temporary resources that weren't removed during the execution.
+        $existingtemporaryResourcesPaths = $script:temporaryResourcesPaths | Where-Object { Test-Path $_ } | Select-Object -Unique
+        if ($existingtemporaryResourcesPaths) {
+            $logger.LogInformation("----")
+            $logger.LogInformation("Deleting temporary resources:")
+
+            foreach ($existingTemporaryResourcePath in $existingtemporaryResourcesPaths) {
+                $logger.LogInformation("| Path: $($existingTemporaryResourcePath)")
+                $logger.MonitorInformation("Resource $($existingTemporaryResourcePath) was deleted")
+
+                Remove-Item -Force -Path $existingTemporaryResourcePath
+            }
+        }
+        $script:temporaryResourcesPaths = @()
 
         $logger.LogInformation("----")
         $logger.LogInformation("End of the example.")

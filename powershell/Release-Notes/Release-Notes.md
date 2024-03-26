@@ -40,8 +40,8 @@ This file is suitable for checking regularly by an automated error checking proc
 The detailed logfile can provide more information about the possible cause of errors.  
 
 See additional details in the Readme of PowerShell examples  
-[Readme Upload example](https://github.com/VR-API-Integration/file-api-integration-examples/blob/main/powershell/VismaDeveloperPortal/upload/README.md)  
-[Readme Download example](https://github.com/VR-API-Integration/file-api-integration-examples/blob/main/powershell/VismaDeveloperPortal/download/README.md)   
+[Readme Upload example](https://github.com/VR-API-Integration/file-api-integration-examples/blob/main/powershell/upload/README.md)  
+[Readme Download example](https://github.com/VR-API-Integration/file-api-integration-examples/blob/main/powershell/download/README.md)   
 
 ## Improve the upload example to upload files by chunks 
 
@@ -57,7 +57,7 @@ Please follow the steps below to upload files by chunks:
 
 ![Upload ChunkSize](images/imageChunks.png)
 
-See additional details in the [Readme](https://github.com/VR-API-Integration/file-api-integration-examples/blob/main/powershell/VismaDeveloperPortal/upload/README.md) of powershell upload example
+See additional details in the [Readme](https://github.com/VR-API-Integration/file-api-integration-examples/blob/main/powershell/upload/README.md) of powershell upload example
 
 
 ## Improve the download example to download files by chunks
@@ -72,7 +72,7 @@ Please follow the below steps to download the files by chunks:
 1. Download the last version of PowerShell examples [here](https://github.com/VR-API-Integration/file-api-integration-examples) 
 2. Edit the configuration settings: **'Download'** - **'ChunkSize'** with the value **'100'**
 
-See additional details in the [Readme](https://github.com/VR-API-Integration/file-api-integration-examples/blob/main/powershell/VismaDeveloperPortal/download/README.md) of the powershell example
+See additional details in the [Readme](https://github.com/VR-API-Integration/file-api-integration-examples/blob/main/powershell/download/README.md) of the powershell example
 
 ## Reliability
 

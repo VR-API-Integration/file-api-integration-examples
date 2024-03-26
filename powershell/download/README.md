@@ -13,7 +13,7 @@ A collection of examples to download files with the File API using **PowerShell*
 
 Download the **file-api-integration-examples** repository.
 
-Inside the **powershell\VismaDeveloperPortal\download** folder you can find these files:
+Inside the **powershell\download** folder you can find these files:
 - **DownloadFiles.ps1**: Script example to download specified files.
 - **config.xml**: Configuration of the **DownloadFiles.ps1** script.
 

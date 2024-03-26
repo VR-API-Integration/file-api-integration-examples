@@ -20,12 +20,15 @@ Param(
 
 $ErrorActionPreference = "Stop"
 $scriptMajorVersion = 1
-$scriptMinorVersion = 22
+$scriptMinorVersion = 23
 
 # The default value of this parameter is set here because $PSScriptRoot is empty if used directly in Param() through PowerShell ISE.
 if (-not $_configPath) {
     $_configPath = "$($PSScriptRoot)\config.xml"
 }
+
+# Place in this variable the paths of all the resources which you want to ensure their removal after each execution.
+$script:temporaryResourcesPaths = @()
 
 #region Log configuration
 
@@ -36,7 +39,7 @@ catch {
     [Helper]::EndProgramWithError($_, "Failure retrieving the logger configuration. Tip: see the README.MD to check the format of the parameters.", $null)
 }
 
-[Logger] $logger = [Logger]::new($logConfig.Enabled, $logConfig.Path)
+[Logger] $logger = [Logger]::new($logConfig.Enabled, $logConfig.Path, $logConfig.MonitorFile, "UPLOAD")
 
 $logger.LogRaw("")
 $logger.LogInformation("=============================================================")
@@ -49,6 +52,7 @@ $logger.LogInformation("| PowerShell : $($global:PSVersionTable.PSVersion).")
 $logger.LogInformation("| Windows    : $(if (($env:OS).Contains("Windows")) { [Helper]::RetrieveWindowsVersion() } else { "Unknown OS system detected" }).")
 $logger.LogInformation("| NET version: $([Helper]::GetDotNetFrameworkVersion().Version)")
 
+$logger.MonitorInformation("Upload script started with config $($(Split-Path -Path $_configPath -Leaf))")
 
 #region Rest of the configuration
 
@@ -56,6 +60,7 @@ try {
     $config = [ConfigurationManager]::GetConfiguration($_configPath)
 }
 catch {
+    $logger.MonitorError("Failure reading the configuration file")
     [Helper]::EndProgramWithError($_, "Failure retrieving the configuration. Tip: see the README.MD to check the format of the parameters.", $logger)
 }
 
@@ -88,6 +93,7 @@ try {
     }
 }
 catch {
+    $logger.MonitorError("Failure retrieving the credentials")
     [Helper]::EndProgramWithError($_, "Failure retrieving the credentials.", $logger)
 }
 
@@ -102,6 +108,7 @@ try {
     $token = $authenticationApiService.NewToken($credentials.ClientId, $credentials.ClientSecret, $credentials.TenantId)
 }
 catch {
+    $logger.MonitorError("Failure retrieving the authentication token")
     [Helper]::EndProgramWithError($_, "Failure retrieving the authentication token.", $logger)
 }
 
@@ -116,7 +123,8 @@ try {
     $fileApiService.UploadAndArchiveFiles($config.Upload.Path, $config.Upload.Filter, $config.Upload.ArchivePath)
 }
 catch {
-    [Helper]::EndProgramWithError($_, "Failure uploading the files.", $logger)
+    $logger.MonitorError("Failure uploading files : $($_)")
+    [Helper]::EndProgramWithError($_, "Failure uploading the file(s).", $logger)
 }
 
 #endregion Upload directory contents
@@ -139,10 +147,13 @@ class ConfigurationManager {
 
         $enableLogs = $config.Logs.Enabled
         $logsPath = $config.Logs.Path
+        $monitorFile = $config.Logs.MonitorFile
+
 
         $missingConfiguration = @()
         if ([string]::IsNullOrEmpty($enableLogs)) { $missingConfiguration += "Logs.Enabled" }
         if ([string]::IsNullOrEmpty($logsPath)) { $missingConfiguration += "Logs.Path" }
+        if ([string]::IsNullOrEmpty($monitorFile)) { $missingConfiguration += "Logs.MonitorFile" }
 
         if ($missingConfiguration.Count -gt 0) {
             throw "Missing parameters: $($missingConfiguration -Join ", ")"
@@ -159,6 +170,7 @@ class ConfigurationManager {
         $logConfiguration = [ConfigurationSectionLogs]::new()
         $logConfiguration.Enabled = [System.Convert]::ToBoolean($enableLogs)
         $logConfiguration.Path = $logsPath
+        $logConfiguration.MonitorFile = $monitorFile
 
         return $logConfiguration
     }
@@ -364,7 +376,8 @@ class FileApiService {
     
         $filesToUploadInfo = Get-ChildItem -Path $uploadPath -Filter $mask
 
-        $this._logger.LogInformation("$($filesToUploadInfo.Length) files found.")
+        $this._logger.LogInformation("$($filesToUploadInfo.Count) file(s) found.")
+        $this._logger.MonitorInformation("Uploading $($filesToUploadInfo.Count) file(s).")
 
         $uploadedFilesCount = 0
         foreach ($fullFilenameToUpload in $filesToUploadInfo.FullName) {
@@ -384,6 +397,7 @@ class FileApiService {
         $this._logger.LogInformation("Uploading the file:")
         $this._logger.LogInformation("| File: $($(Split-Path -Path $filenameToUpload -Leaf))")
         $this._logger.LogInformation("| Business type: $($this._businessTypeId)")
+        $this._logger.MonitorInformation("File $($(Split-Path -Path $filenameToUpload -Leaf)) is uploading")
 
         $this._logger.LogInformation("Uploading chunk #1.")
 
@@ -398,6 +412,7 @@ class FileApiService {
         }
 
         $this._logger.LogInformation("The file was uploaded.")
+        $this._logger.MonitorInformation("File $($(Split-Path -Path $filenameToUpload -Leaf)) was uploaded successfully")
     }
 
     hidden [PSCustomObject] UploadFirstRequest([string] $filenameToUpload) {
@@ -446,6 +461,11 @@ class FileApiService {
             $footerFilePath = "$($folderPath)\$($footerFilename)"
             $footerContent = "`r`n--$($this._boundary)--"
 
+            $script:temporaryResourcesPaths += Join-Path $folderPath $headerFilename
+            $script:temporaryResourcesPaths += Join-Path $folderPath $footerFilename
+            $script:temporaryResourcesPaths += $chunkPath
+            $script:temporaryResourcesPaths += $createdFilePath
+
             New-Item -Path $folderPath -Name $headerFilename -Value $headerContent
             New-Item -Path $folderPath -Name $footerFilename -Value $footerContent
 
@@ -471,7 +491,7 @@ class FileApiService {
         $createdChunkPath = "$($folderPath)\$([Helper]::ConvertToUniqueFilename("Chunk_$($chunkNumber).bin"))"
         [byte[]]$bytes = new-object Byte[] $chunkSize
         $fileStream = New-Object System.IO.FileStream($contentFilePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read)
-        $binaryReader = New-Object System.IO.BinaryReader( $fileStream)
+        $binaryReader = New-Object System.IO.BinaryReader($fileStream)
         $binaryReader.BaseStream.Seek($chunkNumber * $chunkSize, [System.IO.SeekOrigin]::Begin)
         $bytes = $binaryReader.ReadBytes($chunkSize) 
        
@@ -482,6 +502,8 @@ class FileApiService {
         }
 
         $binaryReader.Dispose()
+
+        $script:temporaryResourcesPaths += $createdChunkPath
 
         # The way of encoding the bytes changed in the version 6.0.0. See the following link for more information:
         # https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/set-content?view=powershell-7.3#parameters
@@ -503,7 +525,7 @@ class FileApiService {
             try {
                 Start-Sleep -Milliseconds $this._uploadDelay
 
-                $result = $this._fileApiClient.UploadFile($filePath, $contentType, $token, $chunkNumber, $close )
+                $result = $this._fileApiClient.UploadFile($filePath, $contentType, $token, $chunkNumber, $close)
 
                 if (-not [string]::IsNullOrEmpty($filePath) -and (Test-Path $filePath)) {
                     Remove-Item -Force -Path $filePath
@@ -679,18 +701,26 @@ class Validator {
 class Logger {
     hidden [bool] $_storeLogs
     hidden [string] $_logPath
+    hidden [string] $_monPath
+    hidden [string] $_upDown
 
-    Logger([bool] $storeLogs, [string] $logsDirectory) {
-        $this._storeLogs = $storeLogs
+Logger([bool] $storeLogs, [string] $logsDirectory, [string] $monFile, [string] $upDownLoad) {
+    # this parameter is $true (store logs) or $false (do not store logs)
+    $this._storeLogs = $storeLogs
 
-        if ($this._storeLogs) {
-            $this._logPath = Join-Path $logsDirectory "upload log - $(Get-Date -Format "yyyy-MM-dd").txt"
-
-            if (-not (Test-Path -Path $logsDirectory -PathType Container)) {
-                New-Item -ItemType Directory -Path $logsDirectory -Force
-            }
+    if ($this._storeLogs) {
+        # detailed log file created per day
+        $this._logPath = Join-Path $logsDirectory "download log - $(Get-Date -Format "yyyy-MM-dd").txt"
+        # only 1 monitor file created
+        $this._monPath = Join-Path $logsDirectory $monFile
+        # signals a download or upload record (easy if you use the same the Monitor File for both upload and download)
+        $this._upDown = $upDownLoad
+    
+        if (-not (Test-Path -Path $logsDirectory -PathType Container)) {
+            New-Item -ItemType Directory -Path $logsDirectory -Force
         }
     }
+}
 
     [void] LogRaw([string] $text) {
         Write-Host $text
@@ -715,6 +745,29 @@ class Logger {
         if ($this._storeLogs) {
             $text | Out-File $this._logPath -Encoding utf8 -Append -Force
         }
+    }
+
+    # Log an INFO record in the monitor log file
+    [void] MonitorInformation([string] $text) {
+        $text = $this.GetFormattedDate() + " {0,-10} [INFO]  {1}" -f "[$($this._upDown)]", $($text)
+
+        if ($this._storeLogs) {
+            $text | Out-File $this._monPath -Encoding utf8 -Append -Force
+        }
+    }
+
+    # Log an ERROR record in the monitor log file
+    [void] MonitorError([string] $text) {
+        $text = $this.GetFormattedDate() + " {0,-10} [ERROR] {1}" -f "[$($this._upDown)]", $($text)
+
+        if ($this._storeLogs) {
+            $text | Out-File $this._monPath -Encoding utf8 -Append -Force
+        }
+    }
+
+    # the date format preceding each log record
+    [string] GetFormattedDate() {
+        return Get-Date -Format "dd-MM-yyyy HH:mm:ss"
     }
 }
 
@@ -755,9 +808,11 @@ class Helper {
         try {
             Move-Item $filename -Destination $archiveFilePath
             $logger.logInformation("The file was archived.")
+            $logger.MonitorInformation("File $($(Split-Path -Path $filename -Leaf)) was archived")
         }
         catch {
             $logger.LogError("The file was not archived.")
+            $logger.MonitorError("File $($(Split-Path -Path $filename -Leaf)) could not be archived")
             throw $_
         }
     }
@@ -842,8 +897,25 @@ class Helper {
             $logger = [Logger]::new($false, "")
         }
 
+        # Clean up all the temporary resources that weren't removed during the execution.
+        $existingtemporaryResourcesPaths = $script:temporaryResourcesPaths | Where-Object { Test-Path $_ } | Select-Object -Unique
+        if ($existingtemporaryResourcesPaths) {
+            $logger.LogInformation("----")
+            $logger.LogInformation("Deleting temporary resources:")
+
+            foreach ($existingTemporaryResourcePath in $existingtemporaryResourcesPaths) {
+                $logger.LogInformation("| Path: $($existingTemporaryResourcePath)")
+                $logger.MonitorInformation("Resource $($existingTemporaryResourcePath) was deleted")
+
+                Remove-Item -Force -Path $existingTemporaryResourcePath
+            }
+        }
+        $script:temporaryResourcesPaths = @()
+
         $logger.LogInformation("----")
         $logger.LogInformation("End of the example.")
+
+        $logger.MonitorInformation("Upload script ended")
 
         if ($finishWithError) {
             exit 1
@@ -935,6 +1007,7 @@ class ConfigurationSectionServices {
 class ConfigurationSectionLogs {
     [bool] $Enabled
     [string] $Path
+    [string] $MonitorFile
 }
 
 class ConfigurationSectionUpload {
