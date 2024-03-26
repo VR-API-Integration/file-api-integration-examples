@@ -20,7 +20,7 @@ Param(
 
 $ErrorActionPreference = "Stop"
 $scriptMajorVersion = 1
-$scriptMinorVersion = 23
+$scriptMinorVersion = 24
 
 # The default value of this parameter is set here because $PSScriptRoot is empty if used directly in Param() through PowerShell ISE.
 if (-not $_configPath) {
@@ -710,7 +710,7 @@ Logger([bool] $storeLogs, [string] $logsDirectory, [string] $monFile, [string] $
 
     if ($this._storeLogs) {
         # detailed log file created per day
-        $this._logPath = Join-Path $logsDirectory "download log - $(Get-Date -Format "yyyy-MM-dd").txt"
+        $this._logPath = Join-Path $logsDirectory "upload log - $(Get-Date -Format "yyyy-MM-dd").txt"
         # only 1 monitor file created
         $this._monPath = Join-Path $logsDirectory $monFile
         # signals a download or upload record (easy if you use the same the Monitor File for both upload and download)
