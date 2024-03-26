@@ -1,4 +1,12 @@
-# Powershell update 2024-02 version 1.22
+# PowerShell update 2024-03 version 1.23
+1. Include the monitor file in the Upload examples (it was already in place in the Download examples).
+2. Ensure the removal of all the temporary files created by the examples.
+3. Fix a bug where the amount of files to upload was shown incorrectly when only one file was available to upload.
+
+The monitor file is a single file that will contain the minimum of records needed to determine if the script runs successfully and errors can be easily detected.  
+This file is suitable for checking regularly by an automated error checking process.  
+
+# PowerShell update 2024-02 version 1.22
 
 1. Update the READMEs to show the minimal .NET version required (4.8).
 2. Improve the download process.
