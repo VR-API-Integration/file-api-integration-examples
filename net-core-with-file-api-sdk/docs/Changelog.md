@@ -1,24 +1,24 @@
 # Changelog 
 Date | Package | Version | Description 
 --- | --- | --- | --- 
-2024-05-07 | ALL | v2.3.0 | VRFTR-5245: Update MyGet Service Connection
-2024-03-07 | ALL | v2.2.0 | VRFTR-7544: Support custom metadata
-2024-01-08 | ALL | v2.1.0 | VRFTR-5659: Remove unused dependencies
-2023-02-20 | ALL | v2.0.0 | vrftr-6037 Rename Delete method.  Previous DeleteAsync method has been renamed to SetFileToDeletedAsync to avoid misunderstandings, as it doesn't delete files, it marks the file as 'deleted' for a subscriber.
+2024-05-07 | ALL | v2.3.0 | Update MyGet Service Connection
+2024-03-07 | ALL | v2.2.0 | Support custom metadata
+2024-01-08 | ALL | v2.1.0 | Remove unused dependencies
+2023-02-20 | ALL | v2.0.0 | Rename Delete method.  Previous DeleteAsync method has been renamed to SetFileToDeletedAsync to avoid misunderstandings, as it doesn't delete files, it marks the file as 'deleted' for a subscriber.
 2023-02-03 | ALL | v1.22.0 | Add deleted and deletedDate fields to list response.
 2023-02-02 | ALL | v1.21.0 | Add subscriber delete documentation to the examples.
 2023-02-02 | ALL | v1.20.0 | Breaking changes: IService includes a new method. Add delete method to SDK. This allows a subscriber to mark a file as deleted, won't delete the file.
 2022-09-23 | ALL | v1.19.0 | Add count to concurrentQueue  ConcurrentQueue didn't have any way to retrieve the capacity, now the elements and unprocessed elements count can be retrieved.
-2022-03-07 | ALL | v1.18.0 | Add copyright to the packages  Add Copyright © 2021 Visma to all projects - vrftr-3995
-2022-01-18 | ALL | v1.17.0 | Internal updates  RaetMangedDefault pool is deprecated. We migrated it to CentralManagedCIWin.  - vrftr-3908
+2022-03-07 | ALL | v1.18.0 | Add copyright to the packages  Add Copyright © 2021 Visma to all projects
+2022-01-18 | ALL | v1.17.0 | Internal updates  RaetMangedDefault pool is deprecated. We migrated it to CentralManagedCIWin.
 2022-01-11 | ALL | v1.16.0 | Internal updates
 2022-01-11 | ALL | v1.15.0 | Internal updates to improve reliability  In order to be able to do a rollback with a tagged version, we did some modifications in the pipeline.
-2021-10-11 | ALL | v1.14.0 | Internal Updates  Fixed medium and low Issues created by Polaris VRFTR-3184 VRFTR-3293
-2021-10-08 | ALL | v1.13.0 | Update vulnerable packages reported by Snyk  Update vulnerable packages reported by Snyk  - vrftr-3279
-2021-10-07 | ALL | v1.12.0 | Update vulnerable packages reported by Snyk  Update vulnerable packages reported by Snyk  - vrftr-3279
-2021-10-01 | ALL | v1.11.0 | Upgrade .NET Core version to 3.1  We were using .NET Core 2.2. That version is out of support, so we upgraded it to .NET Core 3.1.  - vrftr-3412
+2021-10-11 | ALL | v1.14.0 | Internal Updates  Fixed medium and low Issues created by Polaris
+2021-10-08 | ALL | v1.13.0 | Update vulnerable packages reported by Snyk  Update vulnerable packages reported by Snyk
+2021-10-07 | ALL | v1.12.0 | Update vulnerable packages reported by Snyk  Update vulnerable packages reported by Snyk
+2021-10-01 | ALL | v1.11.0 | Upgrade .NET Core version to 3.1  We were using .NET Core 2.2. That version is out of support, so we upgraded it to .NET Core 3.1
 2021-08-20 | ALL | v1.10.0 | Implementation of HasSubscription method
-2021-08-20 | ALL | v1.9.0 | Internal updates  Internal updates vrftr-2640
+2021-08-20 | ALL | v1.9.0 | Internal updates
 2021-08-10 | ALL | v1.8.0 | Internal updates
 2021-06-07 | ALL | v1.7.0 | Added documentation for HasSubscribers method
 2021-06-04 | ALL | v1.6.0 | Fixed pipeline step to upload libraries to GitHub
