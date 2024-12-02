@@ -76,6 +76,14 @@ _NOTE: If the file size is greater than the maximum chunk size configured, it wi
 `tenantId`: (optional) tenantId.\
 `cancellationToken`: (optional) the CancellationToken that the upload task will observe.
 
+
+#### Task<FileUploadInfo> UploadFileAsync(long businessTypeId, string filePath, IDictionary<string,string> customMetadata, string tenantId, CancellationToken cancellationToken) ####
+`businessTypeId`: bussinessTypeId the file will be uploaded to.\
+`filePath`: absolute path of the file to upload.\
+`customMetadata`: custom meta data.\
+`tenantId`: (optional) tenantId.\
+`cancellationToken`: (optional) the CancellationToken that the upload task will observe.
+
 ### Delete ###
 
 `SetFileToDeletedAsync` sets a subscriber file to 'deleted'.
@@ -182,7 +190,7 @@ Integrate with File API with stream sources.
 _NOTE: If the file size is greater than the maximum chunk size configured, it will be uploaded by chunks._
 
 #### Task<FileUploadInfo> UploadFileAsync(FileUploadRequest request, Stream stream, string tenantId, CancellationToken cancellationToken) ####
-`request`: composed by fileName and bussinessTypeId.\
+`request`: composed by fileName, bussinessTypeId and CustomMetadata.\
 `stream`: stream containing the bytes of the file.\
 `tenantId`: (optional) tenantId.\
 `cancellationToken`: (optional) the CancellationToken that the upload task will observe.
