@@ -1,6 +1,7 @@
 # Changelog 
 Date | Package | Version | Description 
 --- | --- | --- | --- 
+2024-12-03 | ALL | v2.3.1 | Remove MyGet packages
 2024-05-07 | ALL | v2.3.0 | Update MyGet Service Connection
 2024-03-07 | ALL | v2.2.0 | Support custom metadata
 2024-01-08 | ALL | v2.1.0 | Remove unused dependencies
