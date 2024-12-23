@@ -1,6 +1,7 @@
 # Changelog 
 Date | Package | Version | Description 
 --- | --- | --- | --- 
+2024-12-04 | ALL | v2.4.0 | Add HealthCheck method
 2024-12-04 | ALL | v2.3.2 | Remove MyGet packages
 2024-05-07 | ALL | v2.3.0 | Update MyGet Service Connection
 2024-03-07 | ALL | v2.2.0 | Support custom metadata
