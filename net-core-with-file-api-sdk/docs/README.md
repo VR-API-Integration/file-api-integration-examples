@@ -64,6 +64,13 @@ Integrate with File API with file system sources, sending and downloading files 
 
 ## Usage ##
 
+### HealthCheck ###
+
+`HealthCheckAsync` gets a list with the status of File Transfer services.
+
+#### Task HealthCheckAsync(CancellationToken cancellationToken) ####
+`cancellationToken`: (optional) the CancellationToken that the health check task will observe.
+
 ### Upload ###
 
 `UploadFileAsync` uploads a file and returns the metadata of the file created on MFT: The Id can be used to download the file by the subscribers.
@@ -182,6 +189,13 @@ Integrate with File API with stream sources.
     `bearerTokenFactory`: Function that retrieves an authorization token.
 
 ## Usage ##
+
+### HealthCheck ###
+
+`HealthCheckAsync` gets a list with the status of File Transfer services.
+
+#### Task HealthCheckAsync(CancellationToken cancellationToken) ####
+`cancellationToken`: (optional) the CancellationToken that the health check task will observe.
 
 ### Upload ###
 
