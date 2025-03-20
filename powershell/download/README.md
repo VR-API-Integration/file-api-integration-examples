@@ -7,9 +7,8 @@ A collection of examples to download files with the File API using **PowerShell*
 - Minimum PowerShell version required: 5.1.
 - Minimum .NET version required: 4.8.
 - To run the script you need administrator privileges.
-- Files to be downloaded cannot be bigger than 2 GB.
 
-## Getting Started 
+## Getting Started
 
 Download the **file-api-integration-examples** repository.
 
@@ -34,9 +33,9 @@ The next executions will use the saved credentials unless you manually specify t
 
 **`-ConfigPath`**
 > Configuration full path.
-> 
+>
 > **Mandatory:** False  
-> **Default value:** {DownloadFiles.ps1 folder}\config.xml 
+> **Default value:** {DownloadFiles.ps1 folder}\config.xml
 >
 > **Example:** -ConfigPath "C:\Users\Foorby\config.xml"
 
@@ -44,7 +43,7 @@ The next executions will use the saved credentials unless you manually specify t
 > Indicates if you want to renew the credentials saved in the system (true) or keep using the saved one (false).  
 > This parameter is useful in case you changed your client ID or client secret.  
 > In most of the cases you won't need this parameter set.
-> 
+>
 > **Mandatory:** False  
 > **Default value:** $false
 >
@@ -77,49 +76,42 @@ Inside the **config.xml** file you will find these parameters:
 **`Path`**
 > XML file path where the credentials will be stored.  
 > :warning: It's important that the file you put in the path has an .xml extension, otherwise the example will not work properly.
-> 
+>
 > **Example:** C:\Visma\File API\Ftaas.Examples\powershell\credentials\credentials_integration1.xml
 
 ### Attributes of the `Services` element
 
 **`FileApiBaseUrl`**
 > File API base URL.
-> 
+>
 > It should be set to **https://fileapi.youforce.com/v1.0**
-
-<br/>
-
+  
 **`AuthenticationTokenApiBaseUrl`**
 > Authentication token API base URL.
-> 
+>
 > It should be set to **https://connect.visma.com/connect**
 
 ### Attributes of the `Authentication` element
 
 **`VismaConnectTenantId`**
 > The Visma developer portal tenant ID.
-
-<br />
-
+  
 ### Attributes of the `Logs` element
 
 **`Enabled`**
 > Indicates if you want to store the logs in your machine.
-> 
+>
 > Must be set to any of these values:  
 > **· false:** the logs will only be shown in the console.  
 > **· true:** the logs will be shown in the console and will be stored in your machine.
-
-<br/>
-
+  
 **`Path`**
 > Full path of the directory where the log files will be stored.<br/>
 > One detailed logfile will be created per day.<br/>
 > If the attribute **`Logs`**>**`Enabled`** is set to **`false`**, this attribute will do nothing.
 > 
 > **Example:** C:\Visma\File API\Ftaas.Examples\powershell\download\logs
-
-<br/>
+  
 
 **`MonitorFile`**
 > Filename of the Monitor logfile.<br/>
@@ -138,15 +130,13 @@ Inside the **config.xml** file you will find these parameters:
 > Must be set to any of these values:  
 > **· Subscriber:** to download files provided to you (the most common scenario).  
 > **· Publisher:** to download files uploaded by you.
-
-<br/>
+  
 
 **`Path`**
 > Path where the files will be downloaded.
 > 
 > **Example:** C:\Visma\File API\Ftaas.Examples\powershell\download\output
-
-<br/>
+  
 
 **`EnsureUniqueNames`**
 > Indicates if you want to rename the files to be unique before downloading them.
@@ -157,8 +147,10 @@ Inside the **config.xml** file you will find these parameters:
 > &nbsp;&nbsp;Format: {original file name}_{timestamp}.{original extension}  
 > &nbsp;&nbsp;Original: TestFile.txt  
 > &nbsp;&nbsp;Renamed: TestFile_20220304T1229027372Z.txt
+  
 
-<br/>
+**`ChunkSize`**
+> Indicates the size of the chunks in megabytes. The maximum size is 1000 megabytes.  
 
 **`Filter`**
 > If empty, all the available (not downloaded yet) files will be listed.  
@@ -193,6 +185,7 @@ Inside the **config.xml** file you will find these parameters:
         <Role>subscriber</Role>
         <Path>C:\Visma\File API\Ftaas.Examples\powershell\download\output</Path>
         <EnsureUniqueNames>true</EnsureUniqueNames>
+        <ChunkSize>100</ChunkSize>
         <Filter>startsWith(FileName, 'employee_profile') and uploadDate gt 2023-08-08T11:02:00Z</Filter>
     </Download>
 </Configuration>

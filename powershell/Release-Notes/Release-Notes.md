@@ -1,3 +1,9 @@
+# PowerShell update 2025-03 version 1.25
+
+1. Fix an issue downloading files by chunks.
+2. Improve retry mechanism downloading files to retry 499 errors.
+3. Increase Chunk Size limit to 1GB.
+
 # PowerShell update 2024-03 version 1.24
 
 Fix an issue where the upload examples were creating the log files with a wrong name.
