@@ -2,7 +2,7 @@
 
 1. Fix an issue downloading files by chunks.
 2. Improve retry mechanism downloading files to retry 499 errors.
-3. Increase Chunk Size limit to 1GB.
+3. Increase Chunk Size limit to 1000 megabytes.
 
 # PowerShell update 2024-03 version 1.24
 
