@@ -20,7 +20,7 @@ Param(
 
 $ErrorActionPreference = "Stop"
 $scriptMajorVersion = 1
-$scriptMinorVersion = 24
+$scriptMinorVersion = 25
 
 # The default value of this parameter is set here because $PSScriptRoot is empty if used directly in Param() through PowerShell ISE.
 if (-not $_configPath) {
@@ -226,7 +226,7 @@ class ConfigurationManager {
         $downloadPath = $config.Download.Path
         $ensureUniqueNames = $config.Download.EnsureUniqueNames
         $chunkSize = [int] $config.Download.ChunkSize 
-        $chunkSizeLimit = [int] 100
+        $chunkSizeLimit = [int] 1000
         $filter = $config.Download.Filter
     
         #check for missing configuration options
@@ -519,13 +519,15 @@ class FileApiService {
                 $filestream = New-Object IO.FileStream $tempFileName ,'Create','Write','Read'
 
                 $bytes = $this.DownloadFileInOneGo($this._role, $fileInfo, $tempFileName)
-                
+                $this._logger.LogInformation("Downloaded the file in one go")
                 $filestream.Write($bytes, 0, $bytes.Length)
+                $this._logger.LogInformation("Wrote the file to disk")
             } catch{
                 throw "$($_)"
             }
             finally {
                 $filestream.Close()
+                $this._logger.LogInformation("File closed")
             }
         } else {
             # download the file in multiple chunks
@@ -534,7 +536,7 @@ class FileApiService {
             [int] $totalchunks = [math]::ceiling($fileInfo.Size / $this._chunkSize)
 
             $this._logger.LogInformation("Downloading Headers")
-            $this._fileApiClient.DownloadHeader($this._role, $fileInfo, $this._tempFolder)
+            $this._fileApiClient.DownloadHeader($this._role, $fileInfo, $tempFileName)
 
             $script:temporaryResourcesPaths += $tempFileName
             $filestream = New-Object IO.FileStream $tempFileName ,'Append','Write','Read'
@@ -588,8 +590,8 @@ class FileApiService {
                     Start-Sleep -Seconds 60
                 }
                 else {
-                    # when download fails due to server error 5xx retry download max $maxretry (10) times
-                    if($_.Exception.Message -match "\(5..\)") {
+                    # when download fails due to server error 5xx or 499 connection closed retry download max $maxretry (10) times
+                    if($_.Exception.Message -match "\(5..\)" -or $_.Exception.Message -match "\(499\)") {
                         $retry += 1
                         if($retry -le $maxretry) {
                             $this._logger.LogInformation("Downloading file $($fileInfo.Name): retry $($retry)")
@@ -633,8 +635,8 @@ class FileApiService {
                     Start-Sleep -Seconds $waitSeconds
                 }
                 else {
-                    # when download fails due to server error 5xx retry download max $maxretry (10) times
-                    if($_.Exception.Message -match "\(5..\)") {
+                    # when download fails due to server error 5xx or 499 connection closed retry download max $maxretry (10) times
+                    if($_.Exception.Message -match "\(5..\)" -or $_.Exception.Message -match "\(499\)") {
                         $retry += 1
                         if($retry -le $maxretry) {
                             $this._logger.LogInformation("Downloading chunk $($chunkNumber): retry $($retry)")
@@ -671,7 +673,6 @@ class FileApiClient {
     # list the available files in the File Api that conform to the filter
     [PSCustomObject] ListFiles([string] $role, [int] $pageIndex, [int] $pageSize, [string] $filter) {
         $headers = $this._defaultHeaders
-
         $response = Invoke-RestMethod `
             -Method "Get" `
             -Uri "$($this.BaseUrl)/files?role=$($role)&pageIndex=$($pageIndex)&pageSize=$($pageSize)&`$filter=$($filter)&`$orderBy=uploadDate asc" `
