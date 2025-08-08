@@ -1,3 +1,9 @@
+# PowerShell update 2025-08 version 1.26
+
+1. Added support for Demonstration Proof of Possession (DPoP) enhanced security  
+   Check the DPoP_README.md for more information about using DPoP.
+2. Replaced deprecated WebRequest class with HttpClient class
+
 # PowerShell update 2025-03 version 1.25
 
 1. Fix an issue downloading files by chunks.

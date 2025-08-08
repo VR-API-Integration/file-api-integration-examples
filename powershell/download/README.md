@@ -122,6 +122,15 @@ Inside the **config.xml** file you will find these parameters:
 > 
 > **Example:** FileApi_Monitor.txt
 
+### Attributes of the `DPoP` element
+
+**`Enabled`**
+> Indicates if you want to use DPoP (Demand Proof of Possession) enhanced security
+> 
+> Must be set to any of these values:  
+> **· true:** if you want to use DPoP enhanced security.  
+> **· false:** if you do not want to use DPoP enhanced security
+
 ### Attributes of the `Download` element
 
 **`Role`**
