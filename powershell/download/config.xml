@@ -18,6 +18,11 @@
 		<MonitorFile>EnterTheFilenameWhereYouWantToStoreTheMonitorLogging (e.g. FileApi_Monitor.txt)</MonitorFile>
 	</Logs>
 
+	<DPoP>
+        <!-- Enable DPoP (Demonstration of Proof-of-Possession) for enhanced security -->
+        <Enabled>true</Enabled>
+    </DPoP>
+
     <Download>
         <Role>subscriber</Role>
         <Path>EnterTheFolderPathWhereYouWantToDownloadTheFilesTo (e.g. C:\Visma\File API\Ftaas.Examples\powershell\download\output)</Path>

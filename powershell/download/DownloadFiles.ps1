@@ -18,9 +18,12 @@ Param(
     [bool] $_renewCredentials = $false
 )
 
+# Add necessary assemblies for HttpClient
+Add-Type -AssemblyName System.Net.Http
+
 $ErrorActionPreference = "Stop"
 $scriptMajorVersion = 1
-$scriptMinorVersion = 25
+$scriptMinorVersion = 26
 
 # The default value of this parameter is set here because $PSScriptRoot is empty if used directly in Param() through PowerShell ISE.
 if (-not $_configPath) {
@@ -29,6 +32,10 @@ if (-not $_configPath) {
 
 # Place in this variable the paths of all the resources which you want to ensure their removal after each execution.
 $script:temporaryResourcesPaths = @()
+
+# Place in this variable any DPoP token generator that needs cleanup
+$script:dpopTokenGenerator = $null
+$script:dpopSettings = $null
 
 #region Log configuration
 #try reading <Logs> configuration first so that we are able to log other possible errors in the configuration
@@ -55,10 +62,7 @@ $logger.LogInformation("| PowerShell : $($global:PSVersionTable.PSVersion)")
 $logger.LogInformation("| Windows    : $(if (($env:OS).Contains("Windows")) { [Helper]::RetrieveWindowsVersion() } else { "Unknown OS system detected" })")
 $logger.LogInformation("| NET version: $([Helper]::GetDotNetFrameworkVersion().Version)")
 
-
-
-
-$logger.MonitorInformation("Download script started")
+$logger.MonitorInformation("Download script started with config $($_configPath)")
 
 #region Rest of the configuration
 
@@ -103,9 +107,39 @@ catch {
 
 #endregion Retrieve/Create credentials
 
+#region Initialize DPoP (if enabled)
+
+if ($config.DPoP.Enabled) {
+    $logger.LogInformation("----")
+    $logger.LogInformation("DPoP is enabled. Initializing DPoP settings.")
+    
+    try {
+        $dpopManager = [DPoPManager]::new($logger)
+        $script:dpopSettings = $dpopManager.CreateDPoPSettings()
+        $script:dpopTokenGenerator = [DPoPTokenGenerator]::new($script:dpopSettings.PrivateKey, $script:dpopSettings.PublicKeyN, $script:dpopSettings.PublicKeyE, $script:dpopSettings.GetRsaInstance())
+        
+        $logger.LogInformation("DPoP initialized successfully.")
+    }
+    catch {
+        $logger.MonitorError("Failure initializing DPoP")
+        [Helper]::EndProgramWithError($_, "Failure initializing DPoP.", $logger)
+    }
+} else {
+    $logger.LogInformation("DPoP is disabled.")
+}
+
+#endregion Initialize DPoP
+
 #region Retrieve authentication token
 
-$authenticationApiClient = [AuthenticationApiClient]::new($config.Services.AuthenticationTokenApiBaseUrl)
+if ($script:dpopTokenGenerator) {
+    $authenticationApiClient = [AuthenticationApiClient]::new($config.Services.AuthenticationTokenApiBaseUrl, $script:dpopTokenGenerator)
+    $logger.LogInformation("Authentication API client initialized with DPoP support.")
+} else {
+    $authenticationApiClient = [AuthenticationApiClient]::new($config.Services.AuthenticationTokenApiBaseUrl, $null)
+    $logger.LogInformation("Authentication API client initialized without DPoP.")
+}
+
 $authenticationApiService = [AuthenticationApiService]::new($logger, $authenticationApiClient)
 
 try {
@@ -118,7 +152,18 @@ catch {
 
 #endregion Retrieve authentication token
 
-$fileApiClient = [FileApiClient]::new($config.Services.FileApiBaseUrl, $token)
+#region Initialize File API Client
+
+if ($script:dpopTokenGenerator) {
+    $fileApiClient = [FileApiClient]::new($config.Services.FileApiBaseUrl, $token, $script:dpopTokenGenerator)
+    $logger.LogInformation("File API client initialized with DPoP support.")
+} else {
+    $fileApiClient = [FileApiClient]::new($config.Services.FileApiBaseUrl, $token, $null)
+    $logger.LogInformation("File API client initialized without DPoP.")
+}
+
+#endregion Initialize File API Client
+
 $fileApiService = [FileApiService]::new($logger, $fileApiClient, $config.Download.Role, 200, $config.Download.ChunkSize)
 
 #region List files
@@ -222,12 +267,15 @@ class ConfigurationManager {
         $enableLogs = $config.Logs.Enabled
         $logsPath = $config.Logs.Path
 
-        $role = $Config.Download.Role
+        $role = $config.Download.Role
         $downloadPath = $config.Download.Path
         $ensureUniqueNames = $config.Download.EnsureUniqueNames
         $chunkSize = [int] $config.Download.ChunkSize 
         $chunkSizeLimit = [int] 1000
         $filter = $config.Download.Filter
+        
+        # DPoP configuration (optional)
+        $dpopEnabled = $config.DPoP.Enabled
     
         #check for missing configuration options
         $missingConfiguration = @()
@@ -277,6 +325,13 @@ class ConfigurationManager {
         $configuration.Download.EnsureUniqueNames = [System.Convert]::ToBoolean($ensureUniqueNames)
         $configuration.Download.ChunkSize = $chunkSize * 1024 * 1024 #convert to bytes
         $configuration.Download.Filter = $filter
+        
+        # Set DPoP configuration
+        if (-not [string]::IsNullOrEmpty($dpopEnabled)) {
+            $configuration.DPoP.Enabled = [System.Convert]::ToBoolean($dpopEnabled)
+        } else {
+            $configuration.DPoP.Enabled = $false
+        }
 
         return $configuration
     }
@@ -659,23 +714,47 @@ class FileApiClient {
     [string] $BaseUrl
     
     hidden [PSCustomObject] $_defaultHeaders
+    hidden [DPoPTokenGenerator] $_dpopTokenGenerator
+    hidden [bool] $_dpopEnabled
+    hidden [string] $_token
 
     FileApiClient (
         [string] $baseUrl,
-        [string] $token
+        [string] $token,
+        [DPoPTokenGenerator] $dpopTokenGenerator
     ) {
         $this.BaseUrl = $baseUrl
+        $this._token = $token
         $this._defaultHeaders = @{
             "Authorization" = "Bearer $($token)";
         }
+        
+        if ($dpopTokenGenerator) {
+            $this._dpopTokenGenerator = $dpopTokenGenerator
+            $this._dpopEnabled = $true
+        } else {
+            $this._dpopEnabled = $false
+        }
+    }
+
+    hidden [PSCustomObject] GetHeadersWithDPoP([string] $httpMethod, [string] $uri) {
+        $headers = $this._defaultHeaders.Clone()
+        
+        if ($this._dpopEnabled -and $this._dpopTokenGenerator) {
+            $dpopToken = $this._dpopTokenGenerator.GenerateDpopToken($httpMethod, $uri, $this._token)
+            $headers["DPoP"] = $dpopToken
+        }
+        
+        return $headers
     }
 
     # list the available files in the File Api that conform to the filter
     [PSCustomObject] ListFiles([string] $role, [int] $pageIndex, [int] $pageSize, [string] $filter) {
-        $headers = $this._defaultHeaders
+        $uri = "$($this.BaseUrl)/files?role=$($role)&pageIndex=$($pageIndex)&pageSize=$($pageSize)&`$filter=$($filter)&`$orderBy=uploadDate asc"
+        $headers = $this.GetHeadersWithDPoP("GET", $uri)
         $response = Invoke-RestMethod `
             -Method "Get" `
-            -Uri "$($this.BaseUrl)/files?role=$($role)&pageIndex=$($pageIndex)&pageSize=$($pageSize)&`$filter=$($filter)&`$orderBy=uploadDate asc" `
+            -Uri $uri `
             -Headers $headers
 
         return $response
@@ -685,32 +764,38 @@ class FileApiClient {
      [byte[]] DownloadFileInOneGo([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath) {
         $uri = "$($this.BaseUrl)/files/$($fileInfo.Id)?role=$($role)"
 
-        # create request and the proper headers
-        $request = [System.Net.WebRequest]::Create($uri)
-        $request.Method = "GET"
-        $request.Headers.Add("Authorization", $this._defaultHeaders["Authorization"])
-        $request.Accept = "application/octet-stream"
-
-        # download the bytes into a BinaryReader
-        $downloadStream = $request.GetResponse().GetResponseStream()
-        $reader = New-Object System.IO.BinaryReader($downloadStream)
-        $response = [byte[]] @()
-        try {
-            $response = $reader.ReadBytes($fileInfo.Size)
-        } finally {
-            $reader.Close()
+        # Create HttpClient and setup headers
+        $client = New-Object System.Net.Http.HttpClient
+        $client.DefaultRequestHeaders.Authorization = New-Object System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", $this._token)
+        $client.DefaultRequestHeaders.Add("Accept", "application/octet-stream")
+        
+        # Add DPoP header if enabled
+        if ($this._dpopEnabled -and $this._dpopTokenGenerator) {
+            $dpopToken = $this._dpopTokenGenerator.GenerateDpopToken("GET", $uri, $this._token)
+            $client.DefaultRequestHeaders.Add("DPoP", $dpopToken)
         }
-
-        return $response
+        
+        try {
+            # Execute request and get response as byte array
+            $task = $client.GetByteArrayAsync($uri)
+            $task.Wait() # Wait for the task to complete
+            $response = $task.Result
+            
+            return $response
+        }
+        finally {
+            $client.Dispose()
+        }
     }
 
     [PSCustomObject] DownloadHeader([string] $role, [FileInfo] $fileInfo, [string] $downloadFilePath) {
-        $headers = $this._defaultHeaders
+        $uri = "$($this.BaseUrl)/files/$($fileInfo.Id)?role=$($role)"
+        $headers = $this.GetHeadersWithDPoP("HEAD", $uri)
         $headers.Accept = "application/octet-stream"
 
         $response = Invoke-RestMethod `
             -Method "Head" `
-            -Uri "$($this.BaseUrl)/files/$($fileInfo.Id)?role=$($role)" `
+            -Uri $uri `
             -Headers $headers `
             -OutFile "$($downloadFilePath)"
 
@@ -718,31 +803,36 @@ class FileApiClient {
     }
 
     # download a chunk
-    # this method is not using the Invoke-RestMethod because there we can not add Range header (Powershell bug)
+    # Using HttpClient to download a specific byte range
     [byte[]] DownloadChunk([string] $role, [FileInfo] $fileInfo, [int32] $chunkSize, [int]$chunkNumber) {
         $uri = "$($this.BaseUrl)/files/$($fileInfo.Id)?role=$($role)"
 
-        # create request and the proper headers
-        $request = [System.Net.WebRequest]::Create($uri)
-        $request.Method = "GET"
-        $request.Headers.Add("Authorization", $this._defaultHeaders["Authorization"])
-        $request.Accept = "application/octet-stream"
-
-        # add range header (select which chunk/bytes to download)
+        # Create HttpClient and setup headers
+        $client = New-Object System.Net.Http.HttpClient
+        $client.DefaultRequestHeaders.Authorization = New-Object System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", $this._token)
+        $client.DefaultRequestHeaders.Add("Accept", "application/octet-stream")
+        
+        # Add DPoP header if enabled
+        if ($this._dpopEnabled -and $this._dpopTokenGenerator) {
+            $dpopToken = $this._dpopTokenGenerator.GenerateDpopToken("GET", $uri, $this._token)
+            $client.DefaultRequestHeaders.Add("DPoP", $dpopToken)
+        }
+        
+        # Add range header (select which chunk/bytes to download)
         $rangeStart = [long] ($chunkNumber * $chunkSize)
         $rangeEnd = [long] $rangeStart + $chunkSize - 1
-        $request.AddRange("bytes", $rangeStart, $rangeEnd)
-
-        # download the bytes into a BinaryReader
-        $downloadStream = $request.GetResponse().GetResponseStream()
-        $reader = New-Object System.IO.BinaryReader($downloadStream)
-        $response = [byte[]] @()
+        $rangeHeaderValue = "bytes=$rangeStart-$rangeEnd"
+        $client.DefaultRequestHeaders.Add("Range", $rangeHeaderValue)
+        
         try {
-            $response = $reader.ReadBytes($chunksize)
-        } finally {
-            $reader.Close()
+            # Execute request and get response as byte array
+            $task = $client.GetByteArrayAsync($uri)
+            $task.Wait() # Wait for the task to complete
+            return $task.Result
         }
-        return $response
+        finally {
+            $client.Dispose()
+        }
     }
 }
 
@@ -771,17 +861,37 @@ class AuthenticationApiService {
 
 class AuthenticationApiClient {
     hidden [string] $_baseUrl
+    hidden [DPoPTokenGenerator] $_dpopTokenGenerator
+    hidden [bool] $_dpopEnabled
     
-    AuthenticationApiClient([string] $baseUrl) {
+    AuthenticationApiClient(
+        [string] $baseUrl, 
+        [DPoPTokenGenerator] $dpopTokenGenerator
+    ) {
         $this._baseUrl = $baseUrl
+        
+        if ($dpopTokenGenerator) {
+            $this._dpopTokenGenerator = $dpopTokenGenerator
+            $this._dpopEnabled = $true
+        } else {
+            $this._dpopEnabled = $false
+        }
     }
 
-     # Create and execute the request to get a new access token
+    # Create and execute the request to get a new access token
     [PSCustomObject] NewToken([string] $clientId, [string] $clientSecret, [string] $tenantId) {
         $headers = @{
             "Content-Type"  = "application/x-www-form-urlencoded";
             "Cache-Control" = "no-cache";
         }
+
+        # Add DPoP header if enabled
+        if ($this._dpopEnabled -and $this._dpopTokenGenerator) {
+            $uri = "$($this._baseUrl)/token"
+            $dpopToken = $this._dpopTokenGenerator.GenerateDpopToken("POST", $uri)
+            $headers["DPoP"] = $dpopToken
+        }
+
         $body = @{
             "grant_type"    = "client_credentials";
             "client_id"     = $clientId;
@@ -837,6 +947,186 @@ class Validator {
         return $result
     }
 }
+
+#region DPoP classes
+class DPoPManager {
+    hidden [Logger] $_logger
+
+    DPoPManager([Logger] $logger) {
+        $this._logger = $logger
+    }
+
+    [DPoPSettings] CreateDPoPSettings() {
+        $this._logger.LogInformation("----")
+        $this._logger.LogInformation("Creating new DPoP settings.")
+
+        # Always generate fresh DPoP settings
+        $dpopSettings = [DPoPSettings]::new()
+        
+        $this._logger.LogInformation("New DPoP settings created successfully.")
+
+        return $dpopSettings
+    }
+}
+
+class DPoPSettings {
+    [string] $PublicKey
+    [string] $PrivateKey
+    [string] $PublicKeyN  # RSA modulus
+    [string] $PublicKeyE  # RSA exponent
+    hidden [System.Security.Cryptography.RSA] $_rsa
+
+    DPoPSettings() {
+        $keyPair = [DPoPKeyGenerator]::GenerateKeyPair()
+        $this.PublicKey = $keyPair.PublicKey
+        $this.PrivateKey = $keyPair.PrivateKey
+        $this.PublicKeyN = $keyPair.PublicKeyN
+        $this.PublicKeyE = $keyPair.PublicKeyE
+        $this._rsa = $keyPair.RsaInstance
+    }
+
+    [System.Security.Cryptography.RSA] GetRsaInstance() {
+        return $this._rsa
+    }
+
+    [void] Dispose() {
+        if ($this._rsa) {
+            $this._rsa.Dispose()
+        }
+    }
+}
+
+class DPoPKeyGenerator {
+    static [PSCustomObject] GenerateKeyPair() {
+        try {
+            # Create RSA key with 2048-bit key size 
+            $rsa = [System.Security.Cryptography.RSA]::Create(2048)
+            
+            # Export key parameters for JWT creation
+            $parameters = $rsa.ExportParameters($true) # Include private key
+            
+            # For RSA keys, we'll work directly with parameters instead of PEM
+            $privateKeyXml = $rsa.ToXmlString($true)  # Include private key
+            $publicKeyXml = $rsa.ToXmlString($false)  # Public key only
+            
+            # Base64Url encode the RSA key components (NOT regular Base64)
+            $publicKeyNB64 = [DPoPTokenGenerator]::Base64UrlEncode($parameters.Modulus)
+            $publicKeyEB64 = [DPoPTokenGenerator]::Base64UrlEncode($parameters.Exponent)
+            
+            return [PSCustomObject]@{
+                PublicKey = $publicKeyXml
+                PrivateKey = $privateKeyXml
+                PublicKeyN = $publicKeyNB64  # RSA modulus (replaces PublicKeyX)
+                PublicKeyE = $publicKeyEB64  # RSA exponent (replaces PublicKeyY)
+                RsaInstance = $rsa           # RSA instance (replaces EcdsaInstance)
+            }
+        }
+        catch {
+            throw "Failed to generate RSA key pair: $($_.Exception.Message)"
+        }
+    }
+}
+
+class DPoPTokenGenerator {
+    hidden [string] $_privateKey
+    hidden [string] $_publicKeyN
+    hidden [string] $_publicKeyE
+    hidden [System.Security.Cryptography.RSA] $_rsa
+
+    DPoPTokenGenerator([string] $privateKey, [string] $publicKeyN, [string] $publicKeyE, [System.Security.Cryptography.RSA] $rsa) {
+        $this._privateKey = $privateKey
+        $this._publicKeyN = $publicKeyN
+        $this._publicKeyE = $publicKeyE
+        $this._rsa = $rsa
+    }
+
+    [string] GenerateDpopToken([string] $httpMethod, [string] $uri) {
+        return $this.GenerateDpopToken($httpMethod, $uri, $null)
+    }
+
+    [string] GenerateDpopToken([string] $httpMethod, [string] $uri, [string] $accessToken) {
+        try {
+            # Create JWK (JSON Web Key) from RSA public key components
+            $jwk = @{
+                "kty" = "RSA"
+                "n" = $this._publicKeyN
+                "e" = $this._publicKeyE
+            }
+
+            # Create JWT header
+            $header = @{
+                "alg" = "RS256"
+                "typ" = "dpop+jwt"
+                "jwk" = $jwk
+            } | ConvertTo-Json -Compress
+
+            # Create JWT payload
+            $payload = @{
+                "jti" = [Guid]::NewGuid().ToString()
+                "htm" = $httpMethod.ToUpper()
+                "htu" = $uri
+                "iat" = [DateTimeOffset]::Now.ToUnixTimeSeconds()
+            }
+
+            # Add access token hash if provided
+            if (-not [string]::IsNullOrEmpty($accessToken)) {
+                $accessTokenBytes = [System.Text.Encoding]::UTF8.GetBytes($accessToken)
+                $sha256 = [System.Security.Cryptography.SHA256]::Create()
+                $hashBytes = $sha256.ComputeHash($accessTokenBytes)
+                $sha256.Dispose()
+                $accessTokenHash = [DPoPTokenGenerator]::Base64UrlEncode($hashBytes).TrimEnd('=')
+                $payload["ath"] = $accessTokenHash
+            }
+
+            $payloadJson = $payload | ConvertTo-Json -Compress
+
+            # Encode header and payload
+            $encodedHeader = [DPoPTokenGenerator]::Base64UrlEncode([System.Text.Encoding]::UTF8.GetBytes($header))
+            $encodedPayload = [DPoPTokenGenerator]::Base64UrlEncode([System.Text.Encoding]::UTF8.GetBytes($payloadJson))
+
+            # Create signature
+            $signingInput = "$encodedHeader.$encodedPayload"
+            $signingInputBytes = [System.Text.Encoding]::UTF8.GetBytes($signingInput)
+            $signature = $this._rsa.SignData($signingInputBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+            $encodedSignature = [DPoPTokenGenerator]::Base64UrlEncode($signature)
+
+            return "$signingInput.$encodedSignature"
+        }
+        catch {
+            throw "Failed to generate DPoP token: $($_.Exception.Message)"
+        }
+    }
+
+    static [string] Base64UrlEncode([byte[]] $input) {
+        $base64 = [Convert]::ToBase64String($input)
+        return $base64.TrimEnd('=').Replace('+', '-').Replace('/', '_')
+    }
+    
+    static [string] Base64UrlDecode([string] $input) {
+        # Add padding if needed
+        $paddedInput = $input
+        switch ($input.Length % 4) {
+            0 { break }
+            1 { $paddedInput += "===" }
+            2 { $paddedInput += "==" }
+            3 { $paddedInput += "=" }
+        }
+        $paddedInput = $paddedInput.Replace('-', '+').Replace('_', '/')
+        
+        try {
+            return [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($paddedInput))
+        }
+        catch {
+            throw "Base64Url decoding error: $($_.Exception.Message)"
+        }
+    }
+
+    [void] Dispose() {
+        # Don't dispose the RSA here as it's managed by DPoPSettings
+    }
+}
+
+#endregion DPoP classes
 
 # class containing the Log functions
 class Logger {
@@ -1001,6 +1291,29 @@ class Helper {
         }
         $script:temporaryResourcesPaths = @()
 
+        # Clean up DPoP resources
+        if ($script:dpopTokenGenerator) {
+            try {
+                $script:dpopTokenGenerator.Dispose()
+                $logger.LogInformation("DPoP token generator disposed.")
+            }
+            catch {
+                $logger.LogError("Error disposing DPoP token generator: $($_)")
+            }
+            $script:dpopTokenGenerator = $null
+        }
+
+        if ($script:dpopSettings) {
+            try {
+                $script:dpopSettings.Dispose()
+                $logger.LogInformation("DPoP settings disposed.")
+            }
+            catch {
+                $logger.LogError("Error disposing DPoP settings: $($_)")
+            }
+            $script:dpopSettings = $null
+        }
+
         $logger.LogInformation("----")
         $logger.LogInformation("End of the example.")
 
@@ -1080,6 +1393,7 @@ class Configuration {
     $Services = [ConfigurationSectionServices]::new()
     $Logs = [ConfigurationSectionLogs]::new()
     $Download = [ConfigurationSectionDownload]::new()
+    $DPoP = [ConfigurationSectionDPoP]::new()
 }
 
 class ConfigurationSectionCredentials {
@@ -1104,6 +1418,10 @@ class ConfigurationSectionDownload {
     [bool] $EnsureUniqueNames
     [long] $ChunkSize
     [string] $Filter
+}
+
+class ConfigurationSectionDPoP {
+    [bool] $Enabled
 }
 
 class FileInfo {
