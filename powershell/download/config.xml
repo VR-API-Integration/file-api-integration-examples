@@ -20,7 +20,7 @@
 
 	<DPoP>
         <!-- Enable DPoP (Demonstration of Proof-of-Possession) for enhanced security -->
-        <Enabled>false</Enabled>
+        <Enabled>true</Enabled>
     </DPoP>
 
     <Download>
